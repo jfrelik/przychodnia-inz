@@ -1,0 +1,3 @@
+{
+	"*": ["eslint", "npx prettier --ignore-unknown --write"]
+}
