@@ -8,7 +8,7 @@
 			await authClient.signOut({
 				fetchOptions: {
 					onSuccess: () => {
-						navigateTo('/login');
+						navigateTo('/');
 					},
 				},
 			});
