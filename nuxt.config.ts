@@ -8,6 +8,10 @@ export default defineNuxtConfig({
 		compatibilityVersion: 4,
 	},
 
+	colorMode: {
+		preference: 'light',
+	},
+
 	modules: [
 		'@nuxt/eslint',
 		'@nuxt/fonts',
