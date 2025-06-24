@@ -1,19 +1,32 @@
 <script lang="ts" setup>
+	import type { FormSubmitEvent } from '@nuxt/ui';
+	import * as z from 'zod';
 	import { authClient } from '~~/lib/auth-client';
 
 	const toast = useToast();
 	const session = authClient.useSession();
-	const name = ref('');
-	const email = ref('');
-	const password = ref('');
 	const show = ref(false);
 
-	const handleRegisterSubmit = async (event: Event) => {
+	const schema = z.object({
+		email: z.string().email('Nieprawidłowy adres email'),
+		name: z.string().min(2, 'Imię musi mieć przynajmniej 2 znaki'),
+		password: z.string().min(8, 'Hasło musi mieć przynajmniej 8 znaków'),
+	});
+
+	type Schema = z.output<typeof schema>;
+
+	const state = reactive<Partial<Schema>>({
+		email: '',
+		name: '',
+		password: '',
+	});
+
+	const handleRegisterSubmit = async (event: FormSubmitEvent<Schema>) => {
 		event.preventDefault();
 		const { data, error } = await authClient.signUp.email({
-			email: email.value,
-			password: password.value,
-			name: name.value,
+			email: event.data.email,
+			password: event.data.password,
+			name: event.data.name,
 		});
 		if (error) {
 			console.error('Error signing up:', error);
@@ -21,6 +34,7 @@
 				title: 'Wystąpił problem podczas rejestracji',
 				description: 'Błąd: ' + error.message,
 				color: 'error',
+				icon: 'carbon:error',
 			});
 		} else {
 			console.log('Signed up successfully:', data);
@@ -28,6 +42,7 @@
 				title: 'Zarejestrowano',
 				description: 'Proces rejestracji powiódł się',
 				color: 'success',
+				icon: 'carbon:checkmark',
 			});
 			await navigateTo('/home');
 		}
@@ -49,14 +64,16 @@
 				<h1 class="text-2xl font-bold">Rejestracja</h1>
 			</div>
 
-			<Form
+			<UForm
+				:schema="schema"
+				:state="state"
 				novalidate
 				class="flex flex-col items-center gap-4"
 				@submit="handleRegisterSubmit"
 			>
-				<UFormField label="Email" class="w-full">
+				<UFormField label="Email" name="email" class="w-full">
 					<UInput
-						v-model="email"
+						v-model="state.email"
 						type="email"
 						class="w-full"
 						placeholder="Email"
@@ -66,9 +83,9 @@
 					/>
 				</UFormField>
 
-				<UFormField label="Imię" class="w-full">
+				<UFormField label="Imię" name="name" class="w-full">
 					<UInput
-						v-model="name"
+						v-model="state.name"
 						type="text"
 						class="w-full"
 						placeholder="Imię"
@@ -77,9 +94,9 @@
 					/>
 				</UFormField>
 
-				<UFormField label="Hasło" class="w-full">
+				<UFormField label="Hasło" name="password" class="w-full">
 					<UInput
-						v-model="password"
+						v-model="state.password"
 						placeholder="Hasło"
 						class="w-full"
 						:type="show ? 'text' : 'password'"
@@ -104,7 +121,7 @@
 				<UButton type="submit" class="w-full cursor-pointer justify-center">
 					Zarejestruj
 				</UButton>
-			</Form>
+			</UForm>
 			<div class="flex flex-col items-center">
 				<p class="pt-2">
 					Już masz konto?

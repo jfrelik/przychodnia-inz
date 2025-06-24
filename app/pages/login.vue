@@ -1,24 +1,37 @@
 <script lang="ts" setup>
+	import type { FormSubmitEvent } from '@nuxt/ui';
+	import * as z from 'zod';
 	import { authClient } from '~~/lib/auth-client';
 
 	const toast = useToast();
 	const session = authClient.useSession();
-	const email = ref('');
-	const password = ref('');
 	const show = ref(false);
 
-	const handleLoginSubmit = async (event: Event) => {
-		event.preventDefault();
+	const schema = z.object({
+		email: z.string().email('Nieprawidłowy adres email'),
+		password: z.string().min(8, 'Hasło musi mieć przynajmniej 8 znaków'),
+	});
+
+	type Schema = z.output<typeof schema>;
+
+	const state = reactive<Partial<Schema>>({
+		email: '',
+		password: '',
+	});
+
+	const handleLoginSubmit = async (event: FormSubmitEvent<Schema>) => {
 		const { data, error } = await authClient.signIn.email({
-			email: email.value,
-			password: password.value,
+			email: event.data.email,
+			password: event.data.password,
 		});
+
 		if (error) {
 			console.error('Error signing in:', error);
 			toast.add({
 				title: 'Wystąpił problem podczas logowania',
 				description: 'Błąd: ' + error.message,
 				color: 'error',
+				icon: 'carbon:error',
 			});
 		} else {
 			console.log('Signed in successfully:', data);
@@ -26,6 +39,7 @@
 				title: 'Zalogowano',
 				description: 'Proces logowania powiódł się',
 				color: 'success',
+				icon: 'carbon:checkmark',
 			});
 			await navigateTo('/home');
 		}
@@ -47,31 +61,31 @@
 				<h1 class="text-2xl font-bold">Logowanie</h1>
 			</div>
 
-			<Form
-				novalidate
+			<UForm
+				:schema="schema"
+				:state="state"
 				class="flex flex-col items-center gap-4"
+				novalidate
 				@submit="handleLoginSubmit"
 			>
-				<UFormField label="Email" class="w-full">
+				<UFormField label="Email" name="email" class="w-full">
 					<UInput
-						v-model="email"
+						v-model="state.email"
 						type="email"
 						placeholder="Email"
 						class="w-full"
-						required
 						autocomplete="email"
 						autofocus
 					/>
 				</UFormField>
 
-				<UFormField label="Hasło" class="w-full">
+				<UFormField label="Hasło" name="password" class="w-full">
 					<UInput
-						v-model="password"
+						v-model="state.password"
+						:type="show ? 'text' : 'password'"
 						placeholder="Hasło"
 						class="w-full"
-						:type="show ? 'text' : 'password'"
 						:ui="{ trailing: 'pe-1' }"
-						required
 					>
 						<template #trailing>
 							<UButton
@@ -91,7 +105,7 @@
 				<UButton type="submit" class="w-full cursor-pointer justify-center">
 					Zaloguj
 				</UButton>
-			</Form>
+			</UForm>
 
 			<div class="flex flex-col items-center">
 				<p class="pt-2">
