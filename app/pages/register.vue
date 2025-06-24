@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 	import { authClient } from '~~/lib/auth-client';
 
+	const toast = useToast();
 	const session = authClient.useSession();
 	const name = ref('');
 	const email = ref('');
@@ -16,8 +17,18 @@
 		});
 		if (error) {
 			console.error('Error signing up:', error);
+			toast.add({
+				title: 'Wystąpił problem podczas rejestracji',
+				description: 'Błąd: ' + error.message,
+				color: 'error',
+			});
 		} else {
 			console.log('Signed up successfully:', data);
+			toast.add({
+				title: 'Zarejestrowano',
+				description: 'Proces rejestracji powiódł się',
+				color: 'success',
+			});
 			await navigateTo('/home');
 		}
 	};

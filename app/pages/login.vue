@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 	import { authClient } from '~~/lib/auth-client';
 
+	const toast = useToast();
 	const session = authClient.useSession();
 	const email = ref('');
 	const password = ref('');
@@ -14,8 +15,18 @@
 		});
 		if (error) {
 			console.error('Error signing in:', error);
+			toast.add({
+				title: 'Wystąpił problem podczas logowania',
+				description: 'Błąd: ' + error.message,
+				color: 'error',
+			});
 		} else {
 			console.log('Signed in successfully:', data);
+			toast.add({
+				title: 'Zalogowano',
+				description: 'Proces logowania powiódł się',
+				color: 'success',
+			});
 			await navigateTo('/home');
 		}
 	};
