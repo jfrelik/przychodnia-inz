@@ -27,16 +27,16 @@
 	>
 		<div class="flex items-center gap-2 text-3xl font-bold">
 			<UIcon name="carbon:hospital" class="h-8 w-8" />
-			Company Name
+			Nazwa Przychodni
 		</div>
 		<div
 			class="inline-block w-1/3 flex-col items-center rounded-xl border-1 border-gray-300 p-6 shadow-xl"
 		>
 			<div class="flex flex-col items-center pb-6">
-				<h1 class="text-2xl font-bold">Log In</h1>
+				<h1 class="text-2xl font-bold">Logowanie</h1>
 			</div>
 
-			<UForm
+			<Form
 				novalidate
 				class="flex flex-col items-center gap-4"
 				@submit="handleLoginSubmit"
@@ -53,10 +53,10 @@
 					/>
 				</UFormField>
 
-				<UFormField label="Password" class="w-full">
+				<UFormField label="Hasło" class="w-full">
 					<UInput
 						v-model="password"
-						placeholder="Password"
+						placeholder="Hasło"
 						class="w-full"
 						:type="show ? 'text' : 'password'"
 						:ui="{ trailing: 'pe-1' }"
@@ -68,7 +68,7 @@
 								size="sm"
 								color="neutral"
 								:icon="show ? 'carbon:view-off' : 'carbon:view'"
-								:aria-label="show ? 'Hide password' : 'Show password'"
+								:aria-label="show ? 'Schowaj hasło' : 'Pokaż hasło'"
 								:aria-pressed="show"
 								aria-controls="password"
 								@click="show = !show"
@@ -77,20 +77,22 @@
 					</UInput>
 				</UFormField>
 
-				<UButton type="submit" class="w-full justify-center">Login</UButton>
-			</UForm>
+				<UButton type="submit" class="w-full cursor-pointer justify-center">
+					Zaloguj
+				</UButton>
+			</Form>
 
 			<div class="flex flex-col items-center">
 				<p class="pt-2">
-					Don't have an account?
-					<ULink to="/register" class="text-primary">Register here</ULink>
+					Nie masz konta?
+					<ULink to="/register" class="text-primary">Zarejestruj się</ULink>
 				</p>
 				<ULink to="/change-password" class="text-primary">
-					Forgot password?
+					Nie pamiętasz hasła?
 				</ULink>
 			</div>
 		</div>
-		<ULink to="/" class="text-neutral-500">Return back to Home page</ULink>
+		<ULink to="/" class="text-neutral-500">Powrót do strony głównej</ULink>
 	</div>
 </template>
 

@@ -29,16 +29,16 @@
 	>
 		<div class="flex items-center gap-2 text-3xl font-bold">
 			<UIcon name="carbon:hospital" class="h-8 w-8" />
-			Company Name
+			Nazwa Przychodni
 		</div>
 		<div
 			class="inline-block w-1/3 flex-col items-center rounded-xl border-1 border-gray-300 p-6 shadow-xl"
 		>
 			<div class="flex flex-col items-center pb-6">
-				<h1 class="text-2xl font-bold">Register</h1>
+				<h1 class="text-2xl font-bold">Rejestracja</h1>
 			</div>
 
-			<UForm
+			<Form
 				novalidate
 				class="flex flex-col items-center gap-4"
 				@submit="handleRegisterSubmit"
@@ -55,21 +55,21 @@
 					/>
 				</UFormField>
 
-				<UFormField label="Name" class="w-full">
+				<UFormField label="Imię" class="w-full">
 					<UInput
 						v-model="name"
 						type="text"
 						class="w-full"
-						placeholder="Name"
+						placeholder="Imię"
 						required
 						autocomplete="name"
 					/>
 				</UFormField>
 
-				<UFormField label="Password" class="w-full">
+				<UFormField label="Hasło" class="w-full">
 					<UInput
 						v-model="password"
-						placeholder="Password"
+						placeholder="Hasło"
 						class="w-full"
 						:type="show ? 'text' : 'password'"
 						:ui="{ trailing: 'pe-1' }"
@@ -81,7 +81,7 @@
 								size="sm"
 								color="neutral"
 								:icon="show ? 'carbon:view-off' : 'carbon:view'"
-								:aria-label="show ? 'Hide password' : 'Show password'"
+								:aria-label="show ? 'Schowaj hasło' : 'Pokaż hasło'"
 								:aria-pressed="show"
 								aria-controls="password"
 								@click="show = !show"
@@ -90,16 +90,18 @@
 					</UInput>
 				</UFormField>
 
-				<UButton type="submit" class="w-full justify-center">Login</UButton>
-			</UForm>
+				<UButton type="submit" class="w-full cursor-pointer justify-center">
+					Zarejestruj
+				</UButton>
+			</Form>
 			<div class="flex flex-col items-center">
 				<p class="pt-2">
-					Already have an account?
-					<ULink to="/login" class="text-primary">Log in here</ULink>
+					Już masz konto?
+					<ULink to="/login" class="text-primary">Zaloguj się</ULink>
 				</p>
 			</div>
 		</div>
-		<ULink to="/" class="text-neutral-500">Return back to Home page</ULink>
+		<ULink to="/" class="text-neutral-500">Powrót do strony głównej</ULink>
 	</div>
 </template>
 
