@@ -1,6 +1,6 @@
 <template>
 	<UApp>
-		<div class="flex items-center justify-center">
+		<div class="max-w flex items-center justify-center">
 			<NuxtPage />
 		</div>
 	</UApp>
