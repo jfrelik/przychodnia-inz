@@ -19,12 +19,16 @@
 </script>
 
 <template>
-	<div>
-		<h1>Home</h1>
+	<div class="flex min-h-screen w-full flex-col">
+		<PageHeader />
+		<div class="flex w-full flex-col">
+			<button @click="handleSignout">Logout</button>
 
-		<button @click="handleSignout">Logout</button>
-
-		<p>Your session data is:</p>
-		<pre>{{ JSON.stringify(session, null, 2) }}</pre>
+			<DevOnly>
+				<p>Your session data is:</p>
+				<pre>{{ JSON.stringify(session, null, 2) }}</pre>
+			</DevOnly>
+		</div>
+		<PageFooter />
 	</div>
 </template>

@@ -1,7 +1,7 @@
 <script setup lang="ts"></script>
 
 <template>
-	<div class="flex min-h-screen w-full flex-col">
+	<div class="flex w-full flex-col">
 		<PageHeader />
 
 		<!-- ! REGISTER SUGGESTION SECTION -->
@@ -166,7 +166,7 @@
 						</p>
 					</div>
 				</div>
-				<div class="flex w-1/2 items-center justify-center">
+				<div class="flex w-1/2 items-center justify-center pt-8">
 					<div class="aspect-square w-full max-w-sm overflow-hidden rounded-xl">
 						<NuxtImg
 							src="/mainPageImagePlaceholder.png"
