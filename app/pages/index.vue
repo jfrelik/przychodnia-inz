@@ -25,7 +25,7 @@
 		</div>
 		<!-- ! REGISTER SUGGESTION SECTION END -->
 
-		<div class="flex w-full flex-col gap-24 p-8">
+		<div class="mb-16 flex w-full flex-col gap-24 p-8">
 			<!-- ! GET TO KNOW US SECTION -->
 			<div class="flex flex-col items-center">
 				<h1 class="text-center text-4xl font-bold">
