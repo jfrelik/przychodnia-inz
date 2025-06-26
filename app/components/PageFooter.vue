@@ -11,10 +11,12 @@
 				<p>Motto przychodni</p>
 			</div>
 		</div>
-		<p class="ml-auto text-xs">
-			Projekt wykonany w ramach pracy inżynierskiej przez Jakuba Frelika i
-			Macieja Cynkara
-		</p>
+		<div class="ml-auto max-w-1/3 flex-wrap text-xs">
+			<p>
+				Projekt wykonany w ramach pracy inżynierskiej przez Jakuba Frelika i
+				Macieja Cynkara
+			</p>
+		</div>
 	</div>
 </template>
 
