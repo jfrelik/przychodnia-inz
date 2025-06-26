@@ -6,7 +6,7 @@
 
 		<!-- ! REGISTER SUGGESTION SECTION -->
 		<div
-			class="flex max-h-fit min-h-[400px] w-full flex-col items-start justify-center bg-[url('/mainPageImagePlaceholder.png')] bg-cover bg-center px-8 py-8 text-white"
+			class="flex max-h-fit min-h-[400px] w-full flex-col items-start justify-center bg-[url('/imagePlaceholder.png')] bg-cover bg-center px-8 py-8 text-white"
 		>
 			<div class="w-full max-w-[40%] space-y-4 text-left">
 				<h1 class="text-3xl font-bold">
@@ -169,7 +169,7 @@
 				<div class="flex w-1/2 items-center justify-center pt-8">
 					<div class="aspect-square w-full max-w-sm overflow-hidden rounded-xl">
 						<NuxtImg
-							src="/mainPageImagePlaceholder.png"
+							src="/imagePlaceholder.png"
 							class="h-full w-full object-cover object-center"
 						/>
 					</div>
