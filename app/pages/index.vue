@@ -25,7 +25,7 @@
 		</div>
 		<!-- ! REGISTER SUGGESTION SECTION END -->
 
-		<div class="flex w-full flex-col gap-12 p-8">
+		<div class="flex w-full flex-col gap-24 p-8">
 			<!-- ! GET TO KNOW US SECTION -->
 			<div class="flex flex-col items-center">
 				<h1 class="text-center text-4xl font-bold">
@@ -39,7 +39,7 @@
 			<!-- ! GET TO KNOW US SECTION END -->
 
 			<!-- ! WEBSITE FEATURES SECTION -->
-			<div class="flex w-full">
+			<div class="flex w-full gap-8">
 				<!-- Portal pacjenta -->
 				<!-- Left Half: Feature Box -->
 				<div class="flex w-1/2 items-center justify-center">
@@ -142,10 +142,40 @@
 					</div>
 				</div>
 			</div>
-			<!-- ! FEATURE BOXES END -->
-			<div>
-				<p>More content will go here</p>
+			<!-- ! WEBSITE FEATURES END -->
+
+			<!-- ! OUR GOAL SECTION -->
+			<div class="flex w-full gap-8">
+				<div class="flex w-1/2 items-center justify-end">
+					<div class="flex max-w-md flex-col gap-4">
+						<h1 class="text-3xl font-bold">Twoje zdrowie - nasz cel</h1>
+						<p>
+							Zadbane zdrowie to fundament dobrego życia - właśnie dlatego
+							stworzyliśmy portal, który wspiera Cię na każdym etapie troski o
+							siebie. Naszym priorytetem jest zapewnienie Ci łatwego, szybkiego
+							i bezpiecznego dostępu do usług medycznych, dokumentacji i zaleceń
+							lekarzy. Chcemy, byś mógł skupić się na swoim samopoczuciu, a my
+							zajmiemy się resztą.
+						</p>
+						<p>
+							Nasz portal to nie tylko narzędzie - to cyfrowy partner w Twojej
+							codziennej opiece zdrowotnej. Ułatwiamy kontakt z lekarzem,
+							przegląd historii wizyt, dostęp do wyników badań czy odnalezienie
+							recept. Wierzymy, że technologia może wspierać zdrowie, a my
+							chcemy dać Ci do tego jak najlepsze narzędzia.
+						</p>
+					</div>
+				</div>
+				<div class="flex w-1/2 items-center justify-center">
+					<div class="aspect-square w-full max-w-sm overflow-hidden rounded-xl">
+						<NuxtImg
+							src="/mainPageImagePlaceholder.png"
+							class="h-full w-full object-cover object-center"
+						/>
+					</div>
+				</div>
 			</div>
+			<!-- ! OUR GOAL SECTION END -->
 		</div>
 
 		<PageFooter />
