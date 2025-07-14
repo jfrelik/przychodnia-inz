@@ -24,7 +24,7 @@
 		"dotenv": "^16.5.0",
 		"drizzle-orm": "^0.44.2",
 		"eslint": "^9.29.0",
-		"nuxt": "^3.17.5",
+		"nuxt": "^3.17.7",
 		"pg": "^8.16.2",
 		"typescript": "^5.8.3",
 		"vue": "latest"
