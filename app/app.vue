@@ -1,9 +1,7 @@
-<script lang="ts" setup>
-	const msg = 'Hello Vue 3 + TypeScript + Vite';
-</script>
-
 <template>
-	<div>
-		<NuxtWelcome />
-	</div>
+	<UApp>
+		<div class="max-w flex items-center justify-center">
+			<NuxtPage />
+		</div>
+	</UApp>
 </template>
