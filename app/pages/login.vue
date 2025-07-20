@@ -42,7 +42,7 @@
 				icon: 'carbon:checkmark',
 			});
 
-			const session = await authClient.useSession();
+			const session = authClient.useSession();
 			await new Promise<void>((resolve) => {
 				if (session.value?.data?.user) {
 					resolve();
