@@ -32,14 +32,14 @@
 	const menuItems = computed(() => {
 		const role = session.value.data?.user.role;
 
-		let mainNavItem = null;
+		const roleNavItems: { label: string; to: string }[] = [];
 
 		if (role === 'admin') {
-			mainNavItem = { label: 'Portal administratora', to: '/admin/home' };
+			roleNavItems.push({ label: 'Portal administratora', to: '/admin/home' });
 		} else if (role === 'doctor') {
-			mainNavItem = { label: 'Portal doktora', to: '/doctor/home' };
+			roleNavItems.push({ label: 'Portal doktora', to: '/doctor/home' });
 		} else if (role === 'user') {
-			mainNavItem = { label: 'Portal pacjenta', to: '/user/home' };
+			roleNavItems.push({ label: 'Portal pacjenta', to: '/user/home' });
 		}
 
 		return [
@@ -47,7 +47,7 @@
 				{ label: 'Strona główna', to: '/' },
 				{ label: 'Kontakt', to: '/kontakt' },
 				{ label: 'Dojazd', to: '/dojazd' },
-				...(mainNavItem ? [mainNavItem] : []),
+				...roleNavItems,
 			],
 			[
 				session.value.data?.user
