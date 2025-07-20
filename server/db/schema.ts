@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
+import { boolean, date, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('user', {
 	id: text('id').primaryKey(),
@@ -9,11 +9,19 @@ export const user = pgTable('user', {
 		.notNull(),
 	image: text('image'),
 	createdAt: timestamp('created_at')
-		.$defaultFn(() => /* @__PURE__ */ new Date())
+		.$defaultFn(() => new Date())
 		.notNull(),
 	updatedAt: timestamp('updated_at')
-		.$defaultFn(() => /* @__PURE__ */ new Date())
+		.$defaultFn(() => new Date())
 		.notNull(),
+	role: text('role')
+		.$default(() => 'user')
+		.notNull(),
+	banned: boolean()
+		.$defaultFn(() => false)
+		.notNull(),
+	banReason: text('ban_reason'),
+	banExpires: date('ban_expires'),
 });
 
 export const session = pgTable('session', {
@@ -27,6 +35,7 @@ export const session = pgTable('session', {
 	userId: text('user_id')
 		.notNull()
 		.references(() => user.id, { onDelete: 'cascade' }),
+	impersonatedBy: text('impersonated_by'),
 });
 
 export const account = pgTable('account', {
