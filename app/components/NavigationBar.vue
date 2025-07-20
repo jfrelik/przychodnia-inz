@@ -45,8 +45,8 @@
 		return [
 			[
 				{ label: 'Strona główna', to: '/' },
-				{ label: 'Kontakt', to: '/kontakt' },
-				{ label: 'Dojazd', to: '/dojazd' },
+				{ label: 'Kontakt', to: '/contactUs' },
+				{ label: 'Dojazd', to: '/commute' },
 				...roleNavItems,
 			],
 			[
