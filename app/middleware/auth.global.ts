@@ -3,7 +3,7 @@ import { authClient } from '~~/lib/auth-client';
 export default defineNuxtRouteMiddleware(async (to, from) => {
 	const { data: session } = await authClient.useSession(useFetch);
 
-	const publicPaths = ['/', '/login', '/register', '/dojazd', '/kontakt'];
+	const publicPaths = ['/', '/login', '/register', '/commute', '/contactUs'];
 
 	if (!session.value && !publicPaths.includes(to.path)) {
 		return navigateTo('/');
