@@ -41,7 +41,31 @@
 				color: 'success',
 				icon: 'carbon:checkmark',
 			});
-			await navigateTo('/home');
+
+			const session = await authClient.useSession();
+			await new Promise<void>((resolve) => {
+				if (session.value?.data?.user) {
+					resolve();
+					return;
+				}
+				const stop = watch(
+					() => session.value?.data?.user,
+					(user) => {
+						if (user) {
+							stop();
+							resolve();
+						}
+					}
+				);
+			});
+
+			if (session.value?.data?.user.role === 'admin') {
+				await navigateTo('/admin/home');
+			} else if (session.value?.data?.user.role === 'user') {
+				await navigateTo('/user/home');
+			} else {
+				await navigateTo('/doctor/home');
+			}
 		}
 	};
 </script>
