@@ -29,19 +29,33 @@
 		}
 	};
 
-	// Dynamic menu with logout action if logged in
-	const menuItems = computed(() => [
-		[
-			{ label: 'Strona główna', to: '/' },
-			{ label: 'Kontakt', to: '/kontakt' },
-			{ label: 'Dojazd', to: '/dojazd' },
-		],
-		[
-			session.value.data?.user
-				? { label: 'Wyloguj', action: handleSignout }
-				: { label: 'Zaloguj', to: '/login' },
-		],
-	]);
+	const menuItems = computed(() => {
+		const role = session.value.data?.user.role;
+
+		let mainNavItem = null;
+
+		if (role === 'admin') {
+			mainNavItem = { label: 'Portal administratora', to: '/admin/home' };
+		} else if (role === 'doctor') {
+			mainNavItem = { label: 'Portal doktora', to: '/doctor/home' };
+		} else if (role === 'user') {
+			mainNavItem = { label: 'Portal pacjenta', to: '/user/home' };
+		}
+
+		return [
+			[
+				{ label: 'Strona główna', to: '/' },
+				{ label: 'Kontakt', to: '/kontakt' },
+				{ label: 'Dojazd', to: '/dojazd' },
+				...(mainNavItem ? [mainNavItem] : []),
+			],
+			[
+				session.value.data?.user
+					? { label: 'Wyloguj', action: handleSignout }
+					: { label: 'Zaloguj', to: '/login' },
+			],
+		];
+	});
 </script>
 
 <template>
@@ -51,7 +65,7 @@
 				v-if="item.action"
 				color="primary"
 				variant="ghost"
-				class="w-full cursor-pointer justify-start p-0 text-left hover:bg-gray-50"
+				class="w-full cursor-pointer justify-start p-0 text-left text-gray-500 hover:bg-gray-50"
 				@click="item.action"
 			>
 				{{ item.label }}
