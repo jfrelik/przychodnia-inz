@@ -1,16 +1,14 @@
 <script lang="ts" setup></script>
 
 <template>
-	<div class="flex flex-col pt-4 pr-8 pb-4 pl-8">
+	<div class="flex flex-col justify-center bg-white px-8 pt-4 shadow-md">
 		<div class="mb-2 flex flex-row items-center">
-			<img src="/favicon.ico" />
+			<img class="w-7" src="/hospital.png" />
 			<div class="ml-3 flex flex-col align-baseline">
-				<h1 class="text-2xl font-bold">NazwaPrzychodni</h1>
-				<p>Motto przychodni</p>
+				<h1 class="text-2xl font-bold">Przychodnia</h1>
 			</div>
+			<NavigationBar />
 		</div>
-
-		<NavigationBar />
 	</div>
 </template>
 
