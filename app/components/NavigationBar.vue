@@ -43,43 +43,37 @@
 		}
 
 		return [
-			[
-				{ label: 'Strona główna', to: '/' },
-				{ label: 'Kontakt', to: '/contactUs' },
-				{ label: 'Dojazd', to: '/commute' },
-				...roleNavItems,
-			],
-			[
-				session.value.data?.user
-					? { label: 'Wyloguj', action: handleSignout }
-					: { label: 'Zaloguj', to: '/login' },
-			],
+			{ label: 'Strona główna', to: '/' },
+			...roleNavItems,
+			session.value.data?.user
+				? { label: 'Wyloguj', action: handleSignout }
+				: { label: 'Zaloguj', to: '/login' },
 		];
 	});
 </script>
 
 <template>
-	<UNavigationMenu :items="menuItems" class="w-full">
-		<template #item="{ item }">
+	<nav class="flex w-full gap-2 px-4 py-2">
+		<template v-for="item in menuItems" :key="item.label">
 			<UButton
-				v-if="item.action"
+				v-if="item.action || item.to == '/login'"
 				color="primary"
-				variant="ghost"
-				class="w-full cursor-pointer justify-start p-0 text-left text-gray-500 hover:bg-gray-50"
+				variant="outline"
+				class="ml-auto cursor-pointer"
+				:to="item.to"
 				@click="item.action"
 			>
 				{{ item.label }}
 			</UButton>
-
-			<ULink
+			<UButton
 				v-else
 				:to="item.to"
-				class="block w-full cursor-pointer text-left text-sm hover:bg-gray-100"
+				class="cursor-pointer"
+				color="primary"
+				variant="soft"
 			>
 				{{ item.label }}
-			</ULink>
+			</UButton>
 		</template>
-	</UNavigationMenu>
+	</nav>
 </template>
-
-<style></style>
