@@ -1,183 +1,186 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+	import { computed, ref } from 'vue';
+	const patientsCount = 1240;
+	const visitsToday = 87;
+
+	const specializations = [
+		{ name: 'Kardiologia', icon: 'lucide:heart-pulse' },
+		{ name: 'Dermatologia', icon: 'lucide:scissors' },
+		{ name: 'Pediatria', icon: 'lucide:baby' },
+		{ name: 'Ortopedia', icon: 'lucide:bone' },
+		{ name: 'Okulistyka', icon: 'lucide:eye' },
+		{ name: 'Neurologia', icon: 'lucide:brain' },
+		{ name: 'Stomatologia', icon: 'lucide:apple' },
+	];
+
+	const selectedSpecName = ref(specializations[0].name);
+
+	const selectedSpec = computed(() =>
+		specializations.find((s) => s.name === selectedSpecName.value)
+	);
+	const nextVisitInfo = computed(() => {
+		switch (selectedSpec.value?.name) {
+			case 'Kardiologia':
+				return 'Najbliższa wizyta: jutro, godz. 09:30';
+			case 'Dermatologia':
+				return 'Najbliższa wizyta: dziś, godz. 16:00';
+			case 'Pediatria':
+				return 'Najbliższa wizyta: pojutrze, godz. 11:00';
+			case 'Ortopedia':
+				return 'Najbliższa wizyta: dziś, godz. 14:30';
+			case 'Okulistyka':
+				return 'Najbliższa wizyta: jutro, godz. 13:00';
+			case 'Neurologia':
+				return 'Najbliższa wizyta: za 3 dni, godz. 10:00';
+			case 'Stomatologia':
+				return 'Najbliższa wizyta: dziś, godz. 17:15';
+			default:
+				return 'Brak danych';
+		}
+	});
+</script>
 
 <template>
-	<div class="flex w-full flex-col">
+	<div class="flex min-h-screen w-full flex-col bg-gray-50">
 		<PageHeader />
 
-		<!-- ! REGISTER SUGGESTION SECTION -->
-		<div
-			class="flex max-h-fit min-h-[400px] w-full flex-col items-start justify-center bg-[url('/imagePlaceholder.png')] bg-cover bg-center px-8 py-8 text-white"
+		<!-- Hero Section -->
+		<section
+			class="flex flex-col items-center justify-center bg-gradient-to-br from-blue-100 to-blue-300 py-16"
 		>
-			<div class="w-full max-w-[40%] space-y-4 text-left">
-				<h1 class="text-3xl font-bold">
-					Twoje zdrowie jest naszym priorytetem
-				</h1>
-				<p>
-					Odkryj nowoczesną opiekę zdrowotną dzięki naszemu kompleksowemu
-					portalowi medycznemu. Uzyskaj dostęp do dokumentacji medycznej,
-					umawiaj wizyty, zarządzaj receptami i kontaktuj się z naszymi
-					specjalistami - wszystko w jednym miejscu.
-				</p>
-				<UButton size="xl" to="/register" class="w-max">
-					Zarejestruj się
+			<h1 class="mb-4 text-center text-5xl font-extrabold text-blue-900">
+				Przychodnia Medyczna
+			</h1>
+			<p class="mb-8 max-w-2xl text-center text-xl text-blue-800">
+				Nowoczesna aplikacja medyczna – szybkie umawianie wizyt, dostęp do
+				specjalistów, statystyki i wygodne zarządzanie zdrowiem.
+			</p>
+			<div class="mb-8 flex gap-8">
+				<div class="flex flex-col items-center rounded-xl bg-white p-6 shadow">
+					<span class="text-3xl font-bold text-blue-700">
+						{{ patientsCount }}
+					</span>
+					<span class="text-gray-600">Pacjentów pod opieką</span>
+				</div>
+				<div class="flex flex-col items-center rounded-xl bg-white p-6 shadow">
+					<span class="text-3xl font-bold text-blue-700">
+						{{ visitsToday }}
+					</span>
+					<span class="text-gray-600">Wizyt dzisiaj</span>
+				</div>
+			</div>
+			<div class="flex w-full max-w-md flex-col items-center gap-4">
+				<label class="text-lg font-semibold text-blue-900">
+					Wybierz specjalizację:
+				</label>
+				{{ selectedSpecName }}
+				<USelect
+					v-model="selectedSpecName"
+					:items="specializations"
+					class="w-full"
+				>
+					<!-- <template #item="{ item }">
+						<div class="flex items-center gap-2">
+							<UIcon :name="item.icon" class="text-xl text-blue-600" />
+							<span>{{ item.name }}</span>
+						</div>
+					</template> -->
+				</USelect>
+				<div
+					class="mt-6 flex items-center gap-2 text-xl font-bold text-blue-900"
+				>
+					<UIcon :name="selectedSpec.icon" class="text-2xl" />
+					{{ nextVisitInfo }}
+				</div>
+				<UButton size="xl" to="/register" class="mt-4">
+					Zarejestruj się i umów wizytę
 				</UButton>
 			</div>
-		</div>
-		<!-- ! REGISTER SUGGESTION SECTION END -->
+		</section>
 
-		<div class="mb-16 flex w-full flex-col gap-24 p-8">
-			<!-- ! GET TO KNOW US SECTION -->
-			<div class="flex flex-col items-center">
-				<h1 class="text-center text-4xl font-bold">
-					Poznaj nasz kompleksowy portal opieki zdrowotnej
-				</h1>
-				<p class="max-w-1/2 text-center text-xl">
-					Dzięki zastosowaniu nowoczesnych technologii możesz łatwo i szybko
-					zarządzać swoimi wizytami, czy przeglądać recepty oraz wyniki badań
-				</p>
-			</div>
-			<!-- ! GET TO KNOW US SECTION END -->
-
-			<!-- ! WEBSITE FEATURES SECTION -->
-			<div class="flex w-full gap-8">
-				<!-- Portal pacjenta -->
-				<!-- Left Half: Feature Box -->
-				<div class="flex w-1/2 items-center justify-center">
-					<div
-						class="max-w-md rounded-xl border border-gray-300 p-8 shadow-xl shadow-gray-300 transition-shadow duration-300 hover:shadow-blue-100"
-					>
-						<div class="flex w-full flex-col items-center">
-							<div
-								class="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600"
-							>
-								<UIcon name="carbon:user-profile" class="text-3xl" />
-							</div>
-							<h2 class="mt-2 text-xl font-bold">Portal pacjenta</h2>
-							<p>Wszystkie twoje potrzeby w jednym miejscu</p>
-						</div>
-
-						<div class="flex flex-col gap-2 pt-4">
-							<p class="flex items-center gap-2">
-								<UIcon name="carbon:calendar-heat-map" />
-								Umawiaj wizyty
-							</p>
-							<p class="flex items-center gap-2">
-								<UIcon name="carbon:calendar" />
-								Przeglądaj historię wizyt
-							</p>
-							<p class="flex items-center gap-2">
-								<UIcon name="carbon:pills" />
-								Wyszukaj recepty
-							</p>
-							<p class="flex items-center gap-2">
-								<UIcon name="carbon:notebook" />
-								Sprawdź wyniki badań
-							</p>
-							<p class="flex items-center gap-2">
-								<UIcon name="carbon:information-square" />
-								Zobacz zalecenia lekarskie
-							</p>
-							<p class="flex items-center gap-2">
-								<UIcon name="carbon:notification" />
-								System powiadomień
-							</p>
-						</div>
-					</div>
-				</div>
-				<!-- Right Half: Text Description -->
-				<div class="flex w-1/2 items-center justify-start">
-					<div class="flex max-w-md flex-col gap-4">
-						<h1 class="text-3xl font-bold">Portal pacjenta</h1>
-						<p>
-							Kompleksowy dostęp do Twoich usług medycznych w jednym miejscu.
-							Zarządzaj wizytami, przeglądaj historię leczenia, wyniki badań,
-							recepty, zalecenia oraz otrzymuj ważne powiadomienia na bieżąco.
-						</p>
-					</div>
+		<!-- Specializations List -->
+		<section class="px-8 py-12">
+			<h2 class="mb-6 text-center text-3xl font-bold text-blue-900">
+				Nasze specjalizacje
+			</h2>
+			<div
+				class="grid grid-cols-1 justify-items-center gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+			>
+				<div
+					v-for="spec in specializations"
+					:key="spec.name"
+					class="flex w-full max-w-xs flex-col items-center rounded-xl bg-white p-6 shadow"
+				>
+					<UIcon :name="spec.icon" class="mb-2 text-4xl text-blue-600" />
+					<span class="text-xl font-semibold text-blue-900">
+						{{ spec.name }}
+					</span>
 				</div>
 			</div>
+		</section>
 
-			<!-- Portal lekarza -->
-			<div class="flex w-full">
-				<!-- Left Half: Text Description -->
-				<div class="flex w-1/2 items-center justify-end">
-					<div class="flex max-w-md flex-col gap-4">
-						<h1 class="text-3xl font-bold">Portal lekarza</h1>
-						<p>
-							Intuicyjny system wspierający codzienną pracę lekarza. Zapewnia
-							szybki dostęp do dokumentacji pacjentów, przejrzysty grafik oraz
-							wygodny arkusz do obsługi wizyt.
-						</p>
+		<!-- Services Section -->
+		<section class="bg-white px-8 py-12">
+			<h2 class="mb-6 text-center text-3xl font-bold text-blue-900">
+				Dlaczego warto wybrać naszą opiekę?
+			</h2>
+			<div class="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-3">
+				<div
+					class="flex flex-col items-center rounded-xl bg-blue-50 p-6 text-center shadow"
+				>
+					<UIcon name="carbon:calendar" class="mb-2 text-3xl text-blue-700" />
+					<span class="mb-2 text-lg font-bold">Szybkie umawianie wizyt</span>
+					<span class="text-gray-700">
+						Wybierz specjalistę i termin w kilka sekund.
+					</span>
+				</div>
+				<div
+					class="flex flex-col items-center rounded-xl bg-blue-50 p-6 text-center shadow"
+				>
+					<UIcon name="carbon:document" class="mb-2 text-3xl text-blue-700" />
+					<span class="mb-2 text-lg font-bold">Historia leczenia online</span>
+					<span class="text-gray-700">
+						Wszystkie wizyty i wyniki badań w jednym miejscu.
+					</span>
+				</div>
+				<div
+					class="flex flex-col items-center rounded-xl bg-blue-50 p-6 text-center shadow"
+				>
+					<UIcon name="carbon:security" class="mb-2 text-3xl text-blue-700" />
+					<span class="mb-2 text-lg font-bold">Bezpieczeństwo danych</span>
+					<span class="text-gray-700">
+						Twoje dane są chronione i dostępne tylko dla Ciebie.
+					</span>
+				</div>
+			</div>
+		</section>
+
+		<!-- Opinions Section -->
+		<section class="bg-gray-100 px-8 py-12">
+			<h2 class="mb-6 text-center text-3xl font-bold text-blue-900">
+				Opinie naszych pacjentów
+			</h2>
+			<div class="mx-auto grid max-w-4xl grid-cols-1 gap-8 md:grid-cols-2">
+				<div class="rounded-xl bg-white p-6 shadow">
+					<p class="text-gray-800 italic">
+						"Bardzo szybka rejestracja i świetny kontakt z lekarzem!"
+					</p>
+					<div class="mt-4 flex items-center gap-2">
+						<UIcon name="carbon:user" class="text-blue-600" />
+						<span class="font-semibold text-blue-900">Anna, Warszawa</span>
 					</div>
 				</div>
-				<!-- Right Half: Feature Box -->
-				<div class="flex w-1/2 items-center justify-center">
-					<div
-						class="min-w-1/3 rounded-xl border-1 border-gray-300 p-8 shadow-xl transition-shadow duration-300 hover:shadow-emerald-100"
-					>
-						<div class="flex w-full flex-col items-center">
-							<div
-								class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"
-							>
-								<UIcon name="carbon:reminder-medical" class="text-3xl" />
-							</div>
-							<h2 class="mt-2 text-xl font-bold">Portal lekarza</h2>
-							<p>Zoptymalizowany do szybkiej obsługi pacjenta</p>
-						</div>
-
-						<div class="flex flex-col gap-2 pt-4">
-							<p>
-								<UIcon name="carbon:document" />
-								Łatwy dostęp do dokumentacji medycznej
-							</p>
-							<p>
-								<UIcon name="carbon:calendar-heat-map" />
-								Prosty i czytelny grafik
-							</p>
-							<p>
-								<UIcon name="carbon:edit" />
-								Wygodny do wypełnienia arkusz obsługi wizyty
-							</p>
-						</div>
+				<div class="rounded-xl bg-white p-6 shadow">
+					<p class="text-gray-800 italic">
+						"Wszystkie wyniki badań mam zawsze pod ręką w aplikacji."
+					</p>
+					<div class="mt-4 flex items-center gap-2">
+						<UIcon name="carbon:user" class="text-blue-600" />
+						<span class="font-semibold text-blue-900">Marek, Gdańsk</span>
 					</div>
 				</div>
 			</div>
-			<!-- ! WEBSITE FEATURES END -->
-
-			<!-- ! OUR GOAL SECTION -->
-			<div class="flex w-full gap-8">
-				<div class="flex w-1/2 items-center justify-end">
-					<div class="flex max-w-md flex-col gap-4">
-						<h1 class="text-3xl font-bold">Twoje zdrowie - nasz cel</h1>
-						<p>
-							Zadbane zdrowie to fundament dobrego życia - właśnie dlatego
-							stworzyliśmy portal, który wspiera Cię na każdym etapie troski o
-							siebie. Naszym priorytetem jest zapewnienie Ci łatwego, szybkiego
-							i bezpiecznego dostępu do usług medycznych, dokumentacji i zaleceń
-							lekarzy. Chcemy, byś mógł skupić się na swoim samopoczuciu, a my
-							zajmiemy się resztą.
-						</p>
-						<p>
-							Nasz portal to nie tylko narzędzie - to cyfrowy partner w Twojej
-							codziennej opiece zdrowotnej. Ułatwiamy kontakt z lekarzem,
-							przegląd historii wizyt, dostęp do wyników badań czy odnalezienie
-							recept. Wierzymy, że technologia może wspierać zdrowie, a my
-							chcemy dać Ci do tego jak najlepsze narzędzia.
-						</p>
-					</div>
-				</div>
-				<div class="flex w-1/2 items-center justify-center pt-8">
-					<div class="aspect-square w-full max-w-sm overflow-hidden rounded-xl">
-						<NuxtImg
-							src="/imagePlaceholder.png"
-							class="h-full w-full object-cover object-center"
-						/>
-					</div>
-				</div>
-			</div>
-			<!-- ! OUR GOAL SECTION END -->
-		</div>
-
+		</section>
 		<PageFooter />
 	</div>
 </template>
