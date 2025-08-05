@@ -79,12 +79,12 @@
 					:items="specializations"
 					class="w-full"
 				>
-					<!-- <template #item="{ item }">
+					<template #item="{ item }">
 						<div class="flex items-center gap-2">
 							<UIcon :name="item.icon" class="text-xl text-blue-600" />
 							<span>{{ item.name }}</span>
 						</div>
-					</template> -->
+					</template>
 				</USelect>
 				<div
 					class="mt-6 flex items-center gap-2 text-xl font-bold text-blue-900"

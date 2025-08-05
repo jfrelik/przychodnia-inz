@@ -38,7 +38,9 @@
 		<PageHeader />
 		<div class="flex w-full flex-col p-4">
 			<div class="">
-				<h1 class="text-3xl font-bold">Witaj, {{ session.data.user.name }}!</h1>
+				<h1 class="text-3xl font-bold">
+					Witaj, {{ session?.data?.user?.name }}!
+				</h1>
 				<p class="mt-2 text-sm font-light">
 					To jest Twój portal pacjenta. Tutaj możesz zarządzać swoimi danymi,
 					umawiać się na wizyty i przeglądać historię leczenia.
