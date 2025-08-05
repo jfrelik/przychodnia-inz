@@ -5,6 +5,16 @@
 	const toast = useToast();
 	const session = authClient.useSession();
 
+	const currentTab = ref('overwiev');
+	const tabs = [
+		{ label: 'Informacje ogólne', value: 'overwiev' },
+		{ label: 'Wizyty', value: 'visits' },
+		{ label: 'Recepty', value: 'prescriptions' },
+		{ label: 'Wyniki', value: 'results' },
+		{ label: 'Porady lekarskie', value: 'recommendations' },
+		{ label: 'Mój profil', value: 'profile' },
+	];
+
 	const handleSignout = async () => {
 		try {
 			await authClient.signOut({
@@ -36,7 +46,7 @@
 <template>
 	<div class="flex min-h-screen w-full flex-col">
 		<PageHeader />
-		<div class="flex w-full flex-col p-4">
+		<div class="flex w-full flex-col gap-4 p-4">
 			<div class="">
 				<h1 class="text-3xl font-bold">
 					Witaj, {{ session?.data?.user?.name }}!
@@ -48,7 +58,7 @@
 			</div>
 
 			<div class="mt-4 flex w-full flex-wrap gap-4">
-				<UCard>
+				<UCard class="w-1/5 cursor-pointer" @click="currentTab = 'visits'">
 					<div class="flex items-center space-x-4">
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-3xl"
@@ -63,7 +73,10 @@
 				</UCard>
 
 				<!-- Aktywne recepty -->
-				<UCard>
+				<UCard
+					class="w-1/5 cursor-pointer"
+					@click="currentTab = 'prescriptions'"
+				>
 					<div class="flex items-center space-x-4">
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-3xl"
@@ -78,7 +91,7 @@
 				</UCard>
 
 				<!-- Wyniki testów -->
-				<UCard>
+				<UCard class="w-1/5 cursor-pointer" @click="currentTab = 'results'">
 					<div class="flex items-center space-x-4">
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 text-3xl"
@@ -93,7 +106,7 @@
 				</UCard>
 
 				<!-- Ilość wizyt -->
-				<UCard>
+				<UCard class="w-1/5">
 					<div class="flex items-center space-x-4">
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 text-3xl"
@@ -110,7 +123,22 @@
 					</div>
 				</UCard>
 			</div>
+
+			<UTabs
+				v-model="currentTab"
+				:items="tabs"
+				:ui="{
+					indicator: 'bg-blue-800',
+				}"
+			/>
+
+			<UserOverwievTab v-if="currentTab === 'overwiev'" />
+			<UserUpcomingVisitsTab v-if="currentTab === 'visits'" />
+			<UserActivePrescriptionsTab v-if="currentTab === 'prescriptions'" />
+			<UserTestResultsTab v-if="currentTab === 'results'" />
+			<UserRecommendationsTab v-if="currentTab === 'recommendations'" />
 		</div>
+
 		<PageFooter />
 	</div>
 </template>
