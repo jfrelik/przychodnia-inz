@@ -13,7 +13,7 @@
 		{ name: 'Stomatologia', icon: 'lucide:apple' },
 	];
 
-	const selectedSpecName = ref(specializations[0].name);
+	const selectedSpecName = ref(specializations[0]?.name);
 
 	const selectedSpec = computed(() =>
 		specializations.find((s) => s.name === selectedSpecName.value)
@@ -89,7 +89,10 @@
 				<div
 					class="mt-6 flex items-center gap-2 text-xl font-bold text-blue-900"
 				>
-					<UIcon :name="selectedSpec.icon" class="text-2xl" />
+					<UIcon
+						:name="selectedSpec?.icon || 'svg-spinners:ring-resize'"
+						class="text-2xl"
+					/>
 					{{ nextVisitInfo }}
 				</div>
 				<UButton size="xl" to="/register" class="mt-4">
