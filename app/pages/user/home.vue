@@ -44,10 +44,10 @@
 </script>
 
 <template>
-	<div class="flex min-h-screen w-full flex-col">
+	<div class="flex w-full flex-col">
 		<PageHeader />
 		<div class="flex w-full flex-col gap-4 p-4">
-			<div class="">
+			<div class="flex w-full flex-col items-center">
 				<h1 class="text-3xl font-bold">
 					Witaj, {{ session?.data?.user?.name }}!
 				</h1>
@@ -57,8 +57,8 @@
 				</p>
 			</div>
 
-			<div class="mt-4 flex w-full flex-wrap gap-4">
-				<UCard class="w-1/5 cursor-pointer" @click="currentTab = 'visits'">
+			<div class="mt-4 grid w-full grid-cols-4 gap-4">
+				<UCard class="cursor-pointer" @click="currentTab = 'visits'">
 					<div class="flex items-center space-x-4">
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-3xl"
@@ -73,10 +73,7 @@
 				</UCard>
 
 				<!-- Aktywne recepty -->
-				<UCard
-					class="w-1/5 cursor-pointer"
-					@click="currentTab = 'prescriptions'"
-				>
+				<UCard class="cursor-pointer" @click="currentTab = 'prescriptions'">
 					<div class="flex items-center space-x-4">
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-3xl"
@@ -91,7 +88,7 @@
 				</UCard>
 
 				<!-- Wyniki testów -->
-				<UCard class="w-1/5 cursor-pointer" @click="currentTab = 'results'">
+				<UCard class="cursor-pointer" @click="currentTab = 'results'">
 					<div class="flex items-center space-x-4">
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 text-3xl"
@@ -106,7 +103,7 @@
 				</UCard>
 
 				<!-- Ilość wizyt -->
-				<UCard class="w-1/5">
+				<UCard>
 					<div class="flex items-center space-x-4">
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 text-3xl"
@@ -131,14 +128,12 @@
 					indicator: 'bg-blue-800',
 				}"
 			/>
-
-			<UserOverwievTab v-if="currentTab === 'overwiev'" />
-			<UserUpcomingVisitsTab v-if="currentTab === 'visits'" />
-			<UserActivePrescriptionsTab v-if="currentTab === 'prescriptions'" />
-			<UserTestResultsTab v-if="currentTab === 'results'" />
-			<UserRecommendationsTab v-if="currentTab === 'recommendations'" />
 		</div>
-
+		<UserOverwievTab v-if="currentTab === 'overwiev'" />
+		<UserUpcomingVisitsTab v-if="currentTab === 'visits'" />
+		<UserActivePrescriptionsTab v-if="currentTab === 'prescriptions'" />
+		<UserTestResultsTab v-if="currentTab === 'results'" />
+		<UserRecommendationsTab v-if="currentTab === 'recommendations'" />
 		<PageFooter />
 	</div>
 </template>
