@@ -130,8 +130,8 @@
 			/>
 		</div>
 		<UserTabOverwiev v-if="currentTab === 'overwiev'" />
-		<UserTabUpcomingVisits v-if="currentTab === 'visits'" />
-		<UserTabActivePrescriptions v-if="currentTab === 'prescriptions'" />
+		<UserTabVisits v-if="currentTab === 'visits'" />
+		<UserTabPrescriptions v-if="currentTab === 'prescriptions'" />
 		<UserTabTestResults v-if="currentTab === 'results'" />
 		<UserTabRecommendations v-if="currentTab === 'recommendations'" />
 		<PageFooter />
