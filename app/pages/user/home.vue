@@ -129,11 +129,11 @@
 				}"
 			/>
 		</div>
-		<UserOverwievTab v-if="currentTab === 'overwiev'" />
-		<UserUpcomingVisitsTab v-if="currentTab === 'visits'" />
-		<UserActivePrescriptionsTab v-if="currentTab === 'prescriptions'" />
-		<UserTestResultsTab v-if="currentTab === 'results'" />
-		<UserRecommendationsTab v-if="currentTab === 'recommendations'" />
+		<UserTabOverwiev v-if="currentTab === 'overwiev'" />
+		<UserTabUpcomingVisits v-if="currentTab === 'visits'" />
+		<UserTabActivePrescriptions v-if="currentTab === 'prescriptions'" />
+		<UserTabTestResults v-if="currentTab === 'results'" />
+		<UserTabRecommendations v-if="currentTab === 'recommendations'" />
 		<PageFooter />
 	</div>
 </template>
