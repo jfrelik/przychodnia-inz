@@ -1,75 +1,48 @@
-# Nuxt 3 Minimal Starter
+# Przychodnia — aplikacja Nuxt (Projekt inżynierski PJATK)
 
-Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Aplikacja do obsługi przychodni (pacjenci, lekarze, wizyty, recepty), zbudowana w oparciu o Nuxt 4 + Vue 3, PostgreSQL oraz Drizzle ORM. Uwierzytelnianie realizuje Better Auth, a dokumentacja API jest dostępna w Scalar.
 
-## Setup
+## Technologie
 
-Make sure to install the dependencies:
+- Nuxt 4
+- PostgreSQL + Drizzle ORM
+- Better Auth
+- TypeScript
+- Scalar
+
+## Wymagania
+
+- Node.js ≥ 22.18.0
+- pnpm
+- PostgreSQL 17
+
+## Konfiguracja środowiska
+
+1. Zainstaluj zależności
 
 ```bash
-# npm
-npm install
-
-# pnpm
 pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
 ```
 
-## Development Server
+2. Skonfiguruj zmienne środowiskowe (`.env` w katalogu głównym)
 
-Start the development server on `http://localhost:3000`:
+```env
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/db
+BETTER_AUTH_SECRET=dev-secret-or-random
+BETTER_AUTH_URL=http://localhost:3000
+```
+
+## Uruchomienie w trybie deweloperskim
 
 ```bash
-# npm
-npm run dev
-
-# pnpm
 pnpm run dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+Aplikacja będzie dostępna pod `http://localhost:3000`.
 
-Build the application for production:
+## Dokumentacja API
 
-```bash
-# npm
-npm run build
+- OpenAPI: `/_openapi.json`
+- Podgląd w Scalar: `/docs`
 
-# pnpm
-pnpm run build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm run preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+Projekt inżynierski realizowany podczas procesu nauczania w Polsko‑Japońskiej Akademii Technik Komputerowych (PJATK).
