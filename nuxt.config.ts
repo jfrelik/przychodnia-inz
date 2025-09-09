@@ -13,6 +13,16 @@ export default defineNuxtConfig({
 		fallback: 'light',
 	},
 
+	nitro: {
+		experimental: {
+			openAPI: true,
+		},
+	},
+
+	routeRules: {
+		'/docs/**': { ssr: false },
+	},
+
 	modules: [
 		'@nuxt/eslint',
 		'@nuxt/fonts',
@@ -20,5 +30,26 @@ export default defineNuxtConfig({
 		'@nuxt/image',
 		'@nuxt/test-utils',
 		'@nuxt/ui',
+		'@scalar/nuxt',
 	],
+
+	// Nitro OpenAPI runtime metadata
+	runtimeConfig: {
+		nitro: {
+			openAPI: {
+				meta: {
+					title: 'Przychodnia API',
+					description: 'Auto-generated OpenAPI from Nitro route meta',
+				},
+			},
+		},
+	},
+
+	// Scalar API Reference configuration
+	scalar: {
+		pathRouting: { basePath: '/docs' },
+		url: '/_openapi.json',
+		theme: 'nuxt',
+		darkMode: true,
+	},
 });
