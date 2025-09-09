@@ -3,10 +3,22 @@ import { authClient } from '~~/lib/auth-client';
 export default defineNuxtRouteMiddleware(async (to, from) => {
 	const { data: session } = await authClient.useSession(useFetch);
 
-	const publicPaths = ['/', '/login', '/register', '/commute', '/contactUs'];
+	const isDev = import.meta.dev;
+	const publicPaths = [
+		'/login',
+		'/register',
+		'/commute',
+		'/contactUs',
+		'/openapi.yaml',
+		'/openapi.json',
+		'/_openapi.json',
+	];
 
-	if (!session.value && !publicPaths.includes(to.path)) {
-		return navigateTo('/');
+	const isPublic =
+		publicPaths.includes(to.path) || (isDev && to.path.startsWith('/docs'));
+
+	if (!session.value && !isPublic) {
+		return navigateTo('/register');
 	}
 
 	if (to.path.startsWith('/admin') && session.value?.user.role !== 'admin') {
