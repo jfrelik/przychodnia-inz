@@ -17,9 +17,9 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
 	const isPublic =
 		publicPaths.includes(to.path) || (isDev && to.path.startsWith('/docs'));
 
-	if (!session.value && !isPublic) {
-		return navigateTo('/register');
-	}
+	// if (!session.value && !isPublic) {
+	// 	return navigateTo('/register');
+	// }
 
 	if (to.path.startsWith('/admin') && session.value?.user.role !== 'admin') {
 		console.log(
