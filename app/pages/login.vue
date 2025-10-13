@@ -23,13 +23,14 @@
 		const { data, error } = await authClient.signIn.email({
 			email: event.data.email,
 			password: event.data.password,
+			callbackURL: '/user/home',
 		});
 
 		if (error) {
 			console.error('Error signing in:', error);
 			toast.add({
 				title: 'Wystąpił problem podczas logowania',
-				description: 'Błąd: ' + error.message,
+				description: error.message,
 				color: 'error',
 				icon: 'carbon:error',
 			});
