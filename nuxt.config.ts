@@ -27,6 +27,8 @@ export default defineNuxtConfig({
 		'@nuxt/test-utils',
 		'@nuxt/ui',
 		'@scalar/nuxt',
+		'nuxt-nodemailer',
+		'nuxt-email-renderer',
 	],
 
 	// Nitro OpenAPI runtime metadata
@@ -47,5 +49,16 @@ export default defineNuxtConfig({
 		url: '/_openapi.json',
 		theme: 'nuxt',
 		darkMode: true,
+	},
+
+	nodemailer: {
+		from: '',
+		host: '',
+		port: 465,
+		secure: false,
+		auth: {
+			user: 'user@example.com',
+			pass: '123456',
+		},
 	},
 });
