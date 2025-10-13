@@ -18,6 +18,29 @@ export const auth = betterAuth({
 	}),
 	emailAndPassword: {
 		enabled: true,
+		requireEmailVerification: true,
+	},
+	emailVerification: {
+		sendVerificationEmail: async ({ user, url, token }, request) => {
+			const { sendMail } = useNodeMailer();
+
+			const html = await renderEmailComponent(
+				'EmailConfirm',
+				{
+					userName: user.name,
+					confirmationUrl: url,
+				},
+				{
+					pretty: true,
+				}
+			);
+
+			await sendMail({
+				to: user.email,
+				subject: 'Zweryfikuj swój adres e-mail',
+				html,
+			});
+		},
 	},
 	plugins: [
 		admin({
