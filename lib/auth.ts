@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth';
+import { localization } from 'better-auth-localization';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { admin } from 'better-auth/plugins';
 import { account, session, user, verification } from '../server/db/schema';
@@ -22,6 +23,10 @@ export const auth = betterAuth({
 		admin({
 			ac,
 			roles,
+		}),
+		localization({
+			defaultLocale: 'pl-PL',
+			fallbackLocale: 'default',
 		}),
 	],
 });
