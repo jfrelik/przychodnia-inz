@@ -30,6 +30,7 @@ export default defineNuxtConfig({
 		'@scalar/nuxt',
 		'nuxt-nodemailer',
 		'nuxt-email-renderer',
+		'@nuxtjs/turnstile',
 	],
 
 	// Nitro OpenAPI runtime metadata
@@ -53,6 +54,11 @@ export default defineNuxtConfig({
 		url: '/_openapi.json',
 		theme: 'nuxt',
 		darkMode: true,
+	},
+
+	// Cloudflare Turnstile configuration
+	turnstile: {
+		siteKey: '0x4AAAAAAB7eRFhXHU1Ycfzv',
 	},
 
 	nodemailer: {
