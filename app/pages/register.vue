@@ -37,7 +37,6 @@
 				icon: 'carbon:error',
 			});
 		} else {
-			console.log('Signed up successfully:', data);
 			toast.add({
 				title: 'Zarejestrowano',
 				description: 'Proces rejestracji powiódł się',
