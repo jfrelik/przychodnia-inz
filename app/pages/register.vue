@@ -8,7 +8,7 @@
 	const show = ref(false);
 
 	const schema = z.object({
-		email: z.string().email('Nieprawidłowy adres email'),
+		email: z.email('Nieprawidłowy adres email'),
 		name: z.string().min(2, 'Imię musi mieć przynajmniej 2 znaki'),
 		password: z.string().min(8, 'Hasło musi mieć przynajmniej 8 znaków'),
 	});
