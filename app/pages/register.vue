@@ -39,11 +39,12 @@
 		} else {
 			toast.add({
 				title: 'Zarejestrowano',
-				description: 'Proces rejestracji powiódł się',
+				description:
+					'Proces rejestracji powiódł się. Sprawdź swoją skrzynkę email, aby potwierdzić konto.',
 				color: 'success',
 				icon: 'carbon:checkmark',
 			});
-			await navigateTo('/home');
+			await navigateTo('/login');
 		}
 	};
 </script>
