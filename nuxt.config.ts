@@ -1,3 +1,4 @@
+import pkg from './package.json';
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
 	compatibilityDate: '2025-10-10',
@@ -33,6 +34,9 @@ export default defineNuxtConfig({
 
 	// Nitro OpenAPI runtime metadata
 	runtimeConfig: {
+		public: {
+			appVersion: pkg.version,
+		},
 		nitro: {
 			openAPI: {
 				meta: {
