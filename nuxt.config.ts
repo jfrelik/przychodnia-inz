@@ -61,6 +61,7 @@ export default defineNuxtConfig({
 		siteKey: '0x4AAAAAAB7eRFhXHU1Ycfzv',
 	},
 
+	// Nuxt Nodemailer configuration
 	nodemailer: {
 		from: '',
 		host: '',
