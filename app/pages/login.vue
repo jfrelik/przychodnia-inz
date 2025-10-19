@@ -6,6 +6,8 @@
 	const toast = useToast();
 	const session = authClient.useSession();
 	const show = ref(false);
+	const isSubmitting = ref(false);
+	const turnstile = ref();
 
 	const schema = z.object({
 		email: z.string().email('Nieprawidłowy adres email'),
@@ -20,53 +22,92 @@
 	});
 
 	const handleLoginSubmit = async (event: FormSubmitEvent<Schema>) => {
-		const { data, error } = await authClient.signIn.email({
-			email: event.data.email,
-			password: event.data.password,
-			callbackURL: '/user/home',
-		});
+		event.preventDefault();
+		if (isSubmitting.value) {
+			return;
+		}
 
-		if (error) {
-			console.error('Error signing in:', error);
+		const token = turnstile.value;
+		if (!token) {
 			toast.add({
-				title: 'Wystąpił problem podczas logowania',
-				description: error.message,
+				title: 'Weryfikacja nie powiodła się',
+				description: 'Odśwież stronę i spróbuj ponownie.',
 				color: 'error',
 				icon: 'carbon:error',
 			});
-		} else {
-			console.log('Signed in successfully:', data);
-			toast.add({
-				title: 'Zalogowano',
-				description: 'Proces logowania powiódł się',
-				color: 'success',
-				icon: 'carbon:checkmark',
-			});
+			return;
+		}
 
-			const session = authClient.useSession();
-			await new Promise<void>((resolve) => {
-				if (session.value?.data?.user) {
-					resolve();
-					return;
+		isSubmitting.value = true;
+		try {
+			const { data: turnstileData, error: turnstileError } = await useFetch(
+				'/_turnstile/validate',
+				{
+					method: 'POST',
+					body: { token },
 				}
-				const stop = watch(
-					() => session.value?.data?.user,
-					(user) => {
-						if (user) {
-							stop();
-							resolve();
-						}
-					}
-				);
+			);
+
+			if (turnstileError.value || !turnstileData.value?.success) {
+				toast.add({
+					title: 'Weryfikacja nie powiodła się',
+					description: 'Odśwież stronę i spróbuj ponownie.',
+					color: 'error',
+					icon: 'carbon:error',
+				});
+				return;
+			}
+
+			const { data, error } = await authClient.signIn.email({
+				email: event.data.email,
+				password: event.data.password,
+				callbackURL: '/user/home',
 			});
 
-			if (session.value?.data?.user.role === 'admin') {
-				await navigateTo('/admin/home');
-			} else if (session.value?.data?.user.role === 'user') {
-				await navigateTo('/user/home');
+			if (error) {
+				console.error('Error signing in:', error);
+				toast.add({
+					title: 'Wystąpił problem podczas logowania',
+					description: error.message,
+					color: 'error',
+					icon: 'carbon:error',
+				});
 			} else {
-				await navigateTo('/doctor/home');
+				console.log('Signed in successfully:', data);
+				toast.add({
+					title: 'Zalogowano',
+					description: 'Proces logowania powiódł się',
+					color: 'success',
+					icon: 'carbon:checkmark',
+				});
+
+				const session = authClient.useSession();
+				await new Promise<void>((resolve) => {
+					if (session.value?.data?.user) {
+						resolve();
+						return;
+					}
+					const stop = watch(
+						() => session.value?.data?.user,
+						(user) => {
+							if (user) {
+								stop();
+								resolve();
+							}
+						}
+					);
+				});
+
+				if (session.value?.data?.user.role === 'admin') {
+					await navigateTo('/admin/home');
+				} else if (session.value?.data?.user.role === 'user') {
+					await navigateTo('/user/home');
+				} else {
+					await navigateTo('/doctor/home');
+				}
 			}
+		} finally {
+			isSubmitting.value = false;
 		}
 	};
 </script>
@@ -127,7 +168,16 @@
 					</UInput>
 				</UFormField>
 
-				<UButton type="submit" class="w-full cursor-pointer justify-center">
+				<div class="w-full">
+					<NuxtTurnstile v-model="turnstile" class="w-full" />
+				</div>
+
+				<UButton
+					type="submit"
+					:disabled="!turnstile"
+					:loading="isSubmitting"
+					class="w-full cursor-pointer justify-center"
+				>
 					Zaloguj
 				</UButton>
 			</UForm>

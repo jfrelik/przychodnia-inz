@@ -59,6 +59,7 @@ export default defineNuxtConfig({
 	// Cloudflare Turnstile configuration
 	turnstile: {
 		siteKey: '0x4AAAAAAB7eRFhXHU1Ycfzv',
+		addValidateEndpoint: true,
 	},
 
 	// Nuxt Nodemailer configuration

@@ -6,6 +6,8 @@
 	const toast = useToast();
 	const session = authClient.useSession();
 	const show = ref(false);
+	const isSubmitting = ref(false);
+	const turnstile = ref();
 
 	const passwordCriteria = [
 		{
@@ -107,28 +109,66 @@
 
 	const handleRegisterSubmit = async (event: FormSubmitEvent<Schema>) => {
 		event.preventDefault();
-		const { data, error } = await authClient.signUp.email({
-			email: event.data.email,
-			password: event.data.password,
-			name: event.data.name,
-		});
-		if (error) {
-			console.error('Error signing up:', error);
+		if (isSubmitting.value) {
+			return;
+		}
+
+		const token = turnstile.value;
+		if (!token) {
 			toast.add({
-				title: 'Wystąpił problem podczas rejestracji',
-				description: 'Błąd: ' + error.message,
+				title: 'Weryfikacja nie powiodła się',
+				description: 'Odśwież stronę i spróbuj ponownie.',
 				color: 'error',
 				icon: 'carbon:error',
 			});
-		} else {
-			toast.add({
-				title: 'Zarejestrowano',
-				description:
-					'Proces rejestracji powiódł się. Sprawdź swoją skrzynkę email, aby potwierdzić konto.',
-				color: 'success',
-				icon: 'carbon:checkmark',
+			return;
+		}
+
+		isSubmitting.value = true;
+		try {
+			const { data: turnstileData, error: turnstileError } = await useFetch(
+				'/_turnstile/validate',
+				{
+					method: 'POST',
+					body: { token },
+				}
+			);
+
+			if (turnstileError.value || !turnstileData.value?.success) {
+				toast.add({
+					title: 'Weryfikacja nie powiodła się',
+					description: 'Odśwież stronę i spróbuj ponownie.',
+					color: 'error',
+					icon: 'carbon:error',
+				});
+				return;
+			}
+
+			const { data, error } = await authClient.signUp.email({
+				email: event.data.email,
+				password: event.data.password,
+				name: event.data.name,
 			});
-			await navigateTo('/login');
+			if (error) {
+				console.error('Error signing up:', error);
+				toast.add({
+					title: 'Wystąpił problem podczas rejestracji',
+					description: 'Błąd: ' + error.message,
+					color: 'error',
+					icon: 'carbon:error',
+				});
+			} else {
+				toast.add({
+					title: 'Zarejestrowano',
+					description:
+						'Proces rejestracji powiódł się. Sprawdź swoją skrzynkę email, aby potwierdzić konto.',
+					color: 'success',
+					icon: 'carbon:checkmark',
+				});
+				await navigateTo('/login');
+			}
+		} finally {
+			isSubmitting.value = false;
 		}
 	};
 </script>
@@ -250,7 +290,16 @@
 					/>
 				</UFormField>
 
-				<UButton type="submit" class="w-full cursor-pointer justify-center">
+				<div class="w-full">
+					<NuxtTurnstile v-model="turnstile" class="w-full" />
+				</div>
+
+				<UButton
+					type="submit"
+					:disabled="!turnstile"
+					:loading="isSubmitting"
+					class="w-full cursor-pointer justify-center"
+				>
 					Zarejestruj
 				</UButton>
 			</UForm>
