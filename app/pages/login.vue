@@ -8,6 +8,12 @@
 	const show = ref(false);
 	const isSubmitting = ref(false);
 	const turnstile = ref();
+	const route = useRoute();
+
+	const resetError = computed(() => {
+		const value = route.query.error;
+		return typeof value === 'string' ? value.toLowerCase() : '';
+	});
 
 	const schema = z.object({
 		email: z.string().email('Nieprawidłowy adres email'),
@@ -126,6 +132,15 @@
 			<div class="flex flex-col items-center pb-6">
 				<h1 class="text-2xl font-bold">Logowanie</h1>
 			</div>
+
+			<UAlert
+				v-if="resetError === 'invalid_token'"
+				variant="soft"
+				color="error"
+				title="Nieprawidłowy token weryfikacyjny"
+				description="Jeszcze raz otwórz link z wiadomości e-mail"
+				class="mb-4 w-full"
+			/>
 
 			<UForm
 				:schema="schema"
