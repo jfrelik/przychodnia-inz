@@ -44,7 +44,7 @@
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^19.8.1",
-		"@commitlint/config-conventional": "^19.8.1",
+		"@commitlint/config-conventional": "^20.0.0",
 		"@iconify-json/carbon": "^1.2.14",
 		"@types/pg": "^8.15.5",
 		"drizzle-kit": "^0.31.5",
