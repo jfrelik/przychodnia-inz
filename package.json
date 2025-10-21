@@ -29,11 +29,11 @@
 		"@nuxt/ui": "4.0.0",
 		"@nuxtjs/turnstile": "1.1.1",
 		"@scalar/nuxt": "0.5.9",
-		"better-auth": "^1.3.26",
-		"better-auth-localization": "^2.1.8",
+		"better-auth": "^1.3.28",
+		"better-auth-localization": "^2.1.9",
 		"dotenv": "^17.2.3",
 		"drizzle-orm": "^0.44.6",
-		"eslint": "^9.37.0",
+		"eslint": "^9.38.0",
 		"nodemailer": "^7.0.9",
 		"nuxt": "^4.1.3",
 		"nuxt-email-renderer": "^1.0.0",
@@ -45,16 +45,16 @@
 	"devDependencies": {
 		"@commitlint/cli": "^19.8.1",
 		"@commitlint/config-conventional": "^19.8.1",
-		"@iconify-json/carbon": "^1.2.13",
+		"@iconify-json/carbon": "^1.2.14",
 		"@types/pg": "^8.15.5",
 		"drizzle-kit": "^0.31.5",
 		"eslint-plugin-prettier": "^5.5.4",
 		"husky": "^9.1.7",
-		"lint-staged": "^16.2.3",
+		"lint-staged": "^16.2.5",
 		"prettier": "^3.6.2",
 		"prettier-plugin-organize-imports": "^4.3.0",
 		"prettier-plugin-tailwindcss": "^0.6.14",
-		"typescript-eslint": "^8.45.0",
-		"vue-tsc": "^3.1.0"
+		"typescript-eslint": "^8.46.2",
+		"vue-tsc": "^3.1.1"
 	}
 }
