@@ -11,6 +11,7 @@ export const {
 	signOut,
 	signUp,
 	useSession,
+	requestPasswordReset,
 	forgetPassword,
 	resetPassword,
 	// impersonateUser,
