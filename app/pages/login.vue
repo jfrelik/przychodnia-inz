@@ -72,6 +72,38 @@
 
 			if (error) {
 				console.error('Error signing in:', error);
+				if (error.code === 'EMAIL_NOT_VERIFIED') {
+					toast.add({
+						title: 'Email niezweryfikowany',
+						description:
+							'Email nie dotarł? Kliknij przycisk poniżej, aby wysłać go ponownie.',
+						color: 'warning',
+						icon: 'carbon:warning',
+						actions: [
+							{
+								icon: 'i-lucide-refresh-cw',
+								label: 'Wyślij ponownie',
+								color: 'neutral',
+								variant: 'outline',
+								onClick: async (e) => {
+									e?.stopPropagation();
+									await authClient.sendVerificationEmail({
+										email: event.data.email,
+										callbackURL: '/login',
+									});
+									toast.add({
+										title: 'Email wysłany',
+										description:
+											'Sprawdź swoją skrzynkę odbiorczą (oraz folder spam).',
+										color: 'success',
+										icon: 'carbon:checkmark',
+									});
+								},
+							},
+						],
+					});
+					return;
+				}
 				toast.add({
 					title: 'Wystąpił problem podczas logowania',
 					description: error.message,
@@ -79,7 +111,6 @@
 					icon: 'carbon:error',
 				});
 			} else {
-				console.log('Signed in successfully:', data);
 				toast.add({
 					title: 'Zalogowano',
 					description: 'Proces logowania powiódł się',
@@ -139,6 +170,15 @@
 				color="error"
 				title="Nieprawidłowy token weryfikacyjny"
 				description="Jeszcze raz otwórz link z wiadomości e-mail"
+				class="mb-4 w-full"
+			/>
+
+			<UAlert
+				v-if="resetError === 'token_expired'"
+				variant="soft"
+				color="error"
+				title="Token weryfikacyjny wygasł"
+				description=""
 				class="mb-4 w-full"
 			/>
 
