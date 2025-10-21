@@ -148,6 +148,7 @@
 				email: event.data.email,
 				password: event.data.password,
 				name: event.data.name,
+				callbackURL: '/login',
 			});
 			if (error) {
 				console.error('Error signing up:', error);
