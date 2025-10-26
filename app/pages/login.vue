@@ -67,7 +67,6 @@
 			const { data, error } = await authClient.signIn.email({
 				email: event.data.email,
 				password: event.data.password,
-				callbackURL: '/user/home',
 			});
 
 			if (error) {
