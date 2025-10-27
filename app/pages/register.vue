@@ -36,6 +36,19 @@
 		.object({
 			email: z.email('Nieprawidłowy adres email'),
 			name: z.string().min(2, 'Imię musi mieć przynajmniej 2 znaki'),
+			surname: z.string().min(2, 'Nazwisko musi mieć przynajmniej 2 znaki'),
+			pesel: z
+				.string()
+				.length(11, 'PESEL musi mieć dokładnie 11 znaków')
+				.regex(/^\d+$/, 'PESEL musi składać się tylko z cyfr'),
+			phone: z
+				.string()
+				.min(9, 'Numer telefonu musi mieć przynajmniej 9 znaków')
+				.max(15, 'Numer telefonu może mieć maksymalnie 15 znaków')
+				.regex(
+					/^\+?\d+$/,
+					'Numer telefonu musi składać się tylko z cyfr i opcjonalnie zaczynać się od +'
+				),
 			password: z
 				.string()
 				.min(12, 'Hasło musi mieć przynajmniej 12 znaków')
@@ -60,6 +73,9 @@
 	const state = reactive<Partial<Schema>>({
 		email: '',
 		name: '',
+		surname: '',
+		pesel: '',
+		phone: '',
 		password: '',
 		confirmPassword: '',
 	});
@@ -207,17 +223,53 @@
 						autofocus
 					/>
 				</UFormField>
+				<div class="grid w-full grid-cols-2 gap-4">
+					<UFormField label="Imię" name="name" class="w-full">
+						<UInput
+							v-model="state.name"
+							type="text"
+							class="w-full"
+							placeholder="Imię"
+							required
+							autocomplete="name"
+						/>
+					</UFormField>
 
-				<UFormField label="Imię" name="name" class="w-full">
-					<UInput
-						v-model="state.name"
-						type="text"
-						class="w-full"
-						placeholder="Imię"
-						required
-						autocomplete="name"
-					/>
-				</UFormField>
+					<UFormField label="Nazwisko" name="surname" class="w-full">
+						<UInput
+							v-model="state.surname"
+							type="text"
+							class="w-full"
+							placeholder="Nazwisko"
+							required
+							autocomplete="name"
+						/>
+					</UFormField>
+				</div>
+
+				<div class="grid w-full grid-cols-2 gap-4">
+					<UFormField label="PESEL" name="pesel" class="w-full">
+						<UInput
+							v-model="state.pesel"
+							type="text"
+							class="w-full"
+							placeholder="PESEL"
+							required
+							autocomplete="pesel"
+						/>
+					</UFormField>
+
+					<UFormField label="Numer telefonu" name="phone" class="w-full">
+						<UInput
+							v-model="state.phone"
+							type="text"
+							class="w-full"
+							placeholder="123123123"
+							required
+							autocomplete="phone"
+						/>
+					</UFormField>
+				</div>
 
 				<UFormField label="Hasło" name="password" class="w-full">
 					<UInput
