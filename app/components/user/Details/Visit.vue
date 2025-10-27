@@ -101,7 +101,13 @@
 			:description="errorMessage"
 		>
 			<template #actions>
-				<UButton color="error" variant="soft" size="sm" @click="refresh()">
+				<UButton
+					class="cursor-pointer"
+					color="error"
+					variant="soft"
+					size="sm"
+					@click="refresh()"
+				>
 					Spróbuj ponownie
 				</UButton>
 			</template>
