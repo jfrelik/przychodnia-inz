@@ -19,6 +19,26 @@ export const auth = betterAuth({
 	emailAndPassword: {
 		enabled: true,
 		requireEmailVerification: true,
+		sendResetPassword: async ({ user, url, token }, _request) => {
+			const { sendMail } = useNodeMailer();
+
+			const html = await renderEmailComponent(
+				'PasswordReset',
+				{
+					userName: user.name,
+					resetUrl: url,
+				},
+				{
+					pretty: true,
+				}
+			);
+
+			await sendMail({
+				to: user.email,
+				subject: 'Link do zmiany hasła',
+				html,
+			});
+		},
 	},
 	emailVerification: {
 		sendVerificationEmail: async ({ user, url, token }, request) => {
@@ -49,7 +69,6 @@ export const auth = betterAuth({
 		}),
 		localization({
 			defaultLocale: 'pl-PL',
-			fallbackLocale: 'default',
 		}),
 	],
 });

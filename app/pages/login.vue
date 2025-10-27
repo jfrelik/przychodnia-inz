@@ -6,6 +6,14 @@
 	const toast = useToast();
 	const session = authClient.useSession();
 	const show = ref(false);
+	const isSubmitting = ref(false);
+	const turnstile = ref();
+	const route = useRoute();
+
+	const resetError = computed(() => {
+		const value = route.query.error;
+		return typeof value === 'string' ? value.toLowerCase() : '';
+	});
 
 	const schema = z.object({
 		email: z.string().email('Nieprawidłowy adres email'),
@@ -20,53 +28,123 @@
 	});
 
 	const handleLoginSubmit = async (event: FormSubmitEvent<Schema>) => {
-		const { data, error } = await authClient.signIn.email({
-			email: event.data.email,
-			password: event.data.password,
-			callbackURL: '/user/home',
-		});
+		event.preventDefault();
+		if (isSubmitting.value) {
+			return;
+		}
 
-		if (error) {
-			console.error('Error signing in:', error);
+		const token = turnstile.value;
+		if (!token) {
 			toast.add({
-				title: 'Wystąpił problem podczas logowania',
-				description: error.message,
+				title: 'Weryfikacja nie powiodła się',
+				description: 'Odśwież stronę i spróbuj ponownie.',
 				color: 'error',
 				icon: 'carbon:error',
 			});
-		} else {
-			console.log('Signed in successfully:', data);
-			toast.add({
-				title: 'Zalogowano',
-				description: 'Proces logowania powiódł się',
-				color: 'success',
-				icon: 'carbon:checkmark',
+			return;
+		}
+
+		isSubmitting.value = true;
+		try {
+			const { data: turnstileData, error: turnstileError } = await useFetch(
+				'/_turnstile/validate',
+				{
+					method: 'POST',
+					body: { token },
+				}
+			);
+
+			if (turnstileError.value || !turnstileData.value?.success) {
+				toast.add({
+					title: 'Weryfikacja nie powiodła się',
+					description: 'Odśwież stronę i spróbuj ponownie.',
+					color: 'error',
+					icon: 'carbon:error',
+				});
+				return;
+			}
+
+			const { data, error } = await authClient.signIn.email({
+				email: event.data.email,
+				password: event.data.password,
+				callbackURL: '/user/home',
 			});
 
-			const session = authClient.useSession();
-			await new Promise<void>((resolve) => {
-				if (session.value?.data?.user) {
-					resolve();
+			if (error) {
+				console.error('Error signing in:', error);
+				if (error.code === 'EMAIL_NOT_VERIFIED') {
+					toast.add({
+						title: 'Email niezweryfikowany',
+						description:
+							'Email nie dotarł? Kliknij przycisk poniżej, aby wysłać go ponownie.',
+						color: 'warning',
+						icon: 'carbon:warning',
+						actions: [
+							{
+								icon: 'i-lucide-refresh-cw',
+								label: 'Wyślij ponownie',
+								color: 'neutral',
+								variant: 'outline',
+								onClick: async (e) => {
+									e?.stopPropagation();
+									await authClient.sendVerificationEmail({
+										email: event.data.email,
+										callbackURL: '/login',
+									});
+									toast.add({
+										title: 'Email wysłany',
+										description:
+											'Sprawdź swoją skrzynkę odbiorczą (oraz folder spam).',
+										color: 'success',
+										icon: 'carbon:checkmark',
+									});
+								},
+							},
+						],
+					});
 					return;
 				}
-				const stop = watch(
-					() => session.value?.data?.user,
-					(user) => {
-						if (user) {
-							stop();
-							resolve();
-						}
-					}
-				);
-			});
-
-			if (session.value?.data?.user.role === 'admin') {
-				await navigateTo('/admin/home');
-			} else if (session.value?.data?.user.role === 'user') {
-				await navigateTo('/user/home');
+				toast.add({
+					title: 'Wystąpił problem podczas logowania',
+					description: error.message,
+					color: 'error',
+					icon: 'carbon:error',
+				});
 			} else {
-				await navigateTo('/doctor/home');
+				toast.add({
+					title: 'Zalogowano',
+					description: 'Proces logowania powiódł się',
+					color: 'success',
+					icon: 'carbon:checkmark',
+				});
+
+				const session = authClient.useSession();
+				await new Promise<void>((resolve) => {
+					if (session.value?.data?.user) {
+						resolve();
+						return;
+					}
+					const stop = watch(
+						() => session.value?.data?.user,
+						(user) => {
+							if (user) {
+								stop();
+								resolve();
+							}
+						}
+					);
+				});
+
+				if (session.value?.data?.user.role === 'admin') {
+					await navigateTo('/admin/home');
+				} else if (session.value?.data?.user.role === 'user') {
+					await navigateTo('/user/home');
+				} else {
+					await navigateTo('/doctor/home');
+				}
 			}
+		} finally {
+			isSubmitting.value = false;
 		}
 	};
 </script>
@@ -85,6 +163,24 @@
 			<div class="flex flex-col items-center pb-6">
 				<h1 class="text-2xl font-bold">Logowanie</h1>
 			</div>
+
+			<UAlert
+				v-if="resetError === 'invalid_token'"
+				variant="soft"
+				color="error"
+				title="Nieprawidłowy token weryfikacyjny"
+				description="Jeszcze raz otwórz link z wiadomości e-mail"
+				class="mb-4 w-full"
+			/>
+
+			<UAlert
+				v-if="resetError === 'token_expired'"
+				variant="soft"
+				color="error"
+				title="Token weryfikacyjny wygasł"
+				description=""
+				class="mb-4 w-full"
+			/>
 
 			<UForm
 				:schema="schema"
@@ -127,7 +223,16 @@
 					</UInput>
 				</UFormField>
 
-				<UButton type="submit" class="w-full cursor-pointer justify-center">
+				<div class="w-full">
+					<NuxtTurnstile v-model="turnstile" class="w-full" />
+				</div>
+
+				<UButton
+					type="submit"
+					:disabled="!turnstile"
+					:loading="isSubmitting"
+					class="w-full cursor-pointer justify-center"
+				>
 					Zaloguj
 				</UButton>
 			</UForm>

@@ -1,6 +1,7 @@
+import pkg from './package.json';
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-	compatibilityDate: '2024-11-01',
+	compatibilityDate: '2025-10-10',
 	devtools: { enabled: true },
 	css: ['~/assets/css/main.css'],
 
@@ -29,10 +30,14 @@ export default defineNuxtConfig({
 		'@scalar/nuxt',
 		'nuxt-nodemailer',
 		'nuxt-email-renderer',
+		'@nuxtjs/turnstile',
 	],
 
 	// Nitro OpenAPI runtime metadata
 	runtimeConfig: {
+		public: {
+			appVersion: pkg.version,
+		},
 		nitro: {
 			openAPI: {
 				meta: {
@@ -51,6 +56,13 @@ export default defineNuxtConfig({
 		darkMode: true,
 	},
 
+	// Cloudflare Turnstile configuration
+	turnstile: {
+		siteKey: '0x4AAAAAAB7eRFhXHU1Ycfzv',
+		addValidateEndpoint: true,
+	},
+
+	// Nuxt Nodemailer configuration
 	nodemailer: {
 		from: '',
 		host: '',
