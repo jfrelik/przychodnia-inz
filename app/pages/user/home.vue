@@ -57,6 +57,18 @@
 				</p>
 			</div>
 
+			<div class="flex flex-col gap-4 self-center">
+				<h1 class="text-2xl font-bold">Potrzebujesz spotkać się z lekarzem?</h1>
+				<UButton
+					class="w-fit cursor-pointer self-center"
+					size="xl"
+					icon="carbon:calendar"
+					to="/user/newAppointment"
+				>
+					Umów wizytę
+				</UButton>
+			</div>
+
 			<div class="mt-4 grid w-full grid-cols-4 gap-4">
 				<UCard class="cursor-pointer" @click="currentTab = 'visits'">
 					<div class="flex items-center space-x-4">
