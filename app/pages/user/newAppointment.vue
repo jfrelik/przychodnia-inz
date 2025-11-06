@@ -21,7 +21,7 @@
 		'Wybór specjalizacji',
 		'Wybór rodzaju wizyty',
 		'Wybór terminu wizyty',
-		'Dane dodatkowe',
+		'Informacje dodatkowe',
 		'Zatwierdzenie wizyty',
 	];
 	const currentStep = ref(1);
@@ -105,18 +105,23 @@
 <template>
 	<div class="flex w-full flex-col">
 		<PageHeader />
-		<div class="flex w-full flex-col gap-4 p-4">
-			<div>info at the top of page</div>
+		<div class="flex w-full flex-col gap-4">
+			<div class="m-4 flex flex-col">info at the top of page</div>
+
 			<div class="flex w-full flex-col items-center gap-4">
 				<h1 class="text-2xl font-bold">
 					Krok {{ currentStep }}: {{ visitSignupStep[currentStep - 1] }}
 				</h1>
+
 				<UForm
 					:schema="schema"
 					:state="schemaState"
-					class="flex w-1/2 flex-col gap-4"
+					class="mb-4 flex w-full flex-col gap-4"
 				>
-					<div v-if="currentStep >= 1" class="flex w-full flex-col gap-4">
+					<div
+						v-if="currentStep >= 1"
+						class="mx-auto flex w-1/2 flex-col gap-4"
+					>
 						<div class="grid w-full grid-cols-2 gap-12">
 							<div class="flex w-full flex-col justify-between gap-4">
 								<p class="font-semibold">
@@ -143,83 +148,94 @@
 						<UButton
 							v-if="currentStep === 1"
 							class="w-full cursor-pointer justify-center"
-							:disabled="schemaState.specialization == '' ? true : false"
+							:disabled="schemaState.specialization == ''"
 							label="Zatwierdź"
 							color="info"
 							@click="incrementStep"
 						/>
 					</div>
-					<div v-if="currentStep >= 2" class="flex w-full flex-col gap-4">
-						test2
-						<div v-if="currentStep === 2" class="grid grid-cols-2 gap-4">
-							<UButton
-								class="w-full cursor-pointer justify-center"
-								label="Cofnij"
-								variant="outline"
-								color="neutral"
-								@click="decrementStep"
-							/>
-							<UButton
-								class="w-full cursor-pointer justify-center"
-								label="Zatwierdź"
-								color="info"
-								@click="incrementStep"
-							/>
+
+					<div v-if="currentStep >= 2" class="bg-info-100 w-full px-4 py-4">
+						<div class="mx-auto flex w-1/2 flex-col gap-4">
+							test2
+							<div v-if="currentStep === 2" class="grid grid-cols-2 gap-4">
+								<UButton
+									class="w-full cursor-pointer justify-center"
+									label="Cofnij"
+									variant="outline"
+									color="neutral"
+									@click="decrementStep"
+								/>
+								<UButton
+									class="w-full cursor-pointer justify-center"
+									label="Zatwierdź"
+									color="info"
+									@click="incrementStep"
+								/>
+							</div>
 						</div>
 					</div>
-					<div v-if="currentStep >= 3" class="flex w-full flex-col gap-4">
-						test3
-						<div v-if="currentStep === 3" class="grid grid-cols-2 gap-4">
-							<UButton
-								class="w-full cursor-pointer justify-center"
-								label="Cofnij"
-								variant="outline"
-								color="neutral"
-								@click="decrementStep"
-							/>
-							<UButton
-								class="w-full cursor-pointer justify-center"
-								label="Zatwierdź"
-								color="info"
-								@click="incrementStep"
-							/>
+
+					<div v-if="currentStep >= 3" class="w-full px-4 py-4">
+						<div class="mx-auto flex w-1/2 flex-col gap-4">
+							test3
+							<div v-if="currentStep === 3" class="grid grid-cols-2 gap-4">
+								<UButton
+									class="w-full cursor-pointer justify-center"
+									label="Cofnij"
+									variant="outline"
+									color="neutral"
+									@click="decrementStep"
+								/>
+								<UButton
+									class="w-full cursor-pointer justify-center"
+									label="Zatwierdź"
+									color="info"
+									@click="incrementStep"
+								/>
+							</div>
 						</div>
 					</div>
-					<div v-if="currentStep >= 4" class="flex w-full flex-col gap-4">
-						test4
-						<div v-if="currentStep === 4" class="grid grid-cols-2 gap-4">
-							<UButton
-								class="w-full cursor-pointer justify-center"
-								label="Cofnij"
-								variant="outline"
-								color="neutral"
-								@click="decrementStep"
-							/>
-							<UButton
-								class="w-full cursor-pointer justify-center"
-								label="Zatwierdź"
-								color="info"
-								@click="incrementStep"
-							/>
+
+					<div v-if="currentStep >= 4" class="bg-info-100 w-full px-4 py-4">
+						<div class="mx-auto flex w-1/2 flex-col gap-4">
+							test4
+							<div v-if="currentStep === 4" class="grid grid-cols-2 gap-4">
+								<UButton
+									class="w-full cursor-pointer justify-center"
+									label="Cofnij"
+									variant="outline"
+									color="neutral"
+									@click="decrementStep"
+								/>
+								<UButton
+									class="w-full cursor-pointer justify-center"
+									label="Zatwierdź"
+									color="info"
+									@click="incrementStep"
+								/>
+							</div>
 						</div>
 					</div>
-					<div v-if="currentStep >= 5" class="flex w-full flex-col gap-4">
-						test5
-						<div v-if="currentStep === 5" class="grid grid-cols-2 gap-4">
-							<UButton
-								class="w-full cursor-pointer justify-center"
-								label="Cofnij"
-								variant="outline"
-								color="neutral"
-								@click="decrementStep"
-							/>
-							<!-- This button will trigger a popover or some shit idk -->
-							<UButton
-								class="w-full cursor-pointer justify-center"
-								label="Zatwierdź"
-								color="info"
-								@click="incrementStep"
-							/>
+
+					<div v-if="currentStep >= 5" class="w-full px-4 py-4">
+						<div class="mx-auto flex w-1/2 flex-col gap-4">
+							test5
+							<div v-if="currentStep === 5" class="grid grid-cols-2 gap-4">
+								<UButton
+									class="w-full cursor-pointer justify-center"
+									label="Cofnij"
+									variant="outline"
+									color="neutral"
+									@click="decrementStep"
+								/>
+								<UButton
+									class="w-full cursor-pointer justify-center"
+									label="Zatwierdź"
+									color="info"
+									@click="incrementStep"
+								/>
+							</div>
 						</div>
 					</div>
 				</UForm>
