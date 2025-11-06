@@ -150,7 +150,7 @@
 						/>
 					</div>
 					<div v-if="currentStep >= 2" class="flex w-full flex-col gap-4">
-						nigger2
+						test2
 						<div v-if="currentStep === 2" class="grid grid-cols-2 gap-4">
 							<UButton
 								class="w-full cursor-pointer justify-center"
@@ -168,7 +168,7 @@
 						</div>
 					</div>
 					<div v-if="currentStep >= 3" class="flex w-full flex-col gap-4">
-						nigger3
+						test3
 						<div v-if="currentStep === 3" class="grid grid-cols-2 gap-4">
 							<UButton
 								class="w-full cursor-pointer justify-center"
@@ -186,7 +186,7 @@
 						</div>
 					</div>
 					<div v-if="currentStep >= 4" class="flex w-full flex-col gap-4">
-						nigger4
+						test4
 						<div v-if="currentStep === 4" class="grid grid-cols-2 gap-4">
 							<UButton
 								class="w-full cursor-pointer justify-center"
@@ -204,7 +204,7 @@
 						</div>
 					</div>
 					<div v-if="currentStep >= 5" class="flex w-full flex-col gap-4">
-						nigger5
+						test5
 						<div v-if="currentStep === 5" class="grid grid-cols-2 gap-4">
 							<UButton
 								class="w-full cursor-pointer justify-center"
