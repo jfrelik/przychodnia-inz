@@ -91,7 +91,7 @@
 			)?.description ?? ''
 	);
 
-	// currently chosen visit
+	// selected visit id
 	const selectedVisitId = ref<number | null>(null);
 
 	const availableVisits = [
@@ -129,18 +129,23 @@
 		end: todayDate.add({ weeks: 1 }),
 	});
 
-	// mark every date before today as unavailable
+	// disable every date before today
 	const unavailableDates = (date: CalendarDate) => {
 		return date.compare(todayDate) < 0;
 	};
 
-	// when user clicks "Rezerwuj"
+	// toggle selection of visit
 	const selectVisit = (id: number) => {
-		selectedVisitId.value = id;
+		if (selectedVisitId.value === id) {
+			// clicking the same = unselect
+			selectedVisitId.value = null;
+		} else {
+			selectedVisitId.value = id;
+		}
 	};
 
 	function incrementStep() {
-		// on step 3, require picked appointment
+		// on step 3 user must have picked a visit
 		if (currentStep.value === 3 && selectedVisitId.value === null) {
 			return;
 		}
@@ -311,7 +316,11 @@
 													selectedVisitId === visit.id ? 'success' : 'info'
 												"
 												class="w-full cursor-pointer justify-center md:w-auto"
-												label="Rezerwuj"
+												:label="
+													selectedVisitId === visit.id
+														? 'Anuluj wybór'
+														: 'Wybierz termin'
+												"
 												:disabled="currentStep === 3 ? false : true"
 												@click="selectVisit(visit.id)"
 											/>
