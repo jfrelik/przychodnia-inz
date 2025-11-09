@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+	import type { CalendarDate } from '@internationalized/date';
+	import { getLocalTimeZone, today } from '@internationalized/date';
 	import * as z from 'zod';
 
 	const toast = useToast();
@@ -89,7 +91,60 @@
 			)?.description ?? ''
 	);
 
+	// currently chosen visit
+	const selectedVisitId = ref<number | null>(null);
+
+	const availableVisits = [
+		{
+			id: 1,
+			date: 'Wtorek, 12 marca',
+			time: '09:30',
+			doctor: 'dr n. med. Anna Kowalska',
+			specialization: 'Kardiologia',
+			location: 'Gabinet 201 · ul. Lipowa 10',
+		},
+		{
+			id: 2,
+			date: 'Czwartek, 14 marca',
+			time: '12:15',
+			doctor: 'dr Tomasz Nowak',
+			specialization: 'Dermatologia',
+			location: 'Gabinet 104 · ul. Lipowa 10',
+		},
+		{
+			id: 3,
+			date: 'Piątek, 15 marca',
+			time: '15:45',
+			doctor: 'dr Katarzyna Zielińska',
+			specialization: 'Pediatria',
+			location: 'Gabinet 305 · ul. Lipowa 10',
+		},
+	];
+
+	const tz = getLocalTimeZone();
+	const todayDate = today(tz);
+
+	const selectedVisitDateRange = ref({
+		start: todayDate,
+		end: todayDate.add({ weeks: 1 }),
+	});
+
+	// mark every date before today as unavailable
+	const unavailableDates = (date: CalendarDate) => {
+		return date.compare(todayDate) < 0;
+	};
+
+	// when user clicks "Rezerwuj"
+	const selectVisit = (id: number) => {
+		selectedVisitId.value = id;
+	};
+
 	function incrementStep() {
+		// on step 3, require picked appointment
+		if (currentStep.value === 3 && selectedVisitId.value === null) {
+			return;
+		}
+
 		if (currentStep.value < visitSignupStep.length) {
 			currentStep.value++;
 		}
@@ -118,6 +173,7 @@
 					:state="schemaState"
 					class="mb-4 flex w-full flex-col gap-4"
 				>
+					<!-- STEP 1 -->
 					<div
 						v-if="currentStep >= 1"
 						class="mx-auto flex w-1/2 flex-col gap-4"
@@ -155,10 +211,32 @@
 						/>
 					</div>
 
+					<!-- STEP 2 -->
 					<div v-if="currentStep >= 2" class="bg-info-100 w-full px-4 py-4">
 						<div class="mx-auto flex w-1/2 flex-col gap-4">
-							test2
-							<div v-if="currentStep === 2" class="grid grid-cols-2 gap-4">
+							<div class="grid w-full grid-cols-2 gap-12">
+								<div class="flex w-full flex-col gap-4">
+									<p class="font-semibold">Wybierz rodzaj wizyty:</p>
+									<UFormField label="Rodzaj wizyty" name="visitType">
+										<USelect
+											v-model="schemaState.visitType"
+											:disabled="currentStep === 2 ? false : true"
+											:items="visitTypes.map((v) => v.name)"
+											placeholder="Wybierz rodzaj wizyty"
+											class="w-full cursor-pointer"
+										/>
+									</UFormField>
+								</div>
+
+								<div class="flex w-full flex-col gap-4">
+									<h1 class="font-semibold">Opis rodzaju wizyty:</h1>
+									<p v-if="schemaState.visitType !== ''">
+										{{ selectedVisitTypeDescription }}
+									</p>
+								</div>
+							</div>
+
+							<div v-if="currentStep === 2" class="grid grid-cols-2 gap-12">
 								<UButton
 									class="w-full cursor-pointer justify-center"
 									label="Cofnij"
@@ -176,10 +254,73 @@
 						</div>
 					</div>
 
+					<!-- STEP 3 -->
 					<div v-if="currentStep >= 3" class="w-full px-4 py-4">
 						<div class="mx-auto flex w-1/2 flex-col gap-4">
-							test3
-							<div v-if="currentStep === 3" class="grid grid-cols-2 gap-4">
+							<p class="font-semibold">Znajdź termin swojej wizyty:</p>
+							<div class="flex flex-col items-center gap-4">
+								<!-- @vue-ignore -->
+								<UCalendar
+									v-model="selectedVisitDateRange"
+									range
+									class="w-1/2"
+									:disabled="currentStep === 3 ? false : true"
+									:is-date-unavailable="unavailableDates"
+								/>
+
+								<UButton
+									label="Szukaj wizyty"
+									icon="carbon:search"
+									:disabled="currentStep === 3 ? false : true"
+									class="w-1/2 cursor-pointer justify-center"
+								/>
+							</div>
+
+							<div class="flex flex-col items-center gap-4">
+								<div class="w-full space-y-4">
+									<UCard
+										v-for="visit in availableVisits"
+										:key="visit.id"
+										:class="[
+											'',
+											selectedVisitId === visit.id
+												? 'border-green-400 bg-green-50 ring-2 ring-green-200'
+												: 'border-gray-200',
+										]"
+									>
+										<div
+											class="flex flex-row items-center justify-between gap-3"
+										>
+											<div class="flex flex-col">
+												<p class="text-lg font-semibold text-gray-900">
+													{{ visit.date }} · {{ visit.time }}
+												</p>
+												<p class="text-sm text-gray-600">
+													{{ visit.specialization }}
+												</p>
+												<p class="text-sm text-gray-600">
+													<span class="font-medium text-gray-900">
+														{{ visit.doctor }}
+													</span>
+													· {{ visit.location }}
+												</p>
+											</div>
+											<UButton
+												size="sm"
+												:color="
+													selectedVisitId === visit.id ? 'success' : 'info'
+												"
+												class="w-full cursor-pointer justify-center md:w-auto"
+												label="Rezerwuj"
+												:disabled="currentStep === 3 ? false : true"
+												@click="selectVisit(visit.id)"
+											/>
+										</div>
+									</UCard>
+								</div>
+							</div>
+
+							<div v-if="currentStep === 3" class="grid grid-cols-2 gap-12">
 								<UButton
 									class="w-full cursor-pointer justify-center"
 									label="Cofnij"
@@ -191,16 +332,18 @@
 									class="w-full cursor-pointer justify-center"
 									label="Zatwierdź"
 									color="info"
+									:disabled="selectedVisitId === null"
 									@click="incrementStep"
 								/>
 							</div>
 						</div>
 					</div>
 
+					<!-- STEP 4 -->
 					<div v-if="currentStep >= 4" class="bg-info-100 w-full px-4 py-4">
 						<div class="mx-auto flex w-1/2 flex-col gap-4">
 							test4
-							<div v-if="currentStep === 4" class="grid grid-cols-2 gap-4">
+							<div v-if="currentStep === 4" class="grid grid-cols-2 gap-12">
 								<UButton
 									class="w-full cursor-pointer justify-center"
 									label="Cofnij"
@@ -218,10 +361,11 @@
 						</div>
 					</div>
 
+					<!-- STEP 5 -->
 					<div v-if="currentStep >= 5" class="w-full px-4 py-4">
 						<div class="mx-auto flex w-1/2 flex-col gap-4">
 							test5
-							<div v-if="currentStep === 5" class="grid grid-cols-2 gap-4">
+							<div v-if="currentStep === 5" class="grid grid-cols-2 gap-12">
 								<UButton
 									class="w-full cursor-pointer justify-center"
 									label="Cofnij"
