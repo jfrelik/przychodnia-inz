@@ -1,6 +1,47 @@
 <script lang="ts" setup>
 	import { Icon } from '#components';
+	import { computed } from 'vue';
 	import { authClient } from '~~/lib/auth-client';
+
+	type VisitStatus = 'scheduled' | 'completed' | 'canceled';
+	type Visit = {
+		appointmentId: number;
+		datetime: string | Date;
+		status: VisitStatus;
+		notes: string | null;
+		doctorId: string;
+		doctorName: string | null;
+		doctorEmail: string | null;
+		roomId: number | null;
+		roomNumber: string | null;
+	};
+
+	type PrescriptionStatus = 'active' | 'fulfilled';
+	type Medication = {
+		name?: string;
+		dosage?: string;
+		instructions?: string;
+		[key: string]: unknown;
+	};
+	type ActivePrescription = {
+		prescriptionId: number | null;
+		medications: Medication[] | string | null;
+		issuedAt: string | Date | null;
+		status: PrescriptionStatus | null;
+		appointmentId: number | null;
+		appointmentDatetime: string | Date | null;
+		doctorId: string | null;
+		doctorName: string | null;
+		doctorEmail: string | null;
+	};
+
+	type RecentTestResult = {
+		testId: number;
+		testType: string;
+		result: string;
+		testDate: string | Date | null;
+		filePath: string | null;
+	};
 
 	const toast = useToast();
 	const session = authClient.useSession();
@@ -14,6 +55,43 @@
 		{ label: 'Porady lekarskie', value: 'recommendations' },
 		{ label: 'Mój profil', value: 'profile' },
 	];
+
+	const {
+		data: upcomingVisitsData,
+		pending: upcomingVisitsPending,
+		error: upcomingVisitsError,
+	} = await useFetch<Visit[]>('/api/patient/upcomingVisits', {
+		key: 'patient-upcoming-visits-home',
+	});
+
+	const {
+		data: activePrescriptionsData,
+		pending: activePrescriptionsPending,
+		error: activePrescriptionsError,
+	} = await useFetch<ActivePrescription[]>('/api/patient/activePrescriptions', {
+		key: 'patient-active-prescriptions-home',
+	});
+
+	const {
+		data: recentResultsData,
+		pending: recentResultsPending,
+		error: recentResultsError,
+	} = await useFetch<RecentTestResult[]>('/api/patient/recentResults', {
+		key: 'patient-recent-results-home',
+	});
+
+	const upcomingVisits = computed(() => upcomingVisitsData.value ?? []);
+	const activePrescriptions = computed(
+		() => activePrescriptionsData.value ?? []
+	);
+	const recentResults = computed(() => recentResultsData.value ?? []);
+
+	const handleVisitPreview = () => {
+		currentTab.value = 'visits';
+	};
+	const handlePrescriptionPreview = () => {
+		currentTab.value = 'prescriptions';
+	};
 
 	const handleSignout = async () => {
 		try {
@@ -57,10 +135,18 @@
 				</p>
 			</div>
 
-			<div class="flex flex-col gap-4 self-center">
-				<h1 class="text-2xl font-bold">Potrzebujesz spotkać się z lekarzem?</h1>
+			<div
+				class="w-fit self-center rounded-2xl border border-blue-100 bg-blue-50 p-8 text-center"
+			>
+				<h1 class="text-4xl font-extrabold text-blue-800">
+					Potrzebujesz spotkać się z lekarzem?
+				</h1>
+				<p class="mt-3 text-slate-600">
+					Przejdź do panelu umawiania wizyt, aby umówić się na spotkanie ze
+					specjalistą
+				</p>
 				<UButton
-					class="w-fit cursor-pointer self-center"
+					class="mt-3 w-fit cursor-pointer self-center"
 					size="xl"
 					icon="carbon:calendar"
 					to="/user/newAppointment"
@@ -141,7 +227,20 @@
 				}"
 			/>
 		</div>
-		<UserTabOverwiev v-if="currentTab === 'overwiev'" />
+		<UserTabOverwiev
+			v-if="currentTab === 'overwiev'"
+			:upcoming-visits="upcomingVisits"
+			:upcoming-loading="upcomingVisitsPending"
+			:upcoming-error="upcomingVisitsError"
+			:active-prescriptions="activePrescriptions"
+			:active-loading="activePrescriptionsPending"
+			:active-error="activePrescriptionsError"
+			:recent-results="recentResults"
+			:recent-loading="recentResultsPending"
+			:recent-error="recentResultsError"
+			@view-visit="handleVisitPreview"
+			@view-prescription="handlePrescriptionPreview"
+		/>
 		<UserTabVisits v-if="currentTab === 'visits'" />
 		<UserTabPrescriptions v-if="currentTab === 'prescriptions'" />
 		<UserTabTestResults v-if="currentTab === 'results'" />
