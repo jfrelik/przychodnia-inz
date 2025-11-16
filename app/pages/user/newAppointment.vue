@@ -217,7 +217,7 @@
 					</div>
 
 					<!-- STEP 2 -->
-					<div v-if="currentStep >= 2" class="bg-info-100 w-full px-4 py-4">
+					<div v-if="currentStep >= 2" class="bg-info-100 w-full py-4">
 						<div class="mx-auto flex w-1/2 flex-col gap-4">
 							<div class="grid w-full grid-cols-2 gap-12">
 								<div class="flex w-full flex-col gap-4">
@@ -253,6 +253,7 @@
 									class="w-full cursor-pointer justify-center"
 									label="Zatwierdź"
 									color="info"
+									:disabled="schemaState.visitType === '' ? true : false"
 									@click="incrementStep"
 								/>
 							</div>
@@ -260,7 +261,7 @@
 					</div>
 
 					<!-- STEP 3 -->
-					<div v-if="currentStep >= 3" class="w-full px-4 py-4">
+					<div v-if="currentStep >= 3" class="w-full py-4">
 						<div class="mx-auto flex w-1/2 flex-col gap-4">
 							<p class="font-semibold">Znajdź termin swojej wizyty:</p>
 							<div class="flex flex-col items-center gap-4">
@@ -349,7 +350,7 @@
 					</div>
 
 					<!-- STEP 4 -->
-					<div v-if="currentStep >= 4" class="bg-info-100 w-full px-4 py-4">
+					<div v-if="currentStep >= 4" class="bg-info-100 w-full py-4">
 						<div class="mx-auto flex w-1/2 flex-col gap-4">
 							test4
 							<div v-if="currentStep === 4" class="grid grid-cols-2 gap-12">
@@ -371,7 +372,7 @@
 					</div>
 
 					<!-- STEP 5 -->
-					<div v-if="currentStep >= 5" class="w-full px-4 py-4">
+					<div v-if="currentStep >= 5" class="w-full py-4">
 						<div class="mx-auto flex w-1/2 flex-col gap-4">
 							test5
 							<div v-if="currentStep === 5" class="grid grid-cols-2 gap-12">
