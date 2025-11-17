@@ -44,9 +44,7 @@
 			{
 				label: 'Pacjenci',
 				icon: 'i-lucide-user',
-				badge: '0',
-				active: route.path === '/admin/patients',
-				to: '/admin/patients',
+				disabled: true,
 			},
 			{
 				label: 'Lekarze',
@@ -58,11 +56,13 @@
 						label: 'Lista lekarzy',
 						active: route.path === '/admin/doctors',
 						to: '/admin/doctors',
+						icon: 'i-lucide-list',
 					},
 					{
 						label: 'Specjalizacje',
 						active: route.path === '/admin/specializations',
 						to: '/admin/doctors/specializations',
+						icon: 'i-lucide-activity',
 					},
 				],
 			},
@@ -74,6 +74,9 @@
 				children: [
 					{
 						label: 'Administratorzy',
+						icon: 'i-lucide-shield',
+						active: route.path === '/admin/admins',
+						to: '/admin/admins',
 					},
 					{
 						label: 'Logi aktywności',
@@ -89,7 +92,7 @@
 
 <template>
 	<UApp>
-		<UDashboardGroup class="flex-1">
+		<UDashboardGroup class="flex h-screen min-h-0">
 			<UDashboardSidebar
 				collapsible
 				:ui="{ footer: 'border-t border-default' }"
@@ -119,7 +122,7 @@
 							:label="collapsed ? undefined : 'Wyloguj się'"
 							color="neutral"
 							variant="ghost"
-							class="w-full"
+							class="w-full cursor-pointer"
 							:block="collapsed"
 							icon="i-lucide-log-out"
 							@click="handleSignout"
@@ -150,7 +153,9 @@
 					</div>
 				</template>
 			</UDashboardSidebar>
-			<UContainer class="mx-auto flex min-h-screen w-full px-6 py-8">
+			<UContainer
+				class="mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-y-auto px-6 py-8"
+			>
 				<slot />
 			</UContainer>
 		</UDashboardGroup>
