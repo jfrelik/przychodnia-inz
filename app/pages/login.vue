@@ -54,12 +54,25 @@
 				}
 			);
 
-			if (turnstileError.value || !turnstileData.value?.success) {
+			if (turnstileError.value) {
+				console.error('Turnstile validation error:', turnstileError.value);
 				toast.add({
-					title: 'Weryfikacja nie powiodła się',
-					description: 'Odśwież stronę i spróbuj ponownie.',
+					title: 'Nie udało się zweryfikować zabezpieczenia',
+					description:
+						'Sprawdź połączenie z internetem lub spróbuj ponownie za chwilę.',
 					color: 'error',
-					icon: 'carbon:error',
+					icon: 'carbon:warning',
+				});
+				return;
+			}
+
+			if (!turnstileData.value?.success) {
+				turnstile.value = null;
+				toast.add({
+					title: 'Weryfikacja wygasła',
+					description: 'Zabezpieczenie wygasło. Wykonaj ponownie weryfikację.',
+					color: 'warning',
+					icon: 'carbon:warning',
 				});
 				return;
 			}
@@ -135,12 +148,18 @@
 					);
 				});
 
-				if (session.value?.data?.user.role === 'admin') {
-					await navigateTo('/admin/home');
-				} else if (session.value?.data?.user.role === 'user') {
-					await navigateTo('/user/home');
-				} else {
-					await navigateTo('/doctor/home');
+				switch (session.value?.data?.user.role) {
+					case 'admin':
+						await navigateTo('/admin/home');
+						break;
+					case 'user':
+						await navigateTo('/user/home');
+						break;
+					case 'doctor':
+						await navigateTo('/doctor/home');
+						break;
+					default:
+						await navigateTo('/');
 				}
 			}
 		} finally {
