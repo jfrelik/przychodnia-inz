@@ -3,6 +3,14 @@
 	import { getLocalTimeZone, today } from '@internationalized/date';
 	import * as z from 'zod';
 
+	definePageMeta({
+		layout: 'user',
+	});
+
+	useHead({
+		title: 'Panel pacjenta',
+	});
+
 	const toast = useToast();
 
 	const schema = z.object({
@@ -163,8 +171,11 @@
 </script>
 
 <template>
-	<div class="flex w-full flex-col">
-		<PageHeader />
+	<PageContainer>
+		<PageHeader
+			title="Panel pacjenta"
+			description="Witamy w panelu pacjenta. Wpisz opis."
+		/>
 		<div class="flex w-full flex-col gap-4">
 			<div class="m-4 flex flex-col">info at the top of page</div>
 
@@ -396,7 +407,7 @@
 			</div>
 		</div>
 		<PageFooter />
-	</div>
+	</PageContainer>
 </template>
 
 <style></style>
