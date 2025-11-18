@@ -30,19 +30,13 @@
 	const {
 		data: logs,
 		error,
-		status,
 		refresh,
 		pending,
-	} = useLazyFetch<AuditLog[]>('/api/admin/logs', {
+	} = await useFetch<AuditLog[]>('/api/admin/logs', {
 		default: () => [],
-		server: false,
-		immediate: false, // don't start automatically - we will call refresh on mount
 	});
 
-	// Initial fetch on component mount, to show loading state on hard refresh
-	onMounted(() => {
-		refresh();
-	});
+	const logsData = computed(() => logs.value ?? []);
 
 	const table = ref();
 	const globalFilter = ref('');
@@ -97,7 +91,7 @@
 					'span',
 					{
 						class: 'block max-w-64 truncate',
-						title: value, // pełny tekst w tooltipie
+						title: value,
 					},
 					value
 				);
@@ -219,7 +213,7 @@
 						v-model:column-filters="columnFilters"
 						v-model:sorting="sorting"
 						v-model:pagination="pagination"
-						:data="logs"
+						:data="logsData"
 						:columns
 						:loading="pending"
 						loading-color="primary"
