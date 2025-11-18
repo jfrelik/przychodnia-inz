@@ -16,12 +16,6 @@ services:
       NUXT_NODEMAILER_SECURE: ${NUXT_NODEMAILER_SECURE}
       NUXT_TURNSTILE_SECRET_KEY: ${NUXT_TURNSTILE_SECRET_KEY}
     restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'sh', '-c', 'curl -f http://localhost:3000 || exit 1']
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 40s
 
   db:
     container_name: przychodnia-db
