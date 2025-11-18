@@ -123,7 +123,7 @@
 
 <template>
 	<div class="flex w-full flex-col">
-		<PageHeader />
+		<AppHeader />
 		<div class="flex w-full flex-col gap-4 p-4">
 			<div class="flex w-full flex-col items-center">
 				<h1 class="text-3xl font-bold">

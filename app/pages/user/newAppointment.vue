@@ -164,7 +164,7 @@
 
 <template>
 	<div class="flex w-full flex-col">
-		<PageHeader />
+		<AppHeader />
 		<div class="flex w-full flex-col gap-4">
 			<div class="m-4 flex flex-col">info at the top of page</div>
 
