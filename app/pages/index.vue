@@ -68,7 +68,7 @@
 
 <template>
 	<div class="flex min-h-screen w-full flex-col bg-gray-50">
-		<PageHeader />
+		<AppHeader />
 
 		<section class="bg-gradient-to-br from-blue-50 to-blue-100">
 			<div
@@ -359,6 +359,6 @@
 			</div>
 		</section>
 
-		<PageFooter />
+		<AppFooter />
 	</div>
 </template>
