@@ -57,18 +57,25 @@
 				to: '/user/prescriptions',
 			},
 			{
-				label: 'Wyniki badań',
+				label: 'Wyniki Badań',
 				icon: 'carbon:document',
 				class: 'cursor-pointer',
 				active: route.path === '/user/testResults',
 				to: '/user/testResults',
 			},
 			{
-				label: 'Porady lekarskie',
+				label: 'Porady Lekarskie',
 				icon: 'carbon:user-feedback',
 				class: 'cursor-pointer',
 				active: route.path === '/user/recommendations',
 				to: '/user/recommendations',
+			},
+			{
+				label: 'Umów Wizytę',
+				icon: 'carbon:calendar-add',
+				class: 'cursor-pointer',
+				active: route.path === '/user/newAppointment',
+				to: '/user/newAppointment',
 			},
 		],
 	]);
@@ -96,7 +103,7 @@
 				<template #default="{ collapsed }">
 					<UButton
 						label="Umów wizytę"
-						icon="carbon:calendar"
+						icon="carbon:calendar-add"
 						class="cursor-pointer justify-center"
 						to="/user/newAppointment"
 					/>
