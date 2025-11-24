@@ -1,5 +1,44 @@
+<script lang="ts" setup>
+	import { Icon } from '#components';
+	import { computed } from 'vue';
+
+	definePageMeta({
+		layout: 'user',
+	});
+
+	useHead({
+		title: 'Panel pacjenta',
+	});
+
+	type PrescriptionStatus = 'active' | 'fulfilled';
+	type Prescription = {
+		prescriptionId: number | null;
+		status: PrescriptionStatus | null;
+	};
+
+	const { data } = await useFetch<Prescription[]>(
+		'/api/patient/prescriptions',
+		{
+			key: 'patient-prescriptions-summary',
+		}
+	);
+
+	const prescriptions = computed(() => data.value ?? []);
+	const activePrescriptionsCount = computed(
+		() => prescriptions.value.filter((p) => p.status === 'active').length
+	);
+	const fulfilledPrescriptionsCount = computed(
+		() => prescriptions.value.filter((p) => p.status === 'fulfilled').length
+	);
+	const totalPrescriptionsCount = computed(() => prescriptions.value.length);
+</script>
+
 <template>
-	<div class="flex w-full flex-col gap-6 p-4">
+	<PageContainer>
+		<PageHeader
+			title="Panel pacjenta"
+			description="Witamy w panelu pacjenta. Wpisz opis."
+		/>
 		<div class="grid w-full grid-cols-1 gap-4 md:grid-cols-3">
 			<UCard>
 				<div class="flex items-center gap-4">
@@ -59,34 +98,7 @@
 		<div class="mt-2">
 			<UserDetailsPrescription />
 		</div>
-	</div>
+	</PageContainer>
 </template>
-
-<script lang="ts" setup>
-	import { Icon } from '#components';
-	import { computed } from 'vue';
-
-	type PrescriptionStatus = 'active' | 'fulfilled';
-	type Prescription = {
-		prescriptionId: number | null;
-		status: PrescriptionStatus | null;
-	};
-
-	const { data } = await useFetch<Prescription[]>(
-		'/api/patient/prescriptions',
-		{
-			key: 'patient-prescriptions-summary',
-		}
-	);
-
-	const prescriptions = computed(() => data.value ?? []);
-	const activePrescriptionsCount = computed(
-		() => prescriptions.value.filter((p) => p.status === 'active').length
-	);
-	const fulfilledPrescriptionsCount = computed(
-		() => prescriptions.value.filter((p) => p.status === 'fulfilled').length
-	);
-	const totalPrescriptionsCount = computed(() => prescriptions.value.length);
-</script>
 
 <style></style>

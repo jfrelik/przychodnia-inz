@@ -1,5 +1,51 @@
+<script lang="ts" setup>
+	import { Icon } from '#components';
+	import { computed } from 'vue';
+
+	definePageMeta({
+		layout: 'user',
+	});
+
+	useHead({
+		title: 'Panel pacjenta',
+	});
+
+	type VisitStatus = 'scheduled' | 'completed' | 'canceled';
+	type Visit = {
+		appointmentId: number;
+		datetime: string | Date;
+		status: VisitStatus;
+		notes: string | null;
+		doctorId: string;
+		doctorName: string | null;
+		doctorEmail: string | null;
+		roomId: number | null;
+		roomNumber: string | null;
+	};
+
+	const { data } = await useFetch<Visit[]>('/api/patient/visits', {
+		key: 'patient-visits-summary',
+	});
+
+	const visits = computed(() => data.value ?? []);
+
+	const upcomingVisitsCount = computed(
+		() => visits.value.filter((v) => v.status === 'scheduled').length
+	);
+	const completedVisitsCount = computed(
+		() => visits.value.filter((v) => v.status === 'completed').length
+	);
+	const canceledVisitsCount = computed(
+		() => visits.value.filter((v) => v.status === 'canceled').length
+	);
+</script>
+
 <template>
-	<div class="flex w-full flex-col gap-6 p-4">
+	<PageContainer>
+		<PageHeader
+			title="Panel pacjenta"
+			description="Witamy w panelu pacjenta. Wpisz opis."
+		/>
 		<!-- Summary cards -->
 		<div class="grid w-full grid-cols-3 gap-4">
 			<UCard>
@@ -55,39 +101,5 @@
 		<div class="mt-2">
 			<UserDetailsVisit />
 		</div>
-	</div>
+	</PageContainer>
 </template>
-
-<script lang="ts" setup>
-	import { Icon } from '#components';
-	import { computed } from 'vue';
-
-	type VisitStatus = 'scheduled' | 'completed' | 'canceled';
-	type Visit = {
-		appointmentId: number;
-		datetime: string | Date;
-		status: VisitStatus;
-		notes: string | null;
-		doctorId: string;
-		doctorName: string | null;
-		doctorEmail: string | null;
-		roomId: number | null;
-		roomNumber: string | null;
-	};
-
-	const { data } = await useFetch<Visit[]>('/api/patient/visits', {
-		key: 'patient-visits-summary',
-	});
-
-	const visits = computed(() => data.value ?? []);
-
-	const upcomingVisitsCount = computed(
-		() => visits.value.filter((v) => v.status === 'scheduled').length
-	);
-	const completedVisitsCount = computed(
-		() => visits.value.filter((v) => v.status === 'completed').length
-	);
-	const canceledVisitsCount = computed(
-		() => visits.value.filter((v) => v.status === 'canceled').length
-	);
-</script>

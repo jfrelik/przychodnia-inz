@@ -1,7 +1,16 @@
 <script lang="ts" setup>
 	import type { CalendarDate } from '@internationalized/date';
 	import { getLocalTimeZone, today } from '@internationalized/date';
+	import type { StepperItem } from '@nuxt/ui';
 	import * as z from 'zod';
+
+	definePageMeta({
+		layout: 'user',
+	});
+
+	useHead({
+		title: 'Panel pacjenta',
+	});
 
 	const toast = useToast();
 
@@ -27,6 +36,33 @@
 		'Zatwierdzenie wizyty',
 	];
 	const currentStep = ref(1);
+
+	const visitSignupStepper = [
+		{
+			slot: 'specializationChoice' as const,
+			title: 'Wybór specjalizacji',
+			icon: 'carbon:choices',
+			id: 1,
+		},
+		{
+			slot: 'visitTypeChoice' as const,
+			title: 'Wybór rodzaju wizyty',
+			icon: 'carbon:types',
+			id: 2,
+		},
+		{
+			slot: 'visitTimeChoice' as const,
+			title: 'Wybór terminu wizyty',
+			icon: 'carbon:calendar',
+			id: 3,
+		},
+		{
+			slot: 'confirmVisitDetails' as const,
+			title: 'Zatwierdzenie wizyty',
+			icon: 'carbon:checkbox-checked',
+			id: 4,
+		},
+	] satisfies StepperItem[];
 
 	const specializations = [
 		{
@@ -84,13 +120,6 @@
 		},
 	];
 
-	const selectedVisitTypeDescription = computed(
-		() =>
-			visitTypes.find(
-				(visitType) => visitType.name === schemaState.value.visitType
-			)?.description ?? ''
-	);
-
 	// selected visit id
 	const selectedVisitId = ref<number | null>(null);
 
@@ -144,259 +173,285 @@
 		}
 	};
 
-	function incrementStep() {
-		// on step 3 user must have picked a visit
-		if (currentStep.value === 3 && selectedVisitId.value === null) {
-			return;
-		}
+	const visitSteps: StepperItem[] = [
+		{
+			id: 1,
+			title: 'Wybór specjalizacji',
+			description: 'Podaj interesującą Cię specjalizację',
+			icon: 'carbon:choices',
+		},
+		{
+			id: 2,
+			title: 'Rodzaj wizyty',
+			description: 'Stacjonarna czy telefoniczna?',
+			icon: 'carbon:types',
+		},
+		{
+			id: 3,
+			title: 'Termin',
+			description: 'Wybierz datę i godzinę',
+			icon: 'carbon:calendar',
+		},
+		{
+			id: 4,
+			title: 'Zatwierdzenie',
+			description: 'Podsumowanie wizyty',
+			icon: 'carbon:checkbox-checked',
+		},
+	];
 
-		if (currentStep.value < visitSignupStep.length) {
-			currentStep.value++;
-		}
-	}
+	const activeStep = computed({
+		get: () => currentStep.value - 1,
+		set: (index: number) => {
+			currentStep.value = index + 1;
+		},
+	});
 
-	function decrementStep() {
-		if (currentStep.value > 1) {
-			currentStep.value--;
-		}
-	}
+	const goNext = () => {
+		if (currentStep.value === 3 && !selectedVisitId.value) return;
+		if (currentStep.value < visitSteps.length) currentStep.value++;
+	};
+	const goPrev = () => {
+		if (currentStep.value > 1) currentStep.value--;
+	};
 </script>
 
 <template>
-	<div class="flex w-full flex-col">
-		<AppHeader />
-		<div class="flex w-full flex-col gap-4">
-			<div class="m-4 flex flex-col">info at the top of page</div>
+	<PageContainer>
+		<PageHeader
+			title="Panel pacjenta"
+			description="Witamy w panelu pacjenta. Wpisz opis."
+		/>
 
-			<div class="flex w-full flex-col items-center gap-4">
-				<h1 class="text-2xl font-bold">
-					Krok {{ currentStep }}: {{ visitSignupStep[currentStep - 1] }}
-				</h1>
+		<h1 class="text-2xl font-bold">
+			Krok {{ currentStep }}: {{ visitSignupStep[currentStep - 1] }}
+		</h1>
 
-				<UForm
-					:schema="schema"
-					:state="schemaState"
-					class="mb-4 flex w-full flex-col gap-4"
-				>
-					<!-- STEP 1 -->
-					<div
-						v-if="currentStep >= 1"
-						class="mx-auto flex w-1/2 flex-col gap-4"
-					>
-						<div class="grid w-full grid-cols-2 gap-12">
-							<div class="flex w-full flex-col justify-between gap-4">
-								<p class="font-semibold">
-									Wybierz specjalizację z poniższej listy:
-								</p>
-								<UFormField label="Specjalizacja" name="specialization">
-									<USelect
-										v-model="schemaState.specialization"
-										:disabled="currentStep === 1 ? false : true"
-										:items="specializations.map((s) => s.name)"
-										placeholder="Wybierz specjalizację"
-										class="w-full cursor-pointer"
-									/>
-								</UFormField>
-							</div>
-							<div class="flex w-full flex-col justify-between gap-4">
-								<h1 class="font-semibold">Opis specjalizacji:</h1>
-								<p v-if="schemaState.specialization !== ''">
-									{{ selectedSpecializationDescription }}
-								</p>
-							</div>
+		<UStepper v-model="activeStep" :items="visitSteps" class="w-full" disabled>
+			<template #content="{ item }">
+				<UCard>
+					<section v-if="item.id === 1" class="flex flex-col gap-3">
+						<div class="flex w-full flex-col items-center gap-3">
+							<UFormField
+								label="Specjalizacja"
+								name="specialization"
+								class="w-1/2"
+							>
+								<USelect
+									v-model="schemaState.specialization"
+									:items="specializations.map((s) => s.name)"
+									class="w-full cursor-pointer"
+									placeholder="Wybierz specjalizację"
+								/>
+							</UFormField>
+							<p v-if="schemaState.specialization !== ''">
+								{{ selectedSpecializationDescription }}
+							</p>
 						</div>
+						<div class="flex flex-row justify-between gap-3">
+							<UButton
+								label="Dalej"
+								color="info"
+								:disabled="!schemaState.specialization"
+								class="w-full cursor-pointer"
+								@click="goNext"
+							/>
+						</div>
+					</section>
+
+					<section v-else-if="item.id === 2" class="flex flex-col gap-3">
+						<div class="flex w-full flex-col items-center gap-3">
+							<UFormField label="Rodzaj wizyty" name="visitType" class="w-1/2">
+								<USelect
+									v-model="schemaState.visitType"
+									:disabled="currentStep === 2 ? false : true"
+									:items="visitTypes.map((v) => v.name)"
+									placeholder="Wybierz rodzaj wizyty"
+									class="w-full cursor-pointer"
+								/>
+							</UFormField>
+						</div>
+						<div class="flex flex-row justify-between gap-3">
+							<UButton
+								label="Cofnij"
+								variant="outline"
+								color="neutral"
+								class="w-full cursor-pointer"
+								@click="goPrev"
+							/>
+							<UButton
+								label="Dalej"
+								color="info"
+								class="w-full cursor-pointer"
+								:disabled="!schemaState.visitType"
+								@click="goNext"
+							/>
+						</div>
+					</section>
+
+					<section v-else-if="item.id === 3" class="flex flex-col gap-3">
+						<!-- @vue-ignore -->
+						<UCalendar
+							v-model="selectedVisitDateRange"
+							range
+							class=""
+							:disabled="currentStep === 3 ? false : true"
+							:is-date-unavailable="unavailableDates"
+						/>
 
 						<UButton
-							v-if="currentStep === 1"
-							class="w-full cursor-pointer justify-center"
-							:disabled="schemaState.specialization == ''"
-							label="Zatwierdź"
-							color="info"
-							@click="incrementStep"
+							label="Szukaj wizyty"
+							icon="carbon:search"
+							:disabled="currentStep === 3 ? false : true"
+							class="cursor-pointer justify-center"
 						/>
-					</div>
 
-					<!-- STEP 2 -->
-					<div v-if="currentStep >= 2" class="bg-info-100 w-full py-4">
-						<div class="mx-auto flex w-1/2 flex-col gap-4">
-							<div class="grid w-full grid-cols-2 gap-12">
-								<div class="flex w-full flex-col gap-4">
-									<p class="font-semibold">Wybierz rodzaj wizyty:</p>
-									<UFormField label="Rodzaj wizyty" name="visitType">
-										<USelect
-											v-model="schemaState.visitType"
-											:disabled="currentStep === 2 ? false : true"
-											:items="visitTypes.map((v) => v.name)"
-											placeholder="Wybierz rodzaj wizyty"
-											class="w-full cursor-pointer"
-										/>
-									</UFormField>
+						<div class="flex w-full flex-col items-center gap-3">
+							<UCard
+								v-for="visit in availableVisits"
+								:key="visit.id"
+								:class="[
+									'w-full',
+									selectedVisitId === visit.id
+										? 'border-green-400 bg-green-50 ring-2 ring-green-200'
+										: 'border-gray-200',
+								]"
+							>
+								<div class="flex flex-row items-center justify-between gap-3">
+									<div class="flex flex-col">
+										<p class="text-lg font-semibold text-gray-900">
+											{{ visit.date }} · {{ visit.time }}
+										</p>
+										<p class="text-sm text-gray-600">
+											{{ visit.specialization }}
+										</p>
+										<p class="text-sm text-gray-600">
+											<span class="font-medium text-gray-900">
+												{{ visit.doctor }}
+											</span>
+											· {{ visit.location }}
+										</p>
+									</div>
+									<UButton
+										size="sm"
+										:color="selectedVisitId === visit.id ? 'success' : 'info'"
+										class="w-full cursor-pointer justify-center md:w-auto"
+										:label="
+											selectedVisitId === visit.id
+												? 'Anuluj wybór'
+												: 'Wybierz termin'
+										"
+										:disabled="currentStep === 3 ? false : true"
+										@click="selectVisit(visit.id)"
+									/>
+								</div>
+							</UCard>
+						</div>
+
+						<div class="flex flex-row justify-between gap-3">
+							<UButton
+								label="Cofnij"
+								variant="outline"
+								color="neutral"
+								class="w-full cursor-pointer"
+								@click="goPrev"
+							/>
+							<UButton
+								label="Zatwierdź termin"
+								color="info"
+								class="w-full cursor-pointer"
+								:disabled="!selectedVisitId"
+								@click="goNext"
+							/>
+						</div>
+					</section>
+
+					<section v-else-if="item.id === 4" class="flex flex-col gap-4">
+						<div>
+							<p class="text-lg font-semibold text-gray-900">
+								Podsumowanie wizyty
+							</p>
+							<p class="text-sm text-gray-500">
+								Sprawdź, czy poniższe dane są poprawne przed potwierdzeniem
+								wizyty.
+							</p>
+						</div>
+
+						<UCard class="w-full">
+							<div class="space-y-4">
+								<div>
+									<p
+										class="text-xs font-medium tracking-wide text-gray-500 uppercase"
+									>
+										Specjalizacja
+									</p>
+									<p class="text-sm font-medium text-gray-900">
+										{{ schemaState.specialization || 'Nie wybrano' }}
+									</p>
 								</div>
 
-								<div class="flex w-full flex-col gap-4">
-									<h1 class="font-semibold">Opis rodzaju wizyty:</h1>
-									<p v-if="schemaState.visitType !== ''">
-										{{ selectedVisitTypeDescription }}
+								<div>
+									<p
+										class="text-xs font-medium tracking-wide text-gray-500 uppercase"
+									>
+										Rodzaj wizyty
+									</p>
+									<p class="text-sm font-medium text-gray-900">
+										{{ schemaState.visitType || 'Nie wybrano' }}
+									</p>
+								</div>
+
+								<div>
+									<p
+										class="text-xs font-medium tracking-wide text-gray-500 uppercase"
+									>
+										Termin wizyty
+									</p>
+									<p
+										v-if="selectedVisitId"
+										class="text-sm font-medium text-gray-900"
+									>
+										{{
+											availableVisits.find(
+												(visit) => visit.id === selectedVisitId
+											)?.date
+										}}
+										·
+										{{
+											availableVisits.find(
+												(visit) => visit.id === selectedVisitId
+											)?.time
+										}}
+									</p>
+									<p v-else class="text-sm text-gray-500">
+										Nie wybrano terminu wizyty
 									</p>
 								</div>
 							</div>
+						</UCard>
 
-							<div v-if="currentStep === 2" class="grid grid-cols-2 gap-12">
-								<UButton
-									class="w-full cursor-pointer justify-center"
-									label="Cofnij"
-									variant="outline"
-									color="neutral"
-									@click="decrementStep"
-								/>
-								<UButton
-									class="w-full cursor-pointer justify-center"
-									label="Zatwierdź"
-									color="info"
-									:disabled="schemaState.visitType === '' ? true : false"
-									@click="incrementStep"
-								/>
-							</div>
+						<div class="flex flex-row justify-between gap-3">
+							<UButton
+								label="Cofnij"
+								variant="outline"
+								class="w-full cursor-pointer"
+								color="neutral"
+								@click="goPrev"
+							/>
+							<UButton
+								label="Potwierdź wizytę"
+								color="success"
+								class="w-full cursor-pointer"
+								:disabled="!selectedVisitId"
+							/>
 						</div>
-					</div>
+					</section>
+				</UCard>
+			</template>
+		</UStepper>
 
-					<!-- STEP 3 -->
-					<div v-if="currentStep >= 3" class="w-full py-4">
-						<div class="mx-auto flex w-1/2 flex-col gap-4">
-							<p class="font-semibold">Znajdź termin swojej wizyty:</p>
-							<div class="flex flex-col items-center gap-4">
-								<!-- @vue-ignore -->
-								<UCalendar
-									v-model="selectedVisitDateRange"
-									range
-									class="w-1/2"
-									:disabled="currentStep === 3 ? false : true"
-									:is-date-unavailable="unavailableDates"
-								/>
-
-								<UButton
-									label="Szukaj wizyty"
-									icon="carbon:search"
-									:disabled="currentStep === 3 ? false : true"
-									class="w-1/2 cursor-pointer justify-center"
-								/>
-							</div>
-
-							<div class="flex flex-col items-center gap-4">
-								<div class="w-full space-y-4">
-									<UCard
-										v-for="visit in availableVisits"
-										:key="visit.id"
-										:class="[
-											'',
-											selectedVisitId === visit.id
-												? 'border-green-400 bg-green-50 ring-2 ring-green-200'
-												: 'border-gray-200',
-										]"
-									>
-										<div
-											class="flex flex-row items-center justify-between gap-3"
-										>
-											<div class="flex flex-col">
-												<p class="text-lg font-semibold text-gray-900">
-													{{ visit.date }} · {{ visit.time }}
-												</p>
-												<p class="text-sm text-gray-600">
-													{{ visit.specialization }}
-												</p>
-												<p class="text-sm text-gray-600">
-													<span class="font-medium text-gray-900">
-														{{ visit.doctor }}
-													</span>
-													· {{ visit.location }}
-												</p>
-											</div>
-											<UButton
-												size="sm"
-												:color="
-													selectedVisitId === visit.id ? 'success' : 'info'
-												"
-												class="w-full cursor-pointer justify-center md:w-auto"
-												:label="
-													selectedVisitId === visit.id
-														? 'Anuluj wybór'
-														: 'Wybierz termin'
-												"
-												:disabled="currentStep === 3 ? false : true"
-												@click="selectVisit(visit.id)"
-											/>
-										</div>
-									</UCard>
-								</div>
-							</div>
-
-							<div v-if="currentStep === 3" class="grid grid-cols-2 gap-12">
-								<UButton
-									class="w-full cursor-pointer justify-center"
-									label="Cofnij"
-									variant="outline"
-									color="neutral"
-									@click="decrementStep"
-								/>
-								<UButton
-									class="w-full cursor-pointer justify-center"
-									label="Zatwierdź"
-									color="info"
-									:disabled="selectedVisitId === null"
-									@click="incrementStep"
-								/>
-							</div>
-						</div>
-					</div>
-
-					<!-- STEP 4 -->
-					<div v-if="currentStep >= 4" class="bg-info-100 w-full py-4">
-						<div class="mx-auto flex w-1/2 flex-col gap-4">
-							test4
-							<div v-if="currentStep === 4" class="grid grid-cols-2 gap-12">
-								<UButton
-									class="w-full cursor-pointer justify-center"
-									label="Cofnij"
-									variant="outline"
-									color="neutral"
-									@click="decrementStep"
-								/>
-								<UButton
-									class="w-full cursor-pointer justify-center"
-									label="Zatwierdź"
-									color="info"
-									@click="incrementStep"
-								/>
-							</div>
-						</div>
-					</div>
-
-					<!-- STEP 5 -->
-					<div v-if="currentStep >= 5" class="w-full py-4">
-						<div class="mx-auto flex w-1/2 flex-col gap-4">
-							test5
-							<div v-if="currentStep === 5" class="grid grid-cols-2 gap-12">
-								<UButton
-									class="w-full cursor-pointer justify-center"
-									label="Cofnij"
-									variant="outline"
-									color="neutral"
-									@click="decrementStep"
-								/>
-								<UButton
-									class="w-full cursor-pointer justify-center"
-									label="Zatwierdź"
-									color="info"
-									@click="incrementStep"
-								/>
-							</div>
-						</div>
-					</div>
-				</UForm>
-			</div>
-		</div>
 		<PageFooter />
-	</div>
+	</PageContainer>
 </template>
 
 <style></style>

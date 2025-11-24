@@ -1,5 +1,57 @@
+<script lang="ts" setup>
+	import { Icon } from '#components';
+	import { computed } from 'vue';
+
+	definePageMeta({
+		layout: 'user',
+	});
+
+	useHead({
+		title: 'Panel pacjenta',
+	});
+
+	type TestResult = {
+		testId: number;
+		testDate: string | Date | null;
+		filePath: string | null;
+	};
+
+	const { data } = await useFetch<TestResult[]>('/api/patient/results', {
+		key: 'patient-test-results-summary',
+	});
+
+	const results = computed(() => data.value ?? []);
+
+	const parseDate = (value: TestResult['testDate']) => {
+		if (!value) return null;
+		const date = value instanceof Date ? value : new Date(value);
+		return Number.isNaN(date.getTime()) ? null : date;
+	};
+
+	const totalTestResultsCount = computed(() => results.value.length);
+	const recentTestResultsCount = computed(() => {
+		const threshold = new Date();
+		threshold.setDate(threshold.getDate() - 30);
+		return results.value.filter((result) => {
+			const testDate = parseDate(result.testDate);
+			return testDate != null && testDate >= threshold;
+		}).length;
+	});
+	const downloadableTestResultsCount = computed(
+		() =>
+			results.value.filter(
+				(result) =>
+					typeof result.filePath === 'string' && result.filePath !== ''
+			).length
+	);
+</script>
+
 <template>
-	<div class="flex w-full flex-col gap-6 p-4">
+	<PageContainer>
+		<PageHeader
+			title="Panel pacjenta"
+			description="Witamy w panelu pacjenta. Wpisz opis."
+		/>
 		<div class="grid w-full grid-cols-1 gap-4 md:grid-cols-3">
 			<UCard>
 				<div class="flex items-center gap-4">
@@ -53,47 +105,7 @@
 		<div class="mt-2">
 			<UserDetailsTestResult />
 		</div>
-	</div>
+	</PageContainer>
 </template>
-
-<script lang="ts" setup>
-	import { Icon } from '#components';
-	import { computed } from 'vue';
-
-	type TestResult = {
-		testId: number;
-		testDate: string | Date | null;
-		filePath: string | null;
-	};
-
-	const { data } = await useFetch<TestResult[]>('/api/patient/results', {
-		key: 'patient-test-results-summary',
-	});
-
-	const results = computed(() => data.value ?? []);
-
-	const parseDate = (value: TestResult['testDate']) => {
-		if (!value) return null;
-		const date = value instanceof Date ? value : new Date(value);
-		return Number.isNaN(date.getTime()) ? null : date;
-	};
-
-	const totalTestResultsCount = computed(() => results.value.length);
-	const recentTestResultsCount = computed(() => {
-		const threshold = new Date();
-		threshold.setDate(threshold.getDate() - 30);
-		return results.value.filter((result) => {
-			const testDate = parseDate(result.testDate);
-			return testDate != null && testDate >= threshold;
-		}).length;
-	});
-	const downloadableTestResultsCount = computed(
-		() =>
-			results.value.filter(
-				(result) =>
-					typeof result.filePath === 'string' && result.filePath !== ''
-			).length
-	);
-</script>
 
 <style></style>
