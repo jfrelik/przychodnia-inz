@@ -34,7 +34,7 @@
 
 <template>
 	<div class="flex min-h-screen w-full flex-col">
-		<PageHeader />
+		<AppHeader />
 		<div class="flex w-full flex-col p-8">
 			<UButton class="w-fit" @click="handleSignout">Logout</UButton>
 
