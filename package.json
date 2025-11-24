@@ -48,7 +48,7 @@
 		"@commitlint/cli": "^20.1.0",
 		"@commitlint/config-conventional": "^20.0.0",
 		"@iconify-json/carbon": "^1.2.14",
-		"@iconify-json/lucide": "^1.2.73",
+		"@iconify-json/lucide": "^1.2.75",
 		"@types/pg": "^8.15.6",
 		"drizzle-kit": "^0.31.7",
 		"eslint-plugin-prettier": "^5.5.4",
