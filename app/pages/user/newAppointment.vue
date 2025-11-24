@@ -120,13 +120,6 @@
 		},
 	];
 
-	const selectedVisitTypeDescription = computed(
-		() =>
-			visitTypes.find(
-				(visitType) => visitType.name === schemaState.value.visitType
-			)?.description ?? ''
-	);
-
 	// selected visit id
 	const selectedVisitId = ref<number | null>(null);
 
@@ -234,7 +227,7 @@
 			Krok {{ currentStep }}: {{ visitSignupStep[currentStep - 1] }}
 		</h1>
 
-		<UStepper v-model="activeStep" :items="visitSteps" class="w-full">
+		<UStepper v-model="activeStep" :items="visitSteps" class="w-full" disabled>
 			<template #content="{ item }">
 				<UCard>
 					<section v-if="item.id === 1" class="flex flex-col gap-3">
@@ -248,6 +241,7 @@
 									v-model="schemaState.specialization"
 									:items="specializations.map((s) => s.name)"
 									class="w-full cursor-pointer"
+									placeholder="Wybierz specjalizację"
 								/>
 							</UFormField>
 							<p v-if="schemaState.specialization !== ''">
