@@ -13,8 +13,8 @@
 <template>
 	<PageContainer>
 		<PageHeader
-			title="Panel wizyt"
-			description="Przeglądaj informacje o nadchodzących i przeszłych wizytach."
+			title="Panel badań"
+			description="Przeglądaj informacje o przeprowadzonych badaniach oraz ich wynikach."
 		/>
 		<UCard :ui="{ body: 'p-6' }">content</UCard>
 	</PageContainer>
