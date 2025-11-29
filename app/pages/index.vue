@@ -70,7 +70,7 @@
 	<div class="flex min-h-screen w-full flex-col bg-gray-50">
 		<AppHeader />
 
-		<section class="bg-gradient-to-br from-blue-50 to-blue-100">
+		<section class="bg-linear-to-br from-blue-50 to-blue-100">
 			<div
 				class="mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-[1.1fr_minmax(300px,0.9fr)] lg:items-center"
 			>
@@ -207,7 +207,7 @@
 		</section>
 
 		<section
-			class="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 px-6 py-12 text-white"
+			class="bg-linear-to-r from-blue-900 via-blue-800 to-blue-900 px-6 py-12 text-white"
 		>
 			<div
 				class="mx-auto flex max-w-5xl flex-col gap-6 rounded-2xl bg-white/10 p-8 backdrop-blur"
