@@ -51,10 +51,24 @@
 			},
 			{
 				label: 'Pacjenci',
-				icon: 'carbon:pills',
+				icon: 'carbon:stethoscope',
 				class: 'cursor-pointer',
 				active: route.path === '/doctor/patients',
 				to: '/doctor/patients',
+			},
+			{
+				label: 'Dyspozycja',
+				icon: 'carbon:calendar-heat-map',
+				class: 'cursor-pointer',
+				active: route.path === '/doctor/disposition',
+				to: '/doctor/disposition',
+			},
+			{
+				label: 'Badania',
+				icon: 'carbon:document',
+				class: 'cursor-pointer',
+				active: route.path === '/doctor/testResults',
+				to: '/doctor/testResults',
 			},
 		],
 	]);
@@ -80,6 +94,12 @@
 				</template>
 
 				<template #default="{ collapsed }">
+					<UButton
+						label="Obsłuż wizytę"
+						icon="carbon:calendar-add"
+						class="cursor-pointer justify-center"
+						to="/doctor/handleAppointment"
+					/>
 					<UNavigationMenu
 						:collapsed="collapsed"
 						:items="items[0]"
