@@ -50,6 +50,7 @@
 		"@iconify-json/carbon": "^1.2.14",
 		"@iconify-json/lucide": "^1.2.77",
 		"@types/pg": "^8.15.6",
+		"consola": "^3.4.2",
 		"drizzle-kit": "^0.31.7",
 		"eslint-plugin-prettier": "^5.5.4",
 		"husky": "^9.1.7",
