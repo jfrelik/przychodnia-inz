@@ -67,11 +67,11 @@ export default defineNuxtConfig({
 	nodemailer: {
 		from: '',
 		host: '',
-		port: 465,
+		port: 25,
 		secure: false,
 		auth: {
-			user: 'user@example.com',
-			pass: '123456',
+			user: '',
+			pass: '',
 		},
 	},
 });
