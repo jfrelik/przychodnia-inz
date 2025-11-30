@@ -11,7 +11,9 @@ import { withAuth } from '~~/server/util/withAuth';
 
 const payloadSchema = z
 	.object({
-		email: z.email().min(1, 'Adres email jest wymagany.'),
+		email: z
+			.email('Adres email jest nieprawidłowy.')
+			.min(1, 'Adres email jest wymagany.'),
 		name: z
 			.string()
 			.trim()
@@ -178,40 +180,3 @@ export default withAuth(
 	},
 	['admin']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_CreateDoctor',
-		tags: ['Admin'],
-		summary: 'Create doctor',
-		description:
-			'Creates a new user account with doctor role, sends password reset email, and creates doctor record (admin only).',
-		requestBody: {
-			required: true,
-			content: {
-				'application/json': {
-					schema: {
-						type: 'object',
-						properties: {
-							email: { type: 'string', format: 'email' },
-							name: { type: 'string' },
-							specializationId: { type: 'integer', nullable: true },
-							licenseNumber: {
-								type: 'string',
-							},
-						},
-						required: ['email', 'name', 'licenseNumber'],
-					},
-				},
-			},
-		},
-		responses: {
-			201: { description: 'Created' },
-			400: { description: 'Validation error' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-			404: { description: 'Specialization not found' },
-			409: { description: 'Email or license conflict' },
-		},
-	},
-});

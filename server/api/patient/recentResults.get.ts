@@ -52,17 +52,3 @@ export default withAuth(
 	},
 	['user']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Patient_ListRecentTestResults',
-		tags: ['Patient'],
-		summary: 'List recent patient test results',
-		description:
-			'Returns up to three latest test results for the authenticated patient.',
-		responses: {
-			200: { description: 'OK' },
-			401: { description: 'Unauthorized' },
-		},
-	},
-});

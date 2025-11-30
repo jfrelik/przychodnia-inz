@@ -61,20 +61,3 @@ export default withAuth(
 	},
 	['admin']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_DeleteSpecialization',
-		tags: ['Admin'],
-		summary: 'Delete specialization',
-		description:
-			'Usuwa specjalizację bez przypisanych lekarzy (dostęp tylko dla administratorów).',
-		responses: {
-			200: { description: 'OK' },
-			400: { description: 'Specjalizacja ma przypisanych lekarzy' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-			404: { description: 'Not found' },
-		},
-	},
-});

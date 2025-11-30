@@ -20,18 +20,3 @@ export default withAuth(async () => {
 		doctorCount: Number(row.doctorCount ?? 0),
 	}));
 }, ['admin']);
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_ListSpecializations',
-		tags: ['Admin'],
-		summary: 'List specializations',
-		description:
-			'Returns all medical specializations with assigned doctor counts.',
-		responses: {
-			200: { description: 'OK' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-		},
-	},
-});

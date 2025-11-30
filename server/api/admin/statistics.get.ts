@@ -20,18 +20,3 @@ export default withAuth(async () => {
 		totalLogs: Number(logsResult[0]?.count ?? 0),
 	};
 }, ['admin']);
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_GetStatistics',
-		tags: ['Admin'],
-		summary: 'Get dashboard statistics',
-		description:
-			'Returns counts of admins, doctors, patients, and audit logs (admin only).',
-		responses: {
-			200: { description: 'OK' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-		},
-	},
-});

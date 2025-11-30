@@ -155,21 +155,3 @@ export default withAuth(
 	},
 	['admin']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_UpdateDoctor',
-		tags: ['Admin'],
-		summary: 'Update doctor',
-		description:
-			'Updates doctor specialization and/or license number (admin only).',
-		responses: {
-			200: { description: 'OK' },
-			400: { description: 'Validation error' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-			404: { description: 'Not found' },
-			409: { description: 'Conflict' },
-		},
-	},
-});

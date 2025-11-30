@@ -30,18 +30,3 @@ export default withAuth(async () => {
 
 	return rows;
 }, ['admin']);
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_ListAppointments',
-		tags: ['Admin'],
-		summary: 'List all appointments',
-		description:
-			'Returns all appointments with patient, doctor, and room details (admin only).',
-		responses: {
-			200: { description: 'OK' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-		},
-	},
-});

@@ -59,20 +59,3 @@ export default withAuth(
 	},
 	['admin']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_DeleteRoom',
-		tags: ['Admin'],
-		summary: 'Delete room',
-		description:
-			'Usuwa gabinet bez przypisanych wizyt (dostęp tylko dla administratorów).',
-		responses: {
-			200: { description: 'OK' },
-			400: { description: 'Gabinet ma przypisane wizyty' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-			404: { description: 'Not found' },
-		},
-	},
-});

@@ -52,20 +52,3 @@ export default withAuth(
 	},
 	['admin']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_DeleteDoctor',
-		tags: ['Admin'],
-		summary: 'Delete doctor',
-		description:
-			'Deletes doctor record and reverts user role to user (admin only).',
-		responses: {
-			200: { description: 'OK' },
-			400: { description: 'Bad request' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-			404: { description: 'Not found' },
-		},
-	},
-});

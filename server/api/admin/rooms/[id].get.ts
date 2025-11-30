@@ -35,19 +35,3 @@ export default withAuth(
 	},
 	['admin']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_GetRoom',
-		tags: ['Admin'],
-		summary: 'Get room',
-		description: 'Pobiera gabinet po ID',
-		responses: {
-			200: { description: 'OK' },
-			400: { description: 'Invalid ID' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-			404: { description: 'Not found' },
-		},
-	},
-});

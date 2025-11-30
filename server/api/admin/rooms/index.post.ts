@@ -63,37 +63,3 @@ export default withAuth(
 	},
 	['admin']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_CreateRoom',
-		tags: ['Admin'],
-		summary: 'Create room',
-		description: 'Dodaje nowy gabinet',
-		requestBody: {
-			required: true,
-			content: {
-				'application/json': {
-					schema: {
-						type: 'object',
-						properties: {
-							number: {
-								type: 'integer',
-								minimum: 1,
-								maximum: 9999,
-							},
-						},
-						required: ['number'],
-					},
-				},
-			},
-		},
-		responses: {
-			201: { description: 'Created' },
-			400: { description: 'Validation error' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-			409: { description: 'Conflict' },
-		},
-	},
-});

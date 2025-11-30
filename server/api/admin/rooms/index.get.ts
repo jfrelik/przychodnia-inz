@@ -20,17 +20,3 @@ export default withAuth(async () => {
 		appointmentCount: Number(row.appointmentCount ?? 0),
 	}));
 }, ['admin']);
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_ListRooms',
-		tags: ['Admin'],
-		summary: 'List rooms',
-		description: 'Returns all rooms with appointment counts.',
-		responses: {
-			200: { description: 'OK' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-		},
-	},
-});

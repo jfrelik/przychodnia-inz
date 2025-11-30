@@ -17,17 +17,3 @@ export default withAuth(async () => {
 
 	return admins;
 }, ['admin']);
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_ListAdmins',
-		tags: ['Admin'],
-		summary: 'List all administrators',
-		description: 'Returns all users with admin role (admin only).',
-		responses: {
-			200: { description: 'OK' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-		},
-	},
-});

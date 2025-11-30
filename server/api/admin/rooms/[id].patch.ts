@@ -114,21 +114,3 @@ export default withAuth(
 	},
 	['admin']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_UpdateRoom',
-		tags: ['Admin'],
-		summary: 'Update room',
-		description:
-			'Aktualizuje numer gabinetu (dostęp tylko dla administratorów).',
-		responses: {
-			200: { description: 'OK' },
-			400: { description: 'Validation error' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-			404: { description: 'Not found' },
-			409: { description: 'Conflict' },
-		},
-	},
-});

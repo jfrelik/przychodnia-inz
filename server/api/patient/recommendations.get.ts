@@ -59,17 +59,3 @@ export default withAuth(
 	},
 	['user']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Patient_ListRecommendations',
-		tags: ['Patient'],
-		summary: 'List patient recommendations',
-		description:
-			'Returns distinct recommendations issued by doctors for the authenticated patient.',
-		responses: {
-			200: { description: 'OK' },
-			401: { description: 'Unauthorized' },
-		},
-	},
-});

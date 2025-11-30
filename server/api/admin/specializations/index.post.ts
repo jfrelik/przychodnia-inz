@@ -63,37 +63,3 @@ export default withAuth(
 	},
 	['admin']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_CreateSpecialization',
-		tags: ['Admin'],
-		summary: 'Create specialization',
-		description: 'Dodaje nową specjalizację medyczną',
-		requestBody: {
-			required: true,
-			content: {
-				'application/json': {
-					schema: {
-						type: 'object',
-						properties: {
-							name: {
-								type: 'string',
-								minLength: 2,
-								maxLength: 120,
-							},
-						},
-						required: ['name'],
-					},
-				},
-			},
-		},
-		responses: {
-			201: { description: 'Created' },
-			400: { description: 'Validation error' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-			409: { description: 'Conflict' },
-		},
-	},
-});

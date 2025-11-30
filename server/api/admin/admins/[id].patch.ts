@@ -92,19 +92,3 @@ export default withAuth(
 	},
 	['admin']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_UpdateAdmin',
-		tags: ['Admin'],
-		summary: 'Update administrator',
-		description: 'Updates administrator name (admin only).',
-		responses: {
-			200: { description: 'OK' },
-			400: { description: 'Validation error' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-			404: { description: 'Not found' },
-		},
-	},
-});

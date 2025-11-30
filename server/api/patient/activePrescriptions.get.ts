@@ -67,7 +67,6 @@ defineRouteMeta({
 	openAPI: {
 		operationId: 'Patient_ListActivePrescriptions',
 		tags: ['Patient'],
-		summary: 'List patient active prescriptions',
 		description:
 			'Returns prescriptions with status active issued to the authenticated patient.',
 		responses: {

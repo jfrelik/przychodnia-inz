@@ -60,17 +60,3 @@ export default withAuth(
 	},
 	['user']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Patient_ListPrescriptions',
-		tags: ['Patient'],
-		summary: 'List patient prescriptions',
-		description:
-			'Returns distinct prescriptions issued to the authenticated patient via appointments.',
-		responses: {
-			200: { description: 'OK' },
-			401: { description: 'Unauthorized' },
-		},
-	},
-});

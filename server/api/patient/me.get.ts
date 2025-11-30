@@ -128,18 +128,3 @@ export default withAuth(
 	},
 	['user']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Patient_GetOverview',
-		tags: ['Patient'],
-		summary: 'Get patient overview',
-		description:
-			'Returns patient user info and dashboard aggregates: upcoming appointments, prescriptions, test results.',
-		responses: {
-			200: { description: 'OK' },
-			401: { description: 'Unauthorized' },
-			404: { description: 'Not Found' },
-		},
-	},
-});

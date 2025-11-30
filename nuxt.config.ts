@@ -16,10 +16,6 @@ export default defineNuxtConfig({
 		},
 	},
 
-	routeRules: {
-		'/docs/**': { ssr: false },
-	},
-
 	modules: [
 		'@nuxt/eslint',
 		'@nuxt/fonts',
@@ -27,7 +23,6 @@ export default defineNuxtConfig({
 		'@nuxt/image',
 		'@nuxt/test-utils',
 		'@nuxt/ui',
-		'@scalar/nuxt',
 		'nuxt-nodemailer',
 		'nuxt-email-renderer',
 		'@nuxtjs/turnstile',
@@ -47,14 +42,6 @@ export default defineNuxtConfig({
 				},
 			},
 		},
-	},
-
-	// Scalar API Reference configuration
-	scalar: {
-		pathRouting: { basePath: '/docs' },
-		url: '/_openapi.json',
-		theme: 'nuxt',
-		darkMode: true,
 	},
 
 	// Cloudflare Turnstile configuration

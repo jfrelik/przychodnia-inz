@@ -58,17 +58,3 @@ export default withAuth(
 	},
 	['user']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Patient_ListUpcomingVisits',
-		tags: ['Patient'],
-		summary: 'List next upcoming visits',
-		description:
-			'Returns up to two future appointments for the authenticated patient with doctor and room info.',
-		responses: {
-			200: { description: 'OK' },
-			401: { description: 'Unauthorized' },
-		},
-	},
-});

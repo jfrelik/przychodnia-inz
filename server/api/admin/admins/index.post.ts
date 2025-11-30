@@ -122,35 +122,3 @@ export default withAuth(
 	},
 	['admin']
 );
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_CreateAdmin',
-		tags: ['Admin'],
-		summary: 'Create administrator',
-		description:
-			'Creates a new user account with admin role and sends password reset email (admin only).',
-		requestBody: {
-			required: true,
-			content: {
-				'application/json': {
-					schema: {
-						type: 'object',
-						properties: {
-							email: { type: 'string', format: 'email' },
-							name: { type: 'string' },
-						},
-						required: ['email', 'name'],
-					},
-				},
-			},
-		},
-		responses: {
-			201: { description: 'Created' },
-			400: { description: 'Validation error' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-			409: { description: 'Email conflict' },
-		},
-	},
-});
