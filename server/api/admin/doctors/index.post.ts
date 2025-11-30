@@ -103,6 +103,11 @@ export default withAuth(
 					specializationId: payload.specializationId,
 					licenseNumber: payload.licenseNumber,
 				});
+
+				await tx
+					.update(user)
+					.set({ emailVerified: true })
+					.where(eq(user.id, newUserId));
 			});
 		} catch (error: unknown) {
 			const dbError = error as { code?: string };

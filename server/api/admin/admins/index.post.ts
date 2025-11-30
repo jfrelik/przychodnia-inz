@@ -41,6 +41,13 @@ export default withAuth(
 				},
 			});
 
+			await db.transaction(async (tx) => {
+				await tx
+					.update(user)
+					.set({ emailVerified: true })
+					.where(eq(user.id, signUpResult.user.id));
+			});
+
 			createdUser = {
 				id: signUpResult.user.id,
 				name: signUpResult.user.name,
