@@ -3,7 +3,7 @@ import { authClient } from '~~/lib/auth-client';
 export default defineNuxtRouteMiddleware(async (to, from) => {
 	const { data: session } = await authClient.useSession(useFetch);
 	const role = session.value?.user?.role;
-	const publicPages = ['/', '/login', '/register'];
+	const publicPages = ['/', '/login', '/register', '/change-password'];
 
 	// Allow public pages
 	if (publicPages.includes(to.path)) return;
