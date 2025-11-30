@@ -49,6 +49,7 @@
 					/^\+?\d+$/,
 					'Numer telefonu musi składać się tylko z cyfr i opcjonalnie zaczynać się od +'
 				),
+			address: z.string().min(5, 'Adres musi zawierać przynajmniej 5 znaków'),
 			password: z
 				.string()
 				.min(12, 'Hasło musi mieć przynajmniej 12 znaków')
@@ -76,6 +77,7 @@
 		surname: '',
 		pesel: '',
 		phone: '',
+		address: '',
 		password: '',
 		confirmPassword: '',
 	});
@@ -160,29 +162,71 @@
 				return;
 			}
 
-			const { data, error } = await authClient.signUp.email({
-				email: event.data.email,
-				password: event.data.password,
-				name: event.data.name,
-				callbackURL: '/login',
-			});
-			if (error) {
-				console.error('Error signing up:', error);
-				toast.add({
-					title: 'Wystąpił problem podczas rejestracji',
-					description: 'Błąd: ' + error.message,
-					color: 'error',
-					icon: 'carbon:error',
+			try {
+				const data = await $fetch<{
+					status: string;
+					message: string;
+					patient: Record<string, unknown>;
+				}>('/api/auth/register', {
+					method: 'POST',
+					body: {
+						email: event.data.email,
+						name: event.data.name,
+						surname: event.data.surname,
+						pesel: event.data.pesel,
+						phone: event.data.phone,
+						password: event.data.password,
+						address: event.data.address,
+					},
 				});
-			} else {
+
 				toast.add({
 					title: 'Zarejestrowano',
 					description:
+						data.message ||
 						'Proces rejestracji powiódł się. Sprawdź swoją skrzynkę email, aby potwierdzić konto.',
 					color: 'success',
 					icon: 'carbon:checkmark',
 				});
 				await navigateTo('/login');
+			} catch (error) {
+				let errorMessage = 'Wystąpił błąd podczas rejestracji.';
+
+				if (error && typeof error === 'object') {
+					const fetchError = error as {
+						statusCode?: number;
+						statusMessage?: string;
+						response?: { status?: number };
+						data?: { statusMessage?: string };
+					};
+
+					const statusCode =
+						fetchError.statusCode || fetchError.response?.status;
+					const statusMessage =
+						fetchError.statusMessage || fetchError.data?.statusMessage;
+
+					if (statusCode === 400) {
+						errorMessage =
+							statusMessage ||
+							'Błąd walidacji danych. Sprawdź poprawność wprowadzonych danych.';
+					} else if (statusCode === 409) {
+						errorMessage =
+							statusMessage ||
+							'Użytkownik o podanym email lub PESEL już istnieje.';
+					} else if (statusCode === 500) {
+						errorMessage = 'Wystąpił błąd serwera. Spróbuj ponownie później.';
+					} else if (statusMessage) {
+						errorMessage = statusMessage;
+					}
+				}
+
+				console.error('Error signing up:', error);
+				toast.add({
+					title: 'Wystąpił problem podczas rejestracji',
+					description: errorMessage,
+					color: 'error',
+					icon: 'carbon:error',
+				});
 			}
 		} finally {
 			isSubmitting.value = false;
@@ -199,7 +243,7 @@
 			Nazwa Przychodni
 		</div>
 		<div
-			class="inline-block w-1/3 flex-col items-center rounded-xl border-1 border-gray-300 p-6 shadow-xl"
+			class="inline-block w-1/3 flex-col items-center rounded-xl border border-gray-300 p-6 shadow-xl"
 		>
 			<div class="flex flex-col items-center pb-6">
 				<h1 class="text-2xl font-bold">Rejestracja</h1>
@@ -270,6 +314,17 @@
 						/>
 					</UFormField>
 				</div>
+
+				<UFormField label="Adres" name="address" class="w-full">
+					<UInput
+						v-model="state.address"
+						type="text"
+						class="w-full"
+						placeholder="Ulica, numer domu/mieszkania, kod pocztowy, miasto"
+						required
+						autocomplete="street-address"
+					/>
+				</UFormField>
 
 				<UFormField label="Hasło" name="password" class="w-full">
 					<UInput
