@@ -38,6 +38,7 @@ export default defineNuxtConfig({
 		public: {
 			appVersion: pkg.version,
 		},
+		defaultAdminEmail: 'admin@example.com',
 		nitro: {
 			openAPI: {
 				meta: {
