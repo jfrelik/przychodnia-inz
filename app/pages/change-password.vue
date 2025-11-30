@@ -295,7 +295,7 @@
 			Nazwa Przychodni
 		</div>
 		<div
-			class="inline-block w-1/3 flex-col items-center rounded-xl border-1 border-gray-300 p-6 shadow-xl"
+			class="inline-block w-1/3 flex-col items-center rounded-xl border border-gray-300 p-6 shadow-xl"
 		>
 			<div class="flex flex-col items-center pb-6 text-center">
 				<h1 class="text-2xl font-bold">
