@@ -1,48 +1,92 @@
 <script lang="ts" setup>
-	import { authClient } from '~~/lib/auth-client';
+	import { Icon } from '#components';
+
+	definePageMeta({
+		layout: 'docs',
+	});
+
+	useHead({
+		title: 'Panel doktora',
+	});
 
 	const toast = useToast();
-	const session = authClient.useSession();
 
-	const handleSignout = async () => {
-		try {
-			await authClient.signOut({
-				fetchOptions: {
-					onSuccess: () => {
-						console.log('Logged out successfully');
-						toast.add({
-							title: 'Wylogowano',
-							description: 'Proces wylogowywania powiódł się',
-							color: 'success',
-							icon: 'carbon:checkmark',
-						});
-						navigateTo('/');
-					},
-				},
-			});
-		} catch (error) {
-			console.error('Error signing out:', error);
-			toast.add({
-				title: 'Wystąpił problem podczas wylogowywania',
-				description: 'Błąd: ' + error,
-				color: 'error',
-				icon: 'carbon:error',
-			});
-		}
-	};
+	const dispositionReminder = ref(true);
 </script>
 
 <template>
-	<div class="flex min-h-screen w-full flex-col">
-		<AppHeader />
-		<div class="flex w-full flex-col p-8">
-			<UButton class="w-fit" @click="handleSignout">Logout</UButton>
-
-			<DevOnly>
-				<p>Your session data is:</p>
-				<pre>{{ JSON.stringify(session, null, 2) }}</pre>
-			</DevOnly>
+	<PageContainer>
+		<PageHeader
+			title="Panel doktora"
+			description="Witamy w panelu doktora. Tutaj możesz przeglądać swoje wizyty, pacjentów oraz powiązane dane"
+		/>
+		<UAlert
+			v-if="dispositionReminder"
+			color="error"
+			title="Uzupełnij dyspozycję"
+			description="Przejdź do panelu dyspozycji, aby wpisać swoją dostępność w nadchodzący okres."
+			icon="carbon:warning"
+		/>
+		<div class="grid grid-cols-2 gap-4">
+			<UCard :ui="{ body: 'p-6' }">
+				<h1 class="text-2xl font-bold">Godziny pracy dzisiaj</h1>
+				<p>8:00-16:00</p>
+			</UCard>
+			<UCard :ui="{ body: 'p-6' }">
+				<h1 class="text-2xl font-bold">Pozostałe wizyty</h1>
+				<p>Stacjonarne: 4</p>
+				<p>Telefoniczne: 6</p>
+			</UCard>
 		</div>
-		<PageFooter />
-	</div>
+		<UCard :ui="{ body: 'p-6' }">
+			<div class="flex items-center justify-between pb-6">
+				<h1 class="text-2xl font-bold">Najbliższa wizyta</h1>
+				<UButton variant="soft" color="neutral" class="w-fit cursor-pointer">
+					Pokaż wszystkie
+				</UButton>
+			</div>
+			<!-- sample upcoming visit -->
+			<UCard>
+				<div class="flex items-center justify-between gap-4">
+					<div class="flex items-center gap-4">
+						<div
+							class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100"
+						>
+							<Icon name="carbon:calendar" class-name="w-6 h-6 text-blue-600" />
+						</div>
+
+						<div class="flex flex-col">
+							<h2 class="text-xl font-bold">Jan Nowak</h2>
+							<p class="text-sm text-gray-500">Gabinet 12</p>
+
+							<div
+								class="mt-1 flex flex-row flex-wrap gap-3 text-sm text-gray-600"
+							>
+								<p>12.12.2025</p>
+								<p>10:30</p>
+								<UBadge variant="subtle" color="info">Stacjonarna</UBadge>
+							</div>
+						</div>
+					</div>
+					<div class="flex gap-4">
+						<UButton
+							variant="soft"
+							color="neutral"
+							label="Przyjmij teraz"
+							icon="carbon:play"
+							class="cursor-pointer"
+							to="handleAppointment"
+						/>
+						<UButton
+							variant="soft"
+							color="neutral"
+							icon="carbon:view"
+							size="xl"
+							class="cursor-pointer"
+						/>
+					</div>
+				</div>
+			</UCard>
+		</UCard>
+	</PageContainer>
 </template>
