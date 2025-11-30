@@ -1,9 +1,15 @@
-import { createError, readBody, setResponseStatus } from 'h3';
+import { eq } from 'drizzle-orm';
+import {
+	createError,
+	defineEventHandler,
+	readBody,
+	setResponseStatus,
+} from 'h3';
 import { z } from 'zod';
-import { room } from '~~/server/db/clinic';
+import { auth } from '~~/lib/auth';
+import { room, specializations } from '~~/server/db/clinic';
 import { recordAuditLog } from '~~/server/util/audit';
 import db from '~~/server/util/db';
-import { withAuth } from '~~/server/util/withAuth';
 
 const payloadSchema = z
 	.object({
@@ -12,54 +18,105 @@ const payloadSchema = z
 			.int('Numer gabinetu musi być liczbą całkowitą.')
 			.min(1, 'Numer gabinetu musi być liczbą od 1 do 9999.')
 			.max(9999, 'Numer gabinetu musi być liczbą od 1 do 9999.'),
+		specializationId: z
+			.number()
+			.int('Wybrana specjalizacja jest nieprawidłowa.')
+			.min(1, 'Wybrana specjalizacja jest nieprawidłowa.')
+			.nullable()
+			.optional(),
 	})
 	.strict();
 
-export default withAuth(
-	async (event, session) => {
-		const body = await readBody(event);
-		const payload = payloadSchema.parse(body);
+export default defineEventHandler(async (event) => {
+	const session = await auth.api.getSession({ headers: event.headers });
 
-		try {
-			const [created] = await db
-				.insert(room)
-				.values({ number: payload.number })
-				.returning({
-					roomId: room.roomId,
-					number: room.number,
-				});
+	if (!session)
+		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
 
-			await recordAuditLog(
-				event,
-				session.user.id,
-				`Dodano gabinet numer ${created.number}.`
-			);
+	const hasPermission = await auth.api.userHasPermission({
+		body: {
+			userId: session.user.id,
+			permissions: {
+				rooms: ['create'],
+			},
+		},
+	});
 
-			setResponseStatus(event, 201);
+	if (!hasPermission.success)
+		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-			return {
-				status: 'ok',
-				room: created,
-			};
-		} catch (error: unknown) {
-			const dbError = error as { code?: string };
+	const body = await readBody(event);
+	const payload = payloadSchema.parse(body);
 
-			console.error({
-				operation: 'AdminCreateRoom',
-				targetNumber: payload.number,
-				errorCode: dbError?.code,
-				error,
+	let selectedSpecialization: { id: number; name: string } | null = null;
+
+	if (
+		payload.specializationId !== undefined &&
+		payload.specializationId !== null
+	) {
+		const [foundSpecialization] = await db
+			.select({
+				id: specializations.id,
+				name: specializations.name,
+			})
+			.from(specializations)
+			.where(eq(specializations.id, payload.specializationId))
+			.limit(1);
+
+		if (!foundSpecialization) {
+			throw createError({
+				statusCode: 404,
+				statusMessage: 'Wybrana specjalizacja nie istnieje.',
+			});
+		}
+
+		selectedSpecialization = foundSpecialization;
+	}
+
+	try {
+		const [created] = await db
+			.insert(room)
+			.values({
+				number: payload.number,
+				specializationId: payload.specializationId ?? null,
+			})
+			.returning({
+				roomId: room.roomId,
+				number: room.number,
+				specializationId: room.specializationId,
 			});
 
-			if (dbError?.code === '23505') {
-				throw createError({
-					statusCode: 409,
-					statusMessage: 'Gabinet o tym numerze już istnieje.',
-				});
-			}
+		await recordAuditLog(
+			event,
+			session.user.id,
+			selectedSpecialization
+				? `Dodano gabinet numer ${created.number} (specjalizacja: ${selectedSpecialization.name}).`
+				: `Dodano gabinet numer ${created.number}.`
+		);
 
-			throw error;
+		setResponseStatus(event, 201);
+
+		return {
+			status: 'ok',
+			room: created,
+		};
+	} catch (error: unknown) {
+		const dbError = error as { code?: string };
+
+		console.error({
+			operation: 'AdminCreateRoom',
+			targetNumber: payload.number,
+			errorCode: dbError?.code,
+			error,
+		});
+
+		if (dbError?.code === '23505') {
+			throw createError({
+				statusCode: 409,
+				statusMessage: 'Gabinet o tym numerze już istnieje.',
+			});
 		}
-	},
-	['admin']
-);
+
+		throw error;
+	}
+});

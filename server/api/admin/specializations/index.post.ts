@@ -1,9 +1,14 @@
-import { createError, readBody, setResponseStatus } from 'h3';
+import {
+	createError,
+	defineEventHandler,
+	readBody,
+	setResponseStatus,
+} from 'h3';
 import { z } from 'zod';
+import { auth } from '~~/lib/auth';
 import { specializations } from '~~/server/db/clinic';
 import { recordAuditLog } from '~~/server/util/audit';
 import db from '~~/server/util/db';
-import { withAuth } from '~~/server/util/withAuth';
 
 const payloadSchema = z
 	.object({
@@ -15,51 +20,65 @@ const payloadSchema = z
 	})
 	.strict();
 
-export default withAuth(
-	async (event, session) => {
-		const body = await readBody(event);
-		const payload = payloadSchema.parse(body);
+export default defineEventHandler(async (event) => {
+	const session = await auth.api.getSession({ headers: event.headers });
 
-		try {
-			const [created] = await db
-				.insert(specializations)
-				.values({ name: payload.name })
-				.returning({
-					id: specializations.id,
-					name: specializations.name,
-				});
+	if (!session)
+		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
 
-			await recordAuditLog(
-				event,
-				session.user.id,
-				`Dodano specjalizację "${created.name}".`
-			);
+	const hasPermission = await auth.api.userHasPermission({
+		body: {
+			userId: session.user.id,
+			permissions: {
+				specializations: ['create'],
+			},
+		},
+	});
 
-			setResponseStatus(event, 201);
+	if (!hasPermission.success)
+		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-			return {
-				status: 'ok',
-				specialization: { ...created, doctorCount: 0 },
-			};
-		} catch (error: unknown) {
-			const dbError = error as { code?: string };
+	const body = await readBody(event);
+	const payload = payloadSchema.parse(body);
 
-			console.error({
-				operation: 'AdminCreateSpecialization',
-				targetName: payload.name,
-				errorCode: dbError?.code,
-				error,
+	try {
+		const [created] = await db
+			.insert(specializations)
+			.values({ name: payload.name })
+			.returning({
+				id: specializations.id,
+				name: specializations.name,
 			});
 
-			if (dbError?.code === '23505') {
-				throw createError({
-					statusCode: 409,
-					statusMessage: 'Specjalizacja o takiej nazwie już istnieje.',
-				});
-			}
+		await recordAuditLog(
+			event,
+			session.user.id,
+			`Dodano specjalizację "${created.name}".`
+		);
 
-			throw error;
+		setResponseStatus(event, 201);
+
+		return {
+			status: 'ok',
+			specialization: { ...created, doctorCount: 0 },
+		};
+	} catch (error: unknown) {
+		const dbError = error as { code?: string };
+
+		console.error({
+			operation: 'AdminCreateSpecialization',
+			targetName: payload.name,
+			errorCode: dbError?.code,
+			error,
+		});
+
+		if (dbError?.code === '23505') {
+			throw createError({
+				statusCode: 409,
+				statusMessage: 'Specjalizacja o takiej nazwie już istnieje.',
+			});
 		}
-	},
-	['admin']
-);
+
+		throw error;
+	}
+});

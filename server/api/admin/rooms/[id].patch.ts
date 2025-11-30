@@ -1,10 +1,10 @@
 import { count, eq } from 'drizzle-orm';
-import { createError, readBody } from 'h3';
+import { createError, defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
-import { appointments, room } from '~~/server/db/clinic';
+import { auth } from '~~/lib/auth';
+import { appointments, room, specializations } from '~~/server/db/clinic';
 import { recordAuditLog } from '~~/server/util/audit';
 import db from '~~/server/util/db';
-import { withAuth } from '~~/server/util/withAuth';
 
 const payloadSchema = z
 	.object({
@@ -14,6 +14,12 @@ const payloadSchema = z
 			.min(1, 'Numer gabinetu musi być liczbą od 1 do 9999.')
 			.max(9999, 'Numer gabinetu musi być liczbą od 1 do 9999.')
 			.optional(),
+		specializationId: z
+			.number()
+			.int('Wybrana specjalizacja jest nieprawidłowa.')
+			.min(1, 'Wybrana specjalizacja jest nieprawidłowa.')
+			.nullable()
+			.optional(),
 	})
 	.refine(
 		(payload) => Object.keys(payload).length > 0,
@@ -21,96 +27,147 @@ const payloadSchema = z
 	)
 	.strict();
 
-export default withAuth(
-	async (event, session) => {
-		const roomId = Number(event.context.params?.id);
+export default defineEventHandler(async (event) => {
+	const session = await auth.api.getSession({ headers: event.headers });
 
-		if (!roomId || Number.isNaN(roomId)) {
-			throw createError({
-				statusCode: 400,
-				statusMessage: 'Identyfikator gabinetu jest wymagany.',
-			});
-		}
+	if (!session)
+		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
 
-		const [current] = await db
-			.select({
-				roomId: room.roomId,
-				number: room.number,
-			})
-			.from(room)
-			.where(eq(room.roomId, roomId))
-			.limit(1);
+	const hasPermission = await auth.api.userHasPermission({
+		body: {
+			userId: session.user.id,
+			permissions: {
+				rooms: ['update'],
+			},
+		},
+	});
 
-		if (!current) {
-			throw createError({
-				statusCode: 404,
-				statusMessage: 'Gabinet nie został znaleziony.',
-			});
-		}
+	if (!hasPermission.success)
+		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-		const body = await readBody(event);
-		const payload = payloadSchema.parse(body);
+	const roomId = Number(event.context.params?.id);
 
-		const update: Record<string, unknown> = {};
-		const auditMessages: string[] = [];
+	if (!roomId || Number.isNaN(roomId)) {
+		throw createError({
+			statusCode: 400,
+			statusMessage: 'Identyfikator gabinetu jest wymagany.',
+		});
+	}
 
-		if (payload.number && payload.number !== current.number) {
-			update.number = payload.number;
-			auditMessages.push(`zmieniono numer na ${payload.number}`);
-		}
+	const [current] = await db
+		.select({
+			roomId: room.roomId,
+			number: room.number,
+			specializationId: room.specializationId,
+			specializationName: specializations.name,
+		})
+		.from(room)
+		.leftJoin(specializations, eq(room.specializationId, specializations.id))
+		.where(eq(room.roomId, roomId))
+		.limit(1);
 
-		if (Object.keys(update).length === 0) {
-			return {
-				status: 'noop',
-				message: 'Brak zmian do zapisania.',
-			};
-		}
+	if (!current) {
+		throw createError({
+			statusCode: 404,
+			statusMessage: 'Gabinet nie został znaleziony.',
+		});
+	}
 
-		try {
-			await db.update(room).set(update).where(eq(room.roomId, roomId));
-		} catch (error: unknown) {
-			const dbError = error as { code?: string };
+	const body = await readBody(event);
+	const payload = payloadSchema.parse(body);
 
-			console.error({
-				operation: 'AdminUpdateRoom',
-				targetId: roomId,
-				errorCode: dbError?.code,
-				error,
-			});
+	const update: Record<string, unknown> = {};
+	const auditMessages: string[] = [];
 
-			if (dbError?.code === '23505') {
+	if (payload.number && payload.number !== current.number) {
+		update.number = payload.number;
+		auditMessages.push(`zmieniono numer na ${payload.number}`);
+	}
+
+	if (
+		payload.specializationId !== undefined &&
+		payload.specializationId !== current.specializationId
+	) {
+		if (payload.specializationId === null) {
+			update.specializationId = null;
+			auditMessages.push('usunięto specjalizację');
+		} else {
+			const [newSpecialization] = await db
+				.select({
+					id: specializations.id,
+					name: specializations.name,
+				})
+				.from(specializations)
+				.where(eq(specializations.id, payload.specializationId))
+				.limit(1);
+
+			if (!newSpecialization) {
 				throw createError({
-					statusCode: 409,
-					statusMessage: 'Gabinet o tym numerze już istnieje.',
+					statusCode: 404,
+					statusMessage: 'Wybrana specjalizacja nie istnieje.',
 				});
 			}
-			throw error;
+
+			update.specializationId = payload.specializationId;
+			auditMessages.push(
+				`zmieniono specjalizację na ${newSpecialization.name}`
+			);
 		}
+	}
 
-		const [updated] = await db
-			.select({
-				roomId: room.roomId,
-				number: room.number,
-				appointmentCount: count(appointments.appointmentId),
-			})
-			.from(room)
-			.leftJoin(appointments, eq(appointments.roomRoomId, room.roomId))
-			.where(eq(room.roomId, roomId))
-			.groupBy(room.roomId);
-
-		await recordAuditLog(
-			event,
-			session.user.id,
-			`Zaktualizowano gabinet ${current.number}: ${auditMessages.join(', ')}`
-		);
-
+	if (Object.keys(update).length === 0) {
 		return {
-			status: 'ok',
-			room: {
-				...updated,
-				appointmentCount: Number(updated?.appointmentCount ?? 0),
-			},
+			status: 'noop',
+			message: 'Brak zmian do zapisania.',
 		};
-	},
-	['admin']
-);
+	}
+
+	try {
+		await db.update(room).set(update).where(eq(room.roomId, roomId));
+	} catch (error: unknown) {
+		const dbError = error as { code?: string };
+
+		console.error({
+			operation: 'AdminUpdateRoom',
+			targetId: roomId,
+			errorCode: dbError?.code,
+			error,
+		});
+
+		if (dbError?.code === '23505') {
+			throw createError({
+				statusCode: 409,
+				statusMessage: 'Gabinet o tym numerze już istnieje.',
+			});
+		}
+		throw error;
+	}
+
+	const [updated] = await db
+		.select({
+			roomId: room.roomId,
+			number: room.number,
+			appointmentCount: count(appointments.appointmentId),
+			specializationId: room.specializationId,
+			specializationName: specializations.name,
+		})
+		.from(room)
+		.leftJoin(appointments, eq(appointments.roomRoomId, room.roomId))
+		.leftJoin(specializations, eq(room.specializationId, specializations.id))
+		.where(eq(room.roomId, roomId))
+		.groupBy(room.roomId);
+
+	await recordAuditLog(
+		event,
+		session.user.id,
+		`Zaktualizowano gabinet ${current.number}: ${auditMessages.join(', ')}`
+	);
+
+	return {
+		status: 'ok',
+		room: {
+			...updated,
+			appointmentCount: Number(updated?.appointmentCount ?? 0),
+		},
+	};
+});

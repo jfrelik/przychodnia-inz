@@ -1,63 +1,77 @@
 import { count, eq } from 'drizzle-orm';
-import { createError } from 'h3';
+import { createError, defineEventHandler } from 'h3';
+import { auth } from '~~/lib/auth';
 import { doctors, specializations } from '~~/server/db/clinic';
 import { recordAuditLog } from '~~/server/util/audit';
 import db from '~~/server/util/db';
-import { withAuth } from '~~/server/util/withAuth';
 
-export default withAuth(
-	async (event, session) => {
-		const specializationId = Number(event.context.params?.id);
+export default defineEventHandler(async (event) => {
+	const session = await auth.api.getSession({ headers: event.headers });
 
-		if (!specializationId || Number.isNaN(specializationId)) {
-			throw createError({
-				statusCode: 400,
-				statusMessage: 'Identyfikator specjalizacji jest wymagany.',
-			});
-		}
+	if (!session)
+		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
 
-		const [current] = await db
-			.select({
-				id: specializations.id,
-				name: specializations.name,
-			})
-			.from(specializations)
-			.where(eq(specializations.id, specializationId))
-			.limit(1);
+	const hasPermission = await auth.api.userHasPermission({
+		body: {
+			userId: session.user.id,
+			permissions: {
+				specializations: ['delete'],
+			},
+		},
+	});
 
-		if (!current) {
-			throw createError({
-				statusCode: 404,
-				statusMessage: 'Specjalizacja nie została znaleziona.',
-			});
-		}
+	if (!hasPermission.success)
+		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-		const [assigned] = await db
-			.select({ total: count(doctors.userId) })
-			.from(doctors)
-			.where(eq(doctors.specializationId, specializationId));
+	const specializationId = Number(event.context.params?.id);
 
-		if (Number(assigned?.total ?? 0) > 0) {
-			throw createError({
-				statusCode: 400,
-				statusMessage:
-					'Nie można usunąć specjalizacji, do której przypisani są lekarze.',
-			});
-		}
+	if (!specializationId || Number.isNaN(specializationId)) {
+		throw createError({
+			statusCode: 400,
+			statusMessage: 'Identyfikator specjalizacji jest wymagany.',
+		});
+	}
 
-		await db
-			.delete(specializations)
-			.where(eq(specializations.id, specializationId));
+	const [current] = await db
+		.select({
+			id: specializations.id,
+			name: specializations.name,
+		})
+		.from(specializations)
+		.where(eq(specializations.id, specializationId))
+		.limit(1);
 
-		await recordAuditLog(
-			event,
-			session.user.id,
-			`Usunięto specjalizację "${current.name}".`
-		);
+	if (!current) {
+		throw createError({
+			statusCode: 404,
+			statusMessage: 'Specjalizacja nie została znaleziona.',
+		});
+	}
 
-		return {
-			status: 'ok',
-		};
-	},
-	['admin']
-);
+	const [assigned] = await db
+		.select({ total: count(doctors.userId) })
+		.from(doctors)
+		.where(eq(doctors.specializationId, specializationId));
+
+	if (Number(assigned?.total ?? 0) > 0) {
+		throw createError({
+			statusCode: 400,
+			statusMessage:
+				'Nie można usunąć specjalizacji, do której przypisani są lekarze.',
+		});
+	}
+
+	await db
+		.delete(specializations)
+		.where(eq(specializations.id, specializationId));
+
+	await recordAuditLog(
+		event,
+		session.user.id,
+		`Usunięto specjalizację "${current.name}".`
+	);
+
+	return {
+		status: 'ok',
+	};
+});
