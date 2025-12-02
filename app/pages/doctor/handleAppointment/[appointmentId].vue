@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+	import { useRoute } from '#imports';
 	import type { FormSubmitEvent, StepperItem } from '@nuxt/ui';
 	import { computed, ref } from 'vue';
 	import * as z from 'zod';
@@ -12,6 +13,8 @@
 	});
 
 	const toast = useToast();
+	const route = useRoute();
+	const appointmentId = route.params.appointmentId as string;
 
 	const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 	const ACCEPTED_FILE_TYPES = ['application/pdf'];
@@ -78,12 +81,7 @@
 			description: 'Krok 3',
 			icon: 'carbon:stethoscope',
 		},
-		{
-			id: 4,
-			title: 'Recepta',
-			description: 'Krok 4',
-			icon: 'carbon:pills',
-		},
+		{ id: 4, title: 'Recepta', description: 'Krok 4', icon: 'carbon:pills' },
 		{
 			id: 5,
 			title: 'Zalecenia',
@@ -124,9 +122,8 @@
 	async function handleSubmit(event: FormSubmitEvent<Schema>) {
 		try {
 			// TODO: submit logic
-			console.log(event.data);
+			console.log('appointmentId', appointmentId, event.data);
 		} catch (error) {
-			// TODO: error handling
 			console.error(error);
 		}
 	}
@@ -143,7 +140,7 @@
 		</h1>
 		<UStepper v-model="activeStep" :items="visitSteps" class="w-full">
 			<template #content="{ item }">
-				<UForm :schema="schema" :state="schemaState">
+				<UForm :schema="schema" :state="schemaState" @submit="handleSubmit">
 					<UCard :ui="{ body: 'p-6' }">
 						<!-- Step1: Cel wizyty i opis objawów -->
 						<section
@@ -295,7 +292,6 @@
 								</p>
 
 								<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-									<!-- Kolumna 1 -->
 									<div class="space-y-4">
 										<div>
 											<p class="text-xs font-semibold text-gray-500 uppercase">
@@ -325,7 +321,6 @@
 										</div>
 									</div>
 
-									<!-- Kolumna 2 -->
 									<div class="space-y-4">
 										<div>
 											<p class="text-xs font-semibold text-gray-500 uppercase">
