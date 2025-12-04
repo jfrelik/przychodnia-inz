@@ -1,6 +1,6 @@
 import { integer, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
 import { doctors } from './doctors';
-import { appointmentStatusEnum } from './enums';
+import { appointmentStatusEnum, appointmentTypeEnum } from './enums';
 import { patients } from './patients';
 import { prescriptions, recommendations } from './prescriptions';
 import { room } from './rooms';
@@ -15,13 +15,14 @@ export const appointments = pgTable('appointments', {
 		.references(() => doctors.userId, { onDelete: 'cascade' }),
 	datetime: timestamp('datetime', { withTimezone: false }).notNull(),
 	status: appointmentStatusEnum('status').notNull(),
+	type: appointmentTypeEnum('type').notNull().default('consultation'),
 	notes: text('notes'),
-	recommendationId: integer('recommendation_id')
-		.notNull()
-		.references(() => recommendations.recommendationId),
-	prescriptionId: integer('prescription_id')
-		.notNull()
-		.references(() => prescriptions.prescriptionId),
+	recommendationId: integer('recommendation_id').references(
+		() => recommendations.recommendationId
+	),
+	prescriptionId: integer('prescription_id').references(
+		() => prescriptions.prescriptionId
+	),
 	roomRoomId: integer('room_room_id')
 		.notNull()
 		.references(() => room.roomId),

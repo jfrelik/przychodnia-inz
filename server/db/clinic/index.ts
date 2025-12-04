@@ -9,5 +9,6 @@ export * from './prescriptions';
 export * from './receptionists';
 export * from './relations';
 export * from './rooms';
+export * from './roomSpecializations';
 export * from './specializations';
 export * from './testResults';
