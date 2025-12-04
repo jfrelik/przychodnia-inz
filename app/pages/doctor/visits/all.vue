@@ -1,14 +1,19 @@
 <script lang="ts" setup>
 	import { Icon } from '#components';
-	import { computed } from 'vue';
+	import {
+		createCalendar,
+		createViewDay,
+		createViewMonthAgenda,
+		createViewMonthGrid,
+		createViewWeek,
+	} from '@schedule-x/calendar';
+	import '@schedule-x/theme-default/dist/index.css';
+	import { ScheduleXCalendar } from '@schedule-x/vue';
+	import 'temporal-polyfill/global';
+	import { computed, onMounted, watch } from 'vue';
 
-	definePageMeta({
-		layout: 'docs',
-	});
-
-	useHead({
-		title: 'Panel doktora',
-	});
+	definePageMeta({ layout: 'docs' });
+	useHead({ title: 'Panel doktora' });
 
 	type VisitStatus = 'scheduled' | 'completed' | 'canceled';
 	type Visit = {
@@ -37,6 +42,55 @@
 	const canceledVisitsCount = computed(
 		() => visits.value.filter((v) => v.status === 'canceled').length
 	);
+
+	const calendarApp = shallowRef<ReturnType<typeof createCalendar>>();
+
+	const toZoned = (value: string | Date) => {
+		if (typeof value === 'string') {
+			return Temporal.ZonedDateTime.from(value);
+		}
+		const instant = Temporal.Instant.from(value.toISOString());
+		return instant.toZonedDateTimeISO(Temporal.Now.timeZoneId());
+	};
+
+	const toEvent = (visit: Visit) => {
+		const start = toZoned(visit.datetime);
+		return {
+			id: visit.appointmentId,
+			title: visit.patientName ? `Wizyta: ${visit.patientName}` : 'Wizyta',
+			start,
+			end: start.add({ minutes: 30 }),
+			description: visit.notes ?? undefined,
+		};
+	};
+
+	onMounted(() => {
+		const weekView = createViewWeek();
+
+		calendarApp.value = createCalendar({
+			selectedDate: Temporal.Now.plainDateISO(),
+			defaultView: weekView.name ?? 'week',
+			views: [
+				createViewDay(),
+				weekView,
+				createViewMonthGrid(),
+				createViewMonthAgenda(),
+			],
+			dayBoundaries: { start: '07:00', end: '19:00' },
+			weekOptions: {
+				timeAxisFormatOptions: {
+					hour: '2-digit',
+					minute: '2-digit',
+					hour12: false,
+				},
+			},
+			locale: 'pl-PL',
+		});
+
+		watch(visits, (list) => calendarApp.value?.events.set(list.map(toEvent)), {
+			immediate: true,
+		});
+	});
 </script>
 
 <template>
@@ -96,8 +150,16 @@
 			</UCard>
 		</div>
 
-		<div class="mt-2">
-			<DoctorVisitsList />
-		</div>
+		<ClientOnly>
+			<ScheduleXCalendar v-if="calendarApp" :calendar-app="calendarApp" />
+		</ClientOnly>
 	</PageContainer>
 </template>
+
+<style scoped>
+	.sx-vue-calendar-wrapper {
+		height: 100%;
+		max-height: none;
+		min-height: 40vh;
+	}
+</style>

@@ -1,12 +1,14 @@
 <script lang="ts" setup>
 	import { Icon } from '#components';
-	import { computed } from 'vue';
-	import VisitsTodayList from '~/components/doctor/VisitsTodayList.vue';
+	import { createCalendar, createViewDay } from '@schedule-x/calendar';
+	import '@schedule-x/theme-default/dist/index.css';
+	import { ScheduleXCalendar } from '@schedule-x/vue';
+	import 'temporal-polyfill/global';
+	import { computed, onMounted, shallowRef, watch } from 'vue';
 
 	definePageMeta({
 		layout: 'docs',
 	});
-
 	useHead({
 		title: 'Panel doktora',
 	});
@@ -38,10 +40,56 @@
 	const canceledVisitsCount = computed(
 		() => visits.value.filter((v) => v.status === 'canceled').length
 	);
+
+	const calendarApp = shallowRef<ReturnType<typeof createCalendar>>();
+
+	const toZoned = (value: string | Date) => {
+		if (typeof value === 'string') {
+			return Temporal.ZonedDateTime.from(value);
+		}
+		const instant = Temporal.Instant.from(value.toISOString());
+		return instant.toZonedDateTimeISO(Temporal.Now.timeZoneId());
+	};
+
+	const toEvent = (visit: Visit) => {
+		const start = toZoned(visit.datetime);
+		return {
+			id: visit.appointmentId,
+			title: visit.patientName ? `Wizyta: ${visit.patientName}` : 'Wizyta',
+			start,
+			end: start.add({ minutes: 30 }),
+			description: visit.notes ?? undefined,
+		};
+	};
+
+	onMounted(() => {
+		calendarApp.value = createCalendar({
+			selectedDate: Temporal.Now.plainDateISO(),
+			defaultView: 'day',
+			views: [createViewDay()],
+			dayBoundaries: { start: '07:00', end: '20:00' },
+			weekOptions: {
+				timeAxisFormatOptions: {
+					hour: '2-digit',
+					minute: '2-digit',
+					hour12: false,
+				},
+			},
+			firstDayOfWeek: 1,
+			locale: 'pl-PL',
+			timezone: 'Europe/Warsaw',
+			minDate: Temporal.Now.plainDateISO(),
+			maxDate: Temporal.Now.plainDateISO(),
+		});
+
+		watch(visits, (list) => calendarApp.value?.events.set(list.map(toEvent)), {
+			immediate: true,
+		});
+	});
 </script>
 
 <template>
-	<PageContainer>
+	<PageContainer class="flex min-h-screen flex-col">
 		<PageHeader
 			title="Panel dzisiejszych wizyt"
 			description="Przeglądaj wizyty zaplanowane na dziś, przypisane do Ciebie."
@@ -97,8 +145,20 @@
 			</UCard>
 		</div>
 
-		<div class="mt-2">
-			<VisitsTodayList />
-		</div>
+		<ClientOnly>
+			<ScheduleXCalendar
+				v-if="calendarApp"
+				:calendar-app="calendarApp"
+				class="flex-1"
+			/>
+		</ClientOnly>
 	</PageContainer>
 </template>
+
+<style scoped>
+	.sx-vue-calendar-wrapper {
+		height: 100%;
+		max-height: none;
+		min-height: 40vh;
+	}
+</style>
