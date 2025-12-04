@@ -23,7 +23,7 @@ export const ac = createAccessControl(statements);
 export const roles = {
 	// Patient: read own visits and own results (API enforces ownership)
 	user: ac.newRole({
-		appointments: ['read', 'list'],
+		appointments: ['read', 'list', 'create'],
 		testResults: ['read', 'list'],
 		medicalRecords: ['read', 'list'],
 		prescriptions: ['read', 'list'],
