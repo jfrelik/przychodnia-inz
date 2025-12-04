@@ -6,6 +6,8 @@ export * from './logs';
 export * from './medical';
 export * from './patients';
 export * from './prescriptions';
+export * from './receptionists';
 export * from './relations';
 export * from './rooms';
 export * from './specializations';
+export * from './testResults';

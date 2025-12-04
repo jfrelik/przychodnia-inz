@@ -5,6 +5,7 @@ export const appointmentStatusEnum = pgEnum('appointment_status', [
 	'scheduled',
 	'completed',
 	'canceled',
+	'checked_in',
 ]);
 export const prescriptionStatusEnum = pgEnum('prescription_status', [
 	'active',

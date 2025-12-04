@@ -4,11 +4,12 @@ import { appointments } from './appointments';
 import { availability } from './availability';
 import { doctors } from './doctors';
 import { logs } from './logs';
-import { medicalRecords, testResults } from './medical';
+import { medicalRecords } from './medical';
 import { patients } from './patients';
 import { prescriptions, recommendations } from './prescriptions';
 import { room } from './rooms';
 import { specializations } from './specializations';
+import { testResults } from './testResults';
 
 // users
 export const usersRelations = relations(user, ({ one, many }) => ({
