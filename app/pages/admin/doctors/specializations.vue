@@ -6,8 +6,6 @@
 		SortingState,
 	} from '@tanstack/vue-table';
 	import { getPaginationRowModel } from '@tanstack/vue-table';
-	import type { FetchError } from 'ofetch';
-
 	type Specialization = {
 		id: number;
 		name: string;
@@ -21,24 +19,6 @@
 	useHead({
 		title: 'Specjalizacje medyczne',
 	});
-
-	type FetchErrorLike = FetchError<unknown> | null;
-
-	const getFetchErrorStatus = (fetchError: FetchErrorLike) =>
-		fetchError?.statusCode ??
-		fetchError?.status ??
-		fetchError?.response?.status ??
-		(fetchError?.data as { statusCode?: number } | undefined)?.statusCode;
-
-	const getFetchErrorMessage = (fetchError: FetchErrorLike) =>
-		(
-			fetchError?.data as
-				| { statusMessage?: string; message?: string }
-				| undefined
-		)?.statusMessage ??
-		(fetchError?.data as { message?: string } | undefined)?.message ??
-		fetchError?.statusMessage ??
-		fetchError?.message;
 
 	const toast = useToast();
 
@@ -132,37 +112,11 @@
 		isCreatePending.value = false;
 
 		if (createError.value) {
-			const statusCode = getFetchErrorStatus(createError.value);
-			const statusMessage = getFetchErrorMessage(createError.value);
-
-			if (statusCode === 409) {
-				toast.add({
-					title: 'Nazwa zajęta',
-					description:
-						statusMessage ??
-						'Specjalizacja o tej nazwie już istnieje. Wybierz inną nazwę.',
-					color: 'warning',
-					icon: 'i-lucide-alert-triangle',
-				});
-				return;
-			}
-
-			if (statusCode === 400) {
-				toast.add({
-					title: 'Nieprawidłowe dane',
-					description:
-						statusMessage ??
-						'Podaj prawidłową nazwę specjalizacji i spróbuj ponownie.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
 			toast.add({
 				title: 'Dodawanie nie powiodło się',
 				description:
-					statusMessage ?? 'Wystąpił błąd podczas dodawania specjalizacji.',
+					createError.value.message ??
+					'Wystąpił błąd podczas dodawania specjalizacji.',
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
@@ -228,49 +182,11 @@
 		isRenamePending.value = false;
 
 		if (renameError.value) {
-			const statusCode = getFetchErrorStatus(renameError.value);
-			const statusMessage = getFetchErrorMessage(renameError.value);
-
-			if (statusCode === 409) {
-				toast.add({
-					title: 'Nazwa zajęta',
-					description:
-						statusMessage ??
-						'Specjalizacja o tej nazwie już istnieje. Wybierz inną nazwę.',
-					color: 'warning',
-					icon: 'i-lucide-alert-triangle',
-				});
-				return;
-			}
-
-			if (statusCode === 404) {
-				toast.add({
-					title: 'Specjalizacja nie istnieje',
-					description:
-						statusMessage ??
-						'Wybrana specjalizacja nie istnieje lub została usunięta.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
-			if (statusCode === 400) {
-				toast.add({
-					title: 'Nieprawidłowe dane',
-					description:
-						statusMessage ??
-						'Podaj prawidłową nazwę specjalizacji i spróbuj ponownie.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
 			toast.add({
 				title: 'Aktualizacja nie powiodła się',
 				description:
-					statusMessage ?? 'Wystąpił błąd podczas aktualizacji specjalizacji.',
+					renameError.value.message ??
+					'Wystąpił błąd podczas aktualizacji specjalizacji.',
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
@@ -316,25 +232,11 @@
 		isDeletePending.value = false;
 
 		if (deleteError.value) {
-			const statusCode = getFetchErrorStatus(deleteError.value);
-			const statusMessage = getFetchErrorMessage(deleteError.value);
-
-			if (statusCode === 404) {
-				toast.add({
-					title: 'Specjalizacja nie istnieje',
-					description:
-						statusMessage ??
-						'Wybrana specjalizacja została już usunięta lub nie istnieje.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
 			toast.add({
 				title: 'Usuwanie nie powiodło się',
 				description:
-					statusMessage ?? 'Wystąpił błąd podczas usuwania specjalizacji.',
+					deleteError.value.message ??
+					'Wystąpił błąd podczas usuwania specjalizacji.',
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});

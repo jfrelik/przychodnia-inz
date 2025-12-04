@@ -6,7 +6,6 @@
 		SortingState,
 	} from '@tanstack/vue-table';
 	import { getPaginationRowModel } from '@tanstack/vue-table';
-	import type { FetchError } from 'ofetch';
 
 	type Room = {
 		roomId: number;
@@ -22,24 +21,6 @@
 		title: 'Zarządzanie gabinetami',
 	});
 
-	type FetchErrorLike = FetchError<unknown> | null;
-
-	const getFetchErrorStatus = (fetchError: FetchErrorLike) =>
-		fetchError?.statusCode ??
-		fetchError?.status ??
-		fetchError?.response?.status ??
-		(fetchError?.data as { statusCode?: number } | undefined)?.statusCode;
-
-	const getFetchErrorMessage = (fetchError: FetchErrorLike) =>
-		(
-			fetchError?.data as
-				| { statusMessage?: string; message?: string }
-				| undefined
-		)?.statusMessage ??
-		(fetchError?.data as { message?: string } | undefined)?.message ??
-		fetchError?.statusMessage ??
-		fetchError?.message;
-
 	const toast = useToast();
 
 	const {
@@ -52,6 +33,19 @@
 	});
 
 	const rooms = computed(() => roomsData.value ?? []);
+
+	type Specialization = {
+		id: number;
+		name: string;
+		doctorCount: number;
+	};
+
+	const { data: specializationsData } = await useFetch<Specialization[]>(
+		'/api/admin/specializations',
+		{ default: () => [] }
+	);
+
+	const specializations = computed(() => specializationsData.value ?? []);
 
 	const table = ref();
 	const globalFilter = ref('');
@@ -130,37 +124,11 @@
 		isCreatePending.value = false;
 
 		if (createError.value) {
-			const statusCode = getFetchErrorStatus(createError.value);
-			const statusMessage = getFetchErrorMessage(createError.value);
-
-			if (statusCode === 409) {
-				toast.add({
-					title: 'Numer zajęty',
-					description:
-						statusMessage ??
-						'Gabinet o tym numerze już istnieje. Wybierz inny numer.',
-					color: 'warning',
-					icon: 'i-lucide-alert-triangle',
-				});
-				return;
-			}
-
-			if (statusCode === 400) {
-				toast.add({
-					title: 'Nieprawidłowe dane',
-					description:
-						statusMessage ??
-						'Podaj prawidłowy numer gabinetu i spróbuj ponownie.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
 			toast.add({
 				title: 'Dodawanie nie powiodło się',
 				description:
-					statusMessage ?? 'Wystąpił błąd podczas dodawania gabinetu.',
+					createError.value.message ??
+					'Wystąpił błąd podczas dodawania gabinetu.',
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
@@ -224,49 +192,11 @@
 		isEditPending.value = false;
 
 		if (editError.value) {
-			const statusCode = getFetchErrorStatus(editError.value);
-			const statusMessage = getFetchErrorMessage(editError.value);
-
-			if (statusCode === 409) {
-				toast.add({
-					title: 'Numer zajęty',
-					description:
-						statusMessage ??
-						'Gabinet o tym numerze już istnieje. Wybierz inny numer.',
-					color: 'warning',
-					icon: 'i-lucide-alert-triangle',
-				});
-				return;
-			}
-
-			if (statusCode === 404) {
-				toast.add({
-					title: 'Gabinet nie istnieje',
-					description:
-						statusMessage ??
-						'Wybrany gabinet nie istnieje lub został usunięty.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
-			if (statusCode === 400) {
-				toast.add({
-					title: 'Nieprawidłowe dane',
-					description:
-						statusMessage ??
-						'Podaj prawidłowy numer gabinetu i spróbuj ponownie.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
 			toast.add({
 				title: 'Aktualizacja nie powiodła się',
 				description:
-					statusMessage ?? 'Wystąpił błąd podczas aktualizacji gabinetu.',
+					editError.value.message ??
+					'Wystąpił błąd podczas aktualizacji gabinetu.',
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
@@ -312,37 +242,11 @@
 		isDeletePending.value = false;
 
 		if (deleteError.value) {
-			const statusCode = getFetchErrorStatus(deleteError.value);
-			const statusMessage = getFetchErrorMessage(deleteError.value);
-
-			if (statusCode === 404) {
-				toast.add({
-					title: 'Gabinet nie istnieje',
-					description:
-						statusMessage ??
-						'Wybrany gabinet został już usunięty lub nie istnieje.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
-			if (statusCode === 400) {
-				toast.add({
-					title: 'Nie można usunąć gabinetu',
-					description:
-						statusMessage ??
-						'Gabinet ma przypisane wizyty i nie może zostać usunięty.',
-					color: 'warning',
-					icon: 'i-lucide-alert-triangle',
-				});
-				return;
-			}
-
 			toast.add({
 				title: 'Usuwanie nie powiodło się',
 				description:
-					statusMessage ?? 'Wystąpił błąd podczas usuwania gabinetu.',
+					deleteError.value.message ??
+					'Wystąpił błąd podczas usuwania gabinetu.',
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});

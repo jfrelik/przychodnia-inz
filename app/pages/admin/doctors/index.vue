@@ -6,8 +6,6 @@
 		SortingState,
 	} from '@tanstack/vue-table';
 	import { getPaginationRowModel } from '@tanstack/vue-table';
-	import type { FetchError } from 'ofetch';
-
 	type Doctor = {
 		userId: string;
 		userName: string;
@@ -29,24 +27,6 @@
 	useHead({
 		title: 'Panel lekarzy',
 	});
-
-	type FetchErrorLike = FetchError<unknown> | null;
-
-	const getFetchErrorStatus = (fetchError: FetchErrorLike) =>
-		fetchError?.statusCode ??
-		fetchError?.status ??
-		fetchError?.response?.status ??
-		(fetchError?.data as { statusCode?: number } | undefined)?.statusCode;
-
-	const getFetchErrorMessage = (fetchError: FetchErrorLike) =>
-		(
-			fetchError?.data as
-				| { statusMessage?: string; message?: string }
-				| undefined
-		)?.statusMessage ??
-		(fetchError?.data as { message?: string } | undefined)?.message ??
-		fetchError?.statusMessage ??
-		fetchError?.message;
 
 	const toast = useToast();
 
@@ -235,49 +215,10 @@
 		isCreatePending.value = false;
 
 		if (createError.value) {
-			const statusCode = getFetchErrorStatus(createError.value);
-			const statusMessage = getFetchErrorMessage(createError.value);
-
-			if (statusCode === 409) {
-				toast.add({
-					title: 'Konflikt danych',
-					description:
-						statusMessage ??
-						'Adres email lub numer licencji są już przypisane do innego lekarza.',
-					color: 'warning',
-					icon: 'i-lucide-alert-triangle',
-				});
-				return;
-			}
-
-			if (statusCode === 404) {
-				toast.add({
-					title: 'Specjalizacja niedostępna',
-					description:
-						statusMessage ??
-						'Wybrana specjalizacja nie istnieje. Wybierz inną i spróbuj ponownie.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
-			if (statusCode === 400) {
-				toast.add({
-					title: 'Nieprawidłowe dane',
-					description:
-						statusMessage ??
-						'Sprawdź wprowadzone dane lekarza i spróbuj ponownie.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
 			toast.add({
 				title: 'Dodawanie nie powiodło się',
 				description:
-					statusMessage ??
+					createError.value.message ??
 					'Wystąpił nieoczekiwany błąd podczas dodawania lekarza.',
 				color: 'error',
 				icon: 'i-lucide-x-circle',
@@ -342,48 +283,11 @@
 		isEditPending.value = false;
 
 		if (editError.value) {
-			const statusCode = getFetchErrorStatus(editError.value);
-			const statusMessage = getFetchErrorMessage(editError.value);
-
-			if (statusCode === 409) {
-				toast.add({
-					title: 'Konflikt danych',
-					description:
-						statusMessage ??
-						'Numer licencji należy do innego lekarza. Podaj unikalny numer.',
-					color: 'warning',
-					icon: 'i-lucide-alert-triangle',
-				});
-				return;
-			}
-
-			if (statusCode === 404) {
-				toast.add({
-					title: 'Lekarz nie istnieje',
-					description:
-						statusMessage ?? 'Wybrany lekarz nie istnieje lub został usunięty.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
-			if (statusCode === 400) {
-				toast.add({
-					title: 'Nieprawidłowe dane',
-					description:
-						statusMessage ??
-						'Zweryfikuj wprowadzone dane lekarza i spróbuj ponownie.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
 			toast.add({
 				title: 'Aktualizacja nie powiodła się',
 				description:
-					statusMessage ?? 'Wystąpił błąd podczas aktualizacji danych lekarza.',
+					editError.value.message ??
+					'Wystąpił błąd podczas aktualizacji danych lekarza.',
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
@@ -418,24 +322,11 @@
 		isDeletePending.value = false;
 
 		if (deleteError.value) {
-			const statusCode = getFetchErrorStatus(deleteError.value);
-			const statusMessage = getFetchErrorMessage(deleteError.value);
-
-			if (statusCode === 404) {
-				toast.add({
-					title: 'Lekarz nie istnieje',
-					description:
-						statusMessage ??
-						'Wybrany lekarz został już usunięty lub nie istnieje.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
 			toast.add({
 				title: 'Usuwanie nie powiodło się',
-				description: statusMessage ?? 'Wystąpił błąd podczas usuwania lekarza.',
+				description:
+					deleteError.value.message ??
+					'Wystąpił błąd podczas usuwania lekarza.',
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});

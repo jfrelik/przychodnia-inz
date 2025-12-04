@@ -6,8 +6,6 @@
 		SortingState,
 	} from '@tanstack/vue-table';
 	import { getPaginationRowModel } from '@tanstack/vue-table';
-	import type { FetchError } from 'ofetch';
-
 	type Receptionist = {
 		userId: string;
 		userName: string;
@@ -21,24 +19,6 @@
 	useHead({
 		title: 'Panel rejestratorów',
 	});
-
-	type FetchErrorLike = FetchError<unknown> | null;
-
-	const getFetchErrorStatus = (fetchError: FetchErrorLike) =>
-		fetchError?.statusCode ??
-		fetchError?.status ??
-		fetchError?.response?.status ??
-		(fetchError?.data as { statusCode?: number } | undefined)?.statusCode;
-
-	const getFetchErrorMessage = (fetchError: FetchErrorLike) =>
-		(
-			fetchError?.data as
-				| { statusMessage?: string; message?: string }
-				| undefined
-		)?.statusMessage ??
-		(fetchError?.data as { message?: string } | undefined)?.message ??
-		fetchError?.statusMessage ??
-		fetchError?.message;
 
 	const toast = useToast();
 
@@ -177,36 +157,10 @@
 		isCreatePending.value = false;
 
 		if (createError.value) {
-			const statusCode = getFetchErrorStatus(createError.value);
-			const statusMessage = getFetchErrorMessage(createError.value);
-
-			if (statusCode === 409) {
-				toast.add({
-					title: 'Konflikt danych',
-					description:
-						statusMessage ?? 'Użytkownik o tym adresie email już istnieje.',
-					color: 'warning',
-					icon: 'i-lucide-alert-triangle',
-				});
-				return;
-			}
-
-			if (statusCode === 400) {
-				toast.add({
-					title: 'Nieprawidłowe dane',
-					description:
-						statusMessage ??
-						'Sprawdź wprowadzone dane rejestratora i spróbuj ponownie.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
 			toast.add({
 				title: 'Dodawanie nie powiodło się',
 				description:
-					statusMessage ??
+					createError.value.message ??
 					'Wystąpił nieoczekiwany błąd podczas dodawania rejestratora.',
 				color: 'error',
 				icon: 'i-lucide-x-circle',
@@ -261,25 +215,11 @@
 		isDeletePending.value = false;
 
 		if (deleteError.value) {
-			const statusCode = getFetchErrorStatus(deleteError.value);
-			const statusMessage = getFetchErrorMessage(deleteError.value);
-
-			if (statusCode === 404) {
-				toast.add({
-					title: 'Rejestrator nie istnieje',
-					description:
-						statusMessage ??
-						'Wybrany rejestrator został już usunięty lub nie istnieje.',
-					color: 'warning',
-					icon: 'i-lucide-alert-circle',
-				});
-				return;
-			}
-
 			toast.add({
 				title: 'Usuwanie nie powiodło się',
 				description:
-					statusMessage ?? 'Wystąpił błąd podczas usuwania rejestratora.',
+					deleteError.value.message ??
+					'Wystąpił błąd podczas usuwania rejestratora.',
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
