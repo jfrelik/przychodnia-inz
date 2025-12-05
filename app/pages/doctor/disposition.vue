@@ -19,6 +19,21 @@
 	const toast = useToast();
 	const dispositionReminder = ref(true);
 
+	type Disposition = {
+		scheduleId: string;
+		day: string;
+		timeStart: string;
+		timeEnd: string;
+		doctorUserId: string;
+	};
+
+	const { data: existingDispositions } = await useFetch<Disposition[]>(
+		'/api/doctor/dispositions',
+		{
+			key: 'doctor-dispositions',
+		}
+	);
+
 	const todayDate = today(getLocalTimeZone());
 	const nextMonth = todayDate.add({ months: 1 });
 	const minDate = new CalendarDate(nextMonth.year, nextMonth.month, 1);
@@ -37,6 +52,46 @@
 			date.day
 		).padStart(2, '0')}`;
 
+	const parseHour = (time: string) => {
+		const hour = Number.parseInt(time.split(':')[0] ?? '0', 10);
+		return Number.isFinite(hour) ? hour : 7;
+	};
+
+	// Prefill calendar selection and time ranges using current dispositions
+	watch(
+		() => existingDispositions.value,
+		(list) => {
+			if (!list || list.length === 0) return;
+
+			const nextDates: Record<string, { start: number; end: number }[]> = {};
+			const calendarDates: CalendarDate[] = [];
+
+			for (const item of list) {
+				const [y, m, d] = item.day
+					.split('-')
+					.map((x) => Number.parseInt(x, 10));
+				if (!y || !m || !d) continue;
+
+				const calDate = new CalendarDate(y, m, d);
+				const k = dateKey(calDate);
+
+				if (!nextDates[k]) {
+					nextDates[k] = [];
+					calendarDates.push(calDate);
+				}
+
+				nextDates[k].push({
+					start: parseHour(item.timeStart),
+					end: parseHour(item.timeEnd),
+				});
+			}
+
+			formState.value.dates = nextDates;
+			value.value = calendarDates;
+		},
+		{ immediate: true }
+	);
+
 	watch(
 		value,
 		(newDates) => {
@@ -45,7 +100,7 @@
 
 			for (const d of newDates) {
 				const k = dateKey(d);
-				next[k] = current[k] ?? [{ start: 7, end: 17 }];
+				next[k] = current[k] ?? [{ start: 8, end: 16 }];
 			}
 
 			formState.value.dates = next;
@@ -121,8 +176,8 @@
 		}
 
 		formState.value.dates[key].push({
-			start: 7,
-			end: 17,
+			start: 8,
+			end: 16,
 		});
 	};
 
@@ -191,14 +246,16 @@
 			title="Uzupełnij dyspozycję"
 			description="Wymagane jest uzupełnienie dyspozycji na nadchodzący okres."
 			icon="carbon:warning"
+			class="w-full flex-none"
 		/>
 
-		<UCard :ui="{ body: 'p-6' }">
+		<UCard :ui="{ body: 'p-6' }" class="min-h-[420px] flex-none">
 			<div class="flex w-full justify-center">
 				<UCalendar
 					v-model="value"
 					multiple
 					class="w-2/3"
+					:week-starts-on="1"
 					:min-value="minDate"
 					:max-value="maxDate"
 					:placeholder="minDate"
@@ -213,7 +270,6 @@
 						{{ formatDateLabel(date) }}
 					</div>
 
-					<!-- One row per timeframe -->
 					<div
 						v-for="(range, idx) in formState.dates[dateKey(date)]"
 						:key="idx"
@@ -272,7 +328,7 @@
 				</UCard>
 			</div>
 
-			<div class="mt-6 flex justify-center">
+			<div class="mt-6 mb-24 flex justify-center">
 				<UButton type="submit">Zapisz dyspozycje</UButton>
 			</div>
 		</UForm>
