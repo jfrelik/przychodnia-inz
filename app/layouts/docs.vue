@@ -64,6 +64,13 @@
 				to: '/doctor/disposition',
 			},
 			{
+				label: 'Dni pracy',
+				icon: 'carbon:calendar',
+				class: 'cursor-pointer',
+				active: route.path === '/doctor/workdays',
+				to: '/doctor/workdays',
+			},
+			{
 				label: 'Badania',
 				icon: 'carbon:document',
 				class: 'cursor-pointer',
