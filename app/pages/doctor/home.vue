@@ -9,9 +9,77 @@
 		title: 'Panel doktora',
 	});
 
-	const toast = useToast();
+	type VisitStatus = 'scheduled' | 'completed' | 'canceled';
+	type Visit = {
+		appointmentId: number;
+		datetime: string | Date;
+		status: VisitStatus;
+		notes: string | null;
+		patientId: string;
+		patientName: string | null;
+		patientEmail: string | null;
+		roomId: number | null;
+		roomNumber: string | null;
+	};
+
+	const { data: visitsData, pending: visitsLoading } = await useFetch<Visit[]>(
+		'/api/doctor/visits/today',
+		{
+			key: 'doctor-home-today-visits',
+		}
+	);
+
+	const visits = computed(() => visitsData.value ?? []);
+
+	const nearestVisit = computed(() => {
+		const nowTs = Date.now();
+		return (
+			visits.value
+				.map((visit) => {
+					const ts = new Date(visit.datetime).getTime();
+					return { ...visit, ts };
+				})
+				.filter((v) => v.ts >= nowTs)
+				.sort((a, b) => a.ts - b.ts)[0] ?? null
+		);
+	});
+
+	const formatDate = (value: string | Date) =>
+		new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium' }).format(
+			new Date(value)
+		);
+
+	const formatTime = (value: string | Date) =>
+		new Intl.DateTimeFormat('pl-PL', {
+			hour: '2-digit',
+			minute: '2-digit',
+		}).format(new Date(value));
 
 	const dispositionReminder = ref(true);
+
+	// temp placeholders
+	const weeklyVisits = [
+		{ week: 'Tydzień 1', visits: 18 },
+		{ week: 'Tydzień 2', visits: 22 },
+		{ week: 'Tydzień 3', visits: 19 },
+		{ week: 'Tydzień 4', visits: 25 },
+		{ week: 'Tydzień 5', visits: 21 },
+		{ week: 'Tydzień 6', visits: 24 },
+		{ week: 'Tydzień 7', visits: 20 },
+		{ week: 'Tydzień 8', visits: 23 },
+	];
+	const weeklyVisitsCategories = {
+		visits: { name: 'Obsłużone wizyty', color: '#2563eb' },
+	} as const;
+
+	const weeklyTicks = weeklyVisits.map((_, idx) => idx);
+	const formatWeekTick = (tick: number) => weeklyVisits[tick]?.week ?? '';
+
+	const visitTypeData = [38, 22];
+	const visitTypeCategories = {
+		onsite: { name: 'Wizyty w placówce', color: '#2563eb' },
+		remote: { name: 'Konsultacje telefoniczne', color: '#10b981' },
+	} as const;
 </script>
 
 <template>
@@ -50,8 +118,16 @@
 					Pokaż wszystkie dzisiaj
 				</UButton>
 			</div>
-			<!-- sample upcoming visit -->
-			<UCard>
+
+			<UCard v-if="visitsLoading" :ui="{ body: 'p-6' }">
+				<div class="animate-pulse space-y-2">
+					<div class="h-4 w-1/3 rounded bg-gray-200" />
+					<div class="h-3 w-1/4 rounded bg-gray-200" />
+					<div class="h-3 w-1/5 rounded bg-gray-200" />
+				</div>
+			</UCard>
+
+			<UCard v-else-if="nearestVisit" :ui="{ body: 'p-6' }">
 				<div class="flex items-center justify-between gap-4">
 					<div class="flex items-center gap-4">
 						<div
@@ -61,15 +137,23 @@
 						</div>
 
 						<div class="flex flex-col">
-							<h2 class="text-xl font-bold">Jan Nowak</h2>
-							<p class="text-sm text-gray-500">Gabinet 12</p>
+							<h2 class="text-xl font-bold">
+								{{ nearestVisit.patientName || 'Pacjent' }}
+							</h2>
+							<p class="text-sm text-gray-500">
+								{{
+									nearestVisit.roomNumber
+										? `Gabinet ${nearestVisit.roomNumber}`
+										: 'Gabinet przydzielany'
+								}}
+							</p>
 
 							<div
 								class="mt-1 flex flex-row flex-wrap gap-3 text-sm text-gray-600"
 							>
-								<p>12.12.2025</p>
-								<p>10:30</p>
-								<UBadge variant="subtle" color="info">Stacjonarna</UBadge>
+								<p>{{ formatDate(nearestVisit.datetime) }}</p>
+								<p>{{ formatTime(nearestVisit.datetime) }}</p>
+								<UBadge variant="subtle" color="info">Wizyta</UBadge>
 							</div>
 						</div>
 					</div>
@@ -80,7 +164,7 @@
 							label="Przyjmij teraz"
 							icon="carbon:play"
 							class="cursor-pointer"
-							to="handleAppointment"
+							:to="`/doctor/handleAppointment/${nearestVisit.appointmentId}`"
 						/>
 						<UButton
 							variant="soft"
@@ -88,10 +172,55 @@
 							icon="carbon:view"
 							size="xl"
 							class="cursor-pointer"
+							to="/doctor/visits/today"
 						/>
 					</div>
 				</div>
 			</UCard>
+
+			<UCard v-else :ui="{ body: 'p-6' }">
+				<div class="flex items-center gap-3 text-gray-600">
+					<Icon name="carbon:checkmark" class-name="w-5 h-5 text-green-600" />
+					<p>Brak kolejnych wizyt zaplanowanych na dziś.</p>
+				</div>
+			</UCard>
 		</UCard>
+
+		<div class="grid grid-cols-2 gap-4">
+			<UCard :ui="{ body: 'p-6' }">
+				<div class="flex items-center justify-between pb-4">
+					<h2 class="text-xl font-semibold">
+						Wizyty tygodniowo (ostatnie 2 miesiące)
+					</h2>
+				</div>
+				<ClientOnly>
+					<BarChart
+						:data="weeklyVisits"
+						:categories="weeklyVisitsCategories"
+						:y-axis="['visits']"
+						:x-explicit-ticks="weeklyTicks"
+						:x-formatter="formatWeekTick"
+						:height="280"
+						:bar-padding="0.25"
+						:group-padding="0.2"
+					/>
+				</ClientOnly>
+			</UCard>
+
+			<UCard :ui="{ body: 'p-6' }">
+				<div class="flex items-center justify-between pb-4">
+					<h2 class="text-xl font-semibold">Podział typów wizyt</h2>
+				</div>
+				<ClientOnly>
+					<DonutChart
+						:data="visitTypeData"
+						:categories="visitTypeCategories"
+						:height="280"
+						:radius="110"
+						:arc-width="36"
+					/>
+				</ClientOnly>
+			</UCard>
+		</div>
 	</PageContainer>
 </template>
