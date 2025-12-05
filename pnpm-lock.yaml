@@ -34,6 +34,18 @@ importers:
       '@nuxtjs/turnstile':
         specifier: 1.1.1
         version: 1.1.1(@nuxt/scripts@0.13.0(@googlemaps/markerclusterer@2.6.2)(@unhead/vue@2.0.19(vue@3.5.25(typescript@5.9.3)))(db0@0.3.4(better-sqlite3@12.4.1)(drizzle-orm@0.45.0(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(better-sqlite3@12.4.1)(kysely@0.28.8)(pg@8.16.3)))(ioredis@5.8.2)(magicast@0.5.1)(typescript@5.9.3)(vue@3.5.25(typescript@5.9.3)))(magicast@0.5.1)
+      '@preact/signals':
+        specifier: ^2.5.1
+        version: 2.5.1(preact@10.28.0)
+      '@schedule-x/calendar':
+        specifier: ^3.4.2
+        version: 3.4.2(@preact/signals@2.5.1(preact@10.28.0))(preact@10.28.0)(temporal-polyfill@0.3.0)
+      '@schedule-x/theme-default':
+        specifier: ^3.4.2
+        version: 3.4.2
+      '@schedule-x/vue':
+        specifier: ^3.4.0
+        version: 3.4.0(@schedule-x/calendar@3.4.2(@preact/signals@2.5.1(preact@10.28.0))(preact@10.28.0)(temporal-polyfill@0.3.0))(@schedule-x/date-picker@3.4.0(@preact/signals@2.5.1(preact@10.28.0))(preact@10.28.0))(vue@3.5.25(typescript@5.9.3))
       better-auth:
         specifier: ^1.4.5
         version: 1.4.5(vue@3.5.25(typescript@5.9.3))
@@ -3020,6 +3032,20 @@ packages:
         integrity: sha512-m7bpKCD4QMlFCjA/nKTs23fuvoVFoA83brRKmObCUNmi/9tVu8Ve3w4YQAnJu4q3Tjf5fr685HYIC/IA2zHRSg==,
       }
 
+  '@preact/signals-core@1.12.1':
+    resolution:
+      {
+        integrity: sha512-BwbTXpj+9QutoZLQvbttRg5x3l5468qaV2kufh+51yha1c53ep5dY4kTuZR35+3pAZxpfQerGJiQqg34ZNZ6uA==,
+      }
+
+  '@preact/signals@2.5.1':
+    resolution:
+      {
+        integrity: sha512-VPjk5YFt7i11Fi4UK0tzaEe5xLwfhUxXL3l89ocxQ5aPz7bRo8M5+N73LjBMPklyXKYKz6YsNo4Smp8n6nplng==,
+      }
+    peerDependencies:
+      preact: '>= 10.25.0 || >=11.0.0-0'
+
   '@rolldown/pluginutils@1.0.0-beta.29':
     resolution:
       {
@@ -3303,6 +3329,41 @@ packages:
       }
     cpu: [x64]
     os: [win32]
+
+  '@schedule-x/calendar@3.4.2':
+    resolution:
+      {
+        integrity: sha512-TOL3SM2dXBgS94n1t3cY7OAE3Eh0qFG6g/LcxaDIwyJ0a1NT9wi/YOr3BwzBCt5+XsfdAbeVMVIaQdQnKnLboQ==,
+      }
+    peerDependencies:
+      '@preact/signals': ^2.0.2
+      preact: ^10.19.2
+      temporal-polyfill: 0.3.0
+
+  '@schedule-x/date-picker@3.4.0':
+    resolution:
+      {
+        integrity: sha512-0vrPrR5ciS/bTgvV4Byf6i5G+V9eHFVVqEnl5zjfRtcNkeZEnPkamGXX+ke9W+inLG23WCxiRLyVZ2eUpc1o7g==,
+      }
+    peerDependencies:
+      '@preact/signals': ^2.0.2
+      preact: ^10.19.2
+
+  '@schedule-x/theme-default@3.4.2':
+    resolution:
+      {
+        integrity: sha512-/pc/f2DUgIGdEoQOj1rTzOSGQ/rkb/fOq4iyWVeM+74jJiF5rVAZ63UBeBWzjDD3TTVCAckt0/F5h+diHhAe2w==,
+      }
+
+  '@schedule-x/vue@3.4.0':
+    resolution:
+      {
+        integrity: sha512-f++9f2DSJy85/vRcbT2ms+MyI/e8qWK2Zkcs6LtsnuHB9dfzB/PPXTMqr+u2GOA17HW3gZ6dSxexMVt+LJ8o0Q==,
+      }
+    peerDependencies:
+      '@schedule-x/calendar': ^3.4.0
+      '@schedule-x/date-picker': 3.4.0
+      vue: ^3
 
   '@selderee/plugin-htmlparser2@0.11.0':
     resolution:
@@ -14024,6 +14085,13 @@ snapshots:
 
   '@poppinss/exception@1.2.2': {}
 
+  '@preact/signals-core@1.12.1': {}
+
+  '@preact/signals@2.5.1(preact@10.28.0)':
+    dependencies:
+      '@preact/signals-core': 1.12.1
+      preact: 10.28.0
+
   '@rolldown/pluginutils@1.0.0-beta.29': {}
 
   '@rolldown/pluginutils@1.0.0-beta.41': {}
@@ -14156,6 +14224,25 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.52.5':
     optional: true
+
+  '@schedule-x/calendar@3.4.2(@preact/signals@2.5.1(preact@10.28.0))(preact@10.28.0)(temporal-polyfill@0.3.0)':
+    dependencies:
+      '@preact/signals': 2.5.1(preact@10.28.0)
+      preact: 10.28.0
+      temporal-polyfill: 0.3.0
+
+  '@schedule-x/date-picker@3.4.0(@preact/signals@2.5.1(preact@10.28.0))(preact@10.28.0)':
+    dependencies:
+      '@preact/signals': 2.5.1(preact@10.28.0)
+      preact: 10.28.0
+
+  '@schedule-x/theme-default@3.4.2': {}
+
+  '@schedule-x/vue@3.4.0(@schedule-x/calendar@3.4.2(@preact/signals@2.5.1(preact@10.28.0))(preact@10.28.0)(temporal-polyfill@0.3.0))(@schedule-x/date-picker@3.4.0(@preact/signals@2.5.1(preact@10.28.0))(preact@10.28.0))(vue@3.5.25(typescript@5.9.3))':
+    dependencies:
+      '@schedule-x/calendar': 3.4.2(@preact/signals@2.5.1(preact@10.28.0))(preact@10.28.0)(temporal-polyfill@0.3.0)
+      '@schedule-x/date-picker': 3.4.0(@preact/signals@2.5.1(preact@10.28.0))(preact@10.28.0)
+      vue: 3.5.25(typescript@5.9.3)
 
   '@selderee/plugin-htmlparser2@0.11.0':
     dependencies:
