@@ -1,3 +1,4 @@
+import consola from 'consola';
 import { count, eq } from 'drizzle-orm';
 import { createError, defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
@@ -90,7 +91,7 @@ export default defineEventHandler(async (event) => {
 	} catch (error: unknown) {
 		const dbError = error as { code?: string };
 
-		console.error({
+		consola.error({
 			operation: 'AdminUpdateSpecialization',
 			targetId: specializationId,
 			errorCode: dbError?.code,

@@ -1,3 +1,4 @@
+import consola from 'consola';
 import { eq } from 'drizzle-orm';
 import {
 	createError,
@@ -81,7 +82,7 @@ export default defineEventHandler(async (event) => {
 			body?: { code?: string };
 		};
 
-		console.error({
+		consola.error({
 			operation: 'AdminCreateDoctor',
 			targetEmail: payload.email,
 			errorCode: apiError?.body?.code ?? apiError?.statusCode,
@@ -134,7 +135,7 @@ export default defineEventHandler(async (event) => {
 	} catch (error: unknown) {
 		const dbError = error as { code?: string };
 
-		console.error({
+		consola.error({
 			operation: 'AdminCreateDoctorRecord',
 			targetLicense: payload.licenseNumber,
 			targetEmail: payload.email,
@@ -160,7 +161,7 @@ export default defineEventHandler(async (event) => {
 			},
 		});
 	} catch (error) {
-		console.error({
+		consola.error({
 			operation: 'AdminSendDoctorReset',
 			targetEmail: payload.email,
 			error,

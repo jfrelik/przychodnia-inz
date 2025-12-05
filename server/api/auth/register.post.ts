@@ -1,3 +1,4 @@
+import consola from 'consola';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { auth } from '~~/lib/auth';
@@ -56,7 +57,10 @@ export default defineEventHandler(async (event) => {
 	try {
 		payload = payloadSchema.parse(body);
 	} catch (validationError) {
-		console.error('PatientRegistration: validation failed', validationError);
+		consola.error({
+			operation: 'PatientRegistrationValidation',
+			error: validationError,
+		});
 		throw createError({
 			statusCode: 400,
 			statusMessage: 'Błąd walidacji danych rejestracji.',
@@ -99,7 +103,7 @@ export default defineEventHandler(async (event) => {
 			body?: { code?: string };
 		};
 
-		console.error('PatientRegistration: createUser failed', {
+		consola.error({
 			operation: 'PatientRegistration',
 			targetEmail: payload.email,
 			errorCode: apiError?.body?.code ?? apiError?.statusCode,
@@ -164,7 +168,7 @@ export default defineEventHandler(async (event) => {
 			});
 		});
 	} catch (error: unknown) {
-		console.error('PatientProfileCreation failed', {
+		consola.error({
 			operation: 'PatientProfileCreation',
 			targetPesel: payload.pesel,
 			targetEmail: payload.email,
@@ -211,7 +215,7 @@ export default defineEventHandler(async (event) => {
 
 		patientRow = rows[0];
 	} catch (error) {
-		console.error('PatientRegistration: failed to fetch patient', error);
+		consola.error({ operation: 'PatientRegistrationFetch', error });
 		throw createError({
 			statusCode: 500,
 			statusMessage: 'Błąd podczas pobierania danych pacjenta.',

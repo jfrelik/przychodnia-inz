@@ -1,3 +1,4 @@
+import consola from 'consola';
 import { eq } from 'drizzle-orm';
 import {
 	createError,
@@ -75,7 +76,7 @@ export default defineEventHandler(async (event) => {
 			body?: { code?: string };
 		};
 
-		console.error({
+		consola.error({
 			operation: 'AdminCreateReceptionist',
 			targetEmail: payload.email,
 			errorCode: apiError?.body?.code ?? apiError?.statusCode,
@@ -116,7 +117,7 @@ export default defineEventHandler(async (event) => {
 			},
 		});
 	} catch (error) {
-		console.error({
+		consola.error({
 			operation: 'AdminSendReceptionistReset',
 			targetEmail: payload.email,
 			error,

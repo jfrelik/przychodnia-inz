@@ -1,3 +1,4 @@
+import consola from 'consola';
 import {
 	createError,
 	defineEventHandler,
@@ -65,7 +66,7 @@ export default defineEventHandler(async (event) => {
 	} catch (error: unknown) {
 		const dbError = error as { code?: string };
 
-		console.error({
+		consola.error({
 			operation: 'AdminCreateSpecialization',
 			targetName: payload.name,
 			errorCode: dbError?.code,
