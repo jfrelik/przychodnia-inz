@@ -1,7 +1,11 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
 import { auth } from '~~/lib/auth';
-import { room } from '~~/server/db/clinic';
+import {
+	room,
+	roomSpecializations,
+	specializations,
+} from '~~/server/db/clinic';
 import db from '~~/server/util/db';
 
 export default defineEventHandler(async (event) => {
@@ -35,9 +39,21 @@ export default defineEventHandler(async (event) => {
 		.select({
 			roomId: room.roomId,
 			number: room.number,
+			specializationIds: sql<
+				number[]
+			>`coalesce(array_agg(DISTINCT ${roomSpecializations.specializationId}), '{}'::integer[])`,
+			specializationNames: sql<
+				string[]
+			>`coalesce(array_agg(DISTINCT ${specializations.name}), '{}'::text[])`,
 		})
 		.from(room)
+		.leftJoin(roomSpecializations, eq(room.roomId, roomSpecializations.roomId))
+		.leftJoin(
+			specializations,
+			eq(roomSpecializations.specializationId, specializations.id)
+		)
 		.where(eq(room.roomId, roomId))
+		.groupBy(room.roomId, room.number)
 		.limit(1);
 
 	if (!current) {
@@ -47,5 +63,13 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	return current;
+	return {
+		...current,
+		specializationIds: (current.specializationIds ?? []).filter(
+			(id): id is number => id !== null
+		),
+		specializationNames: (current.specializationNames ?? []).filter(
+			(name): name is string => name !== null && name !== undefined
+		),
+	};
 });

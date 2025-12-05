@@ -11,6 +11,14 @@
 		roomId: number;
 		number: number;
 		appointmentCount: number;
+		specializationIds: number[];
+		specializationNames: string[];
+	};
+
+	type Specialization = {
+		id: number;
+		name: string;
+		doctorCount: number;
 	};
 
 	definePageMeta({
@@ -34,18 +42,16 @@
 
 	const rooms = computed(() => roomsData.value ?? []);
 
-	type Specialization = {
-		id: number;
-		name: string;
-		doctorCount: number;
-	};
-
 	const { data: specializationsData } = await useFetch<Specialization[]>(
 		'/api/admin/specializations',
 		{ default: () => [] }
 	);
 
 	const specializations = computed(() => specializationsData.value ?? []);
+
+	const specializationOptions = computed(() =>
+		specializations.value.map((s) => ({ label: s.name, value: s.id }))
+	);
 
 	const table = ref();
 	const globalFilter = ref('');
@@ -64,9 +70,9 @@
 			enableGlobalFilter: true,
 		},
 		{
-			accessorKey: 'appointmentCount',
-			header: 'Przypisane wizyty',
-			enableSorting: true,
+			accessorKey: 'specializationNames',
+			header: 'Specjalizacje',
+			enableSorting: false,
 		},
 		{
 			accessorKey: 'actions',
@@ -76,10 +82,12 @@
 
 	const createForm = reactive({
 		number: null as number | null,
+		specializations: [] as number[],
 	});
 
 	const editForm = reactive({
 		number: null as number | null,
+		specializations: [] as number[],
 	});
 
 	const isCreateModalOpen = ref(false);
@@ -94,6 +102,7 @@
 
 	const openCreateModal = () => {
 		createForm.number = null;
+		createForm.specializations = [];
 		isCreateModalOpen.value = true;
 	};
 
@@ -101,6 +110,7 @@
 		isCreateModalOpen.value = false;
 		isCreatePending.value = false;
 		createForm.number = null;
+		createForm.specializations = [];
 	};
 
 	const handleCreate = async () => {
@@ -118,7 +128,13 @@
 
 		const { error: createError } = await useFetch('/api/admin/rooms', {
 			method: 'POST',
-			body: { number: createForm.number },
+			body: {
+				number: createForm.number,
+				specializations:
+					createForm.specializations.length > 0
+						? createForm.specializations
+						: undefined,
+			},
 		});
 
 		isCreatePending.value = false;
@@ -149,6 +165,7 @@
 	const openEditModal = (room: Room) => {
 		selectedRoom.value = room;
 		editForm.number = room.number;
+		editForm.specializations = [...room.specializationIds];
 		isEditModalOpen.value = true;
 	};
 
@@ -156,6 +173,7 @@
 		isEditModalOpen.value = false;
 		isEditPending.value = false;
 		editForm.number = null;
+		editForm.specializations = [];
 		selectedRoom.value = null;
 	};
 
@@ -174,9 +192,27 @@
 			return;
 		}
 
-		if (editForm.number === selectedRoom.value.number) {
+		const numberChanged = editForm.number !== selectedRoom.value.number;
+
+		const currentSpecsSorted = [...selectedRoom.value.specializationIds].sort(
+			(a, b) => a - b
+		);
+		const newSpecsSorted = [...editForm.specializations].sort((a, b) => a - b);
+		const specsChanged =
+			currentSpecsSorted.length !== newSpecsSorted.length ||
+			currentSpecsSorted.some((id, idx) => id !== newSpecsSorted[idx]);
+
+		if (!numberChanged && !specsChanged) {
 			closeEditModal();
 			return;
+		}
+
+		const payload: { number?: number; specializations?: number[] } = {};
+		if (numberChanged) {
+			payload.number = editForm.number;
+		}
+		if (specsChanged) {
+			payload.specializations = editForm.specializations;
 		}
 
 		isEditPending.value = true;
@@ -185,7 +221,7 @@
 			`/api/admin/rooms/${selectedRoom.value.roomId}`,
 			{
 				method: 'PATCH',
-				body: { number: editForm.number },
+				body: payload,
 			}
 		);
 
@@ -205,7 +241,7 @@
 
 		toast.add({
 			title: 'Zaktualizowano gabinet',
-			description: 'Numer gabinetu został zmieniony.',
+			description: 'Gabinet został zaktualizowany.',
 			color: 'success',
 			icon: 'i-lucide-check',
 		});
@@ -307,7 +343,7 @@
 					<div>
 						<h2 class="text-lg font-semibold">Lista gabinetów</h2>
 						<p class="text-sm text-neutral-500">
-							Przeglądaj gabinety oraz liczbę przypisanych do nich wizyt.
+							Przeglądaj gabinety oraz przypisane do nich specjalizacje.
 						</p>
 					</div>
 					<UBadge
@@ -339,10 +375,23 @@
 						getPaginationRowModel: getPaginationRowModel(),
 					}"
 				>
-					<template #appointmentCount-cell="{ row }">
-						<span class="text-right font-medium">
-							{{ row.original.appointmentCount }}
-						</span>
+					<template #specializationNames-cell="{ row }">
+						<div class="flex flex-wrap gap-1">
+							<UBadge
+								v-for="name in row.original.specializationNames"
+								:key="name"
+								variant="soft"
+								color="primary"
+								size="xs"
+								:label="name"
+							/>
+							<span
+								v-if="row.original.specializationNames.length === 0"
+								class="text-neutral-400"
+							>
+								Brak
+							</span>
+						</div>
 					</template>
 
 					<template #actions-cell="{ row }">
@@ -403,6 +452,17 @@
 								icon="i-lucide-door-open"
 							/>
 						</UFormField>
+
+						<UFormField label="Specjalizacje" name="specializations">
+							<USelectMenu
+								v-model="createForm.specializations"
+								:items="specializationOptions"
+								multiple
+								placeholder="Wybierz specjalizacje..."
+								:disabled="isCreatePending"
+								value-key="value"
+							/>
+						</UFormField>
 					</UForm>
 
 					<template #footer>
@@ -439,6 +499,17 @@
 								:disabled="isEditPending"
 								icon="i-lucide-door-open"
 								placeholder="Podaj nowy numer"
+							/>
+						</UFormField>
+
+						<UFormField label="Specjalizacje" name="specializations">
+							<USelectMenu
+								v-model="editForm.specializations"
+								:items="specializationOptions"
+								multiple
+								placeholder="Wybierz specjalizacje..."
+								:disabled="isEditPending"
+								value-key="value"
 							/>
 						</UFormField>
 

@@ -1,7 +1,12 @@
-import { asc, count, eq } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
 import { auth } from '~~/lib/auth';
-import { appointments, room, specializations } from '~~/server/db/clinic';
+import {
+	appointments,
+	room,
+	roomSpecializations,
+	specializations,
+} from '~~/server/db/clinic';
 import db from '~~/server/util/db';
 
 export default defineEventHandler(async (event) => {
@@ -26,18 +31,33 @@ export default defineEventHandler(async (event) => {
 		.select({
 			roomId: room.roomId,
 			number: room.number,
-			appointmentCount: count(appointments.appointmentId),
-			specializationId: room.specializationId,
-			specializationName: specializations.name,
+			appointmentCount: sql<number>`count(DISTINCT ${appointments.appointmentId})`,
+			specializationIds: sql<
+				number[]
+			>`coalesce(array_agg(DISTINCT ${roomSpecializations.specializationId}), '{}'::int[])`,
+			specializationNames: sql<
+				string[]
+			>`coalesce(array_agg(DISTINCT ${specializations.name}), '{}'::text[])`,
 		})
 		.from(room)
 		.leftJoin(appointments, eq(appointments.roomRoomId, room.roomId))
-		.leftJoin(specializations, eq(room.specializationId, specializations.id))
-		.groupBy(room.roomId, specializations.name)
+		.leftJoin(roomSpecializations, eq(room.roomId, roomSpecializations.roomId))
+		.leftJoin(
+			specializations,
+			eq(roomSpecializations.specializationId, specializations.id)
+		)
+		.groupBy(room.roomId, room.number)
 		.orderBy(asc(room.number));
 
 	return rows.map((row) => ({
-		...row,
+		roomId: row.roomId,
+		number: row.number,
 		appointmentCount: Number(row.appointmentCount ?? 0),
+		specializationIds: (row.specializationIds ?? []).filter(
+			(id): id is number => id !== null
+		),
+		specializationNames: (row.specializationNames ?? []).filter(
+			(name): name is string => name !== null && name !== undefined
+		),
 	}));
 });
