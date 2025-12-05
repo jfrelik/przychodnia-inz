@@ -46,8 +46,8 @@
 				label: 'Wizyty',
 				icon: 'carbon:calendar',
 				class: 'cursor-pointer',
-				active: route.path === '/doctor/visits',
-				to: '/doctor/visits',
+				active: route.path === '/doctor/visits/all',
+				to: '/doctor/visits/all',
 			},
 			{
 				label: 'Pacjenci',
@@ -95,10 +95,10 @@
 
 				<template #default="{ collapsed }">
 					<UButton
-						label="Obsłuż wizytę"
+						label="Obsłuż wizytę..."
 						icon="carbon:calendar-add"
 						class="cursor-pointer justify-center"
-						to="/doctor/handleAppointment"
+						to="/doctor/visits/today"
 					/>
 					<UNavigationMenu
 						:collapsed="collapsed"

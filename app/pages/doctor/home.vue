@@ -41,8 +41,13 @@
 		<UCard :ui="{ body: 'p-6' }">
 			<div class="flex items-center justify-between pb-6">
 				<h1 class="text-2xl font-bold">Najbliższa wizyta</h1>
-				<UButton variant="soft" color="neutral" class="w-fit cursor-pointer">
-					Pokaż wszystkie
+				<UButton
+					variant="soft"
+					color="neutral"
+					class="w-fit cursor-pointer"
+					to="/doctor/visits/today"
+				>
+					Pokaż wszystkie dzisiaj
 				</UButton>
 			</div>
 			<!-- sample upcoming visit -->

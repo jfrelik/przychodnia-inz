@@ -26,6 +26,7 @@ export default defineNuxtConfig({
 		'nuxt-nodemailer',
 		'nuxt-email-renderer',
 		'@nuxtjs/turnstile',
+		'nuxt-charts',
 	],
 
 	// Nitro OpenAPI runtime metadata
