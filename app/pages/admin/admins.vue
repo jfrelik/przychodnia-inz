@@ -535,7 +535,7 @@
 						</p>
 
 						<UAlert
-							v-if="selectedAdmin?.id === session.value?.data?.user?.id"
+							v-if="selectedAdmin?.id === session?.data?.user?.id"
 							color="warning"
 							icon="i-lucide-alert-triangle"
 							description="Nie możesz usunąć własnego konta administratora."
@@ -550,7 +550,7 @@
 							<UButton
 								color="error"
 								icon="i-lucide-trash"
-								:disabled="selectedAdmin?.id === session.value?.data?.user?.id"
+								:disabled="selectedAdmin?.id === session?.data?.user?.id"
 								:loading="isDeletePending"
 								@click="handleDelete"
 							>
