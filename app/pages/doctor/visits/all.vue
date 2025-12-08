@@ -46,10 +46,10 @@
 	const calendarApp = shallowRef<ReturnType<typeof createCalendar>>();
 
 	const toZoned = (value: string | Date) => {
-		if (typeof value === 'string') {
-			return Temporal.ZonedDateTime.from(value);
-		}
-		const instant = Temporal.Instant.from(value.toISOString());
+		const instant =
+			typeof value === 'string'
+				? Temporal.Instant.from(value)
+				: Temporal.Instant.from(value.toISOString());
 		return instant.toZonedDateTimeISO(Temporal.Now.timeZoneId());
 	};
 
