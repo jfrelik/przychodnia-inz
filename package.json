@@ -52,7 +52,7 @@
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^20.1.0",
-		"@commitlint/config-conventional": "^20.0.0",
+		"@commitlint/config-conventional": "^20.2.0",
 		"@iconify-json/carbon": "^1.2.15",
 		"@iconify-json/lucide": "^1.2.78",
 		"@types/pg": "^8.15.6",
