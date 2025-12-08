@@ -22,10 +22,26 @@
 		roomNumber: string | null;
 	};
 
+	type TodayDispositionResponse = {
+		day: string;
+		timeframes: { start: string; end: string }[];
+	};
+
 	const { data: visitsData, pending: visitsLoading } = await useFetch<Visit[]>(
 		'/api/doctor/visits/today',
 		{
 			key: 'doctor-home-today-visits',
+		}
+	);
+
+	const {
+		data: dispositionData,
+		pending: dispositionLoading,
+		error: dispositionError,
+	} = await useFetch<TodayDispositionResponse>(
+		'/api/doctor/dispositions/today',
+		{
+			key: 'doctor-home-disposition-today',
 		}
 	);
 
@@ -54,6 +70,24 @@
 			hour: '2-digit',
 			minute: '2-digit',
 		}).format(new Date(value));
+
+	const todayTimeframes = computed(
+		() => dispositionData.value?.timeframes ?? []
+	);
+
+	const formatTimeframe = (timeframe: { start: string; end: string }) => {
+		const start = timeframe.start.slice(0, 5);
+		const end = timeframe.end.slice(0, 5);
+		return `${start}-${end}`;
+	};
+
+	const availabilityLabel = computed(() => {
+		if (dispositionLoading.value) return 'Ładowanie...';
+		if (dispositionError.value)
+			return 'Nie udało się pobrać dyspozycji na dziś';
+		if (!todayTimeframes.value.length) return 'Brak dyspozycji na dziś';
+		return todayTimeframes.value.map((tf) => formatTimeframe(tf)).join(', ');
+	});
 
 	const dispositionReminder = ref(true);
 
@@ -98,7 +132,23 @@
 		<div class="grid grid-cols-2 gap-4">
 			<UCard :ui="{ body: 'p-6' }">
 				<h1 class="text-2xl font-bold">Godziny pracy dzisiaj</h1>
-				<p>8:00-16:00</p>
+				<div v-if="dispositionLoading" class="mt-2 space-y-2">
+					<div class="h-4 w-24 rounded bg-gray-200" />
+					<div class="h-4 w-32 rounded bg-gray-200" />
+				</div>
+				<p v-else-if="dispositionError" class="text-sm text-red-600">
+					Nie udało się pobrać dyspozycji na dziś
+				</p>
+				<template v-else-if="todayTimeframes.length">
+					<p
+						v-for="timeframe in todayTimeframes"
+						:key="`${timeframe.start}-${timeframe.end}`"
+						class="text-sm"
+					>
+						{{ formatTimeframe(timeframe) }}
+					</p>
+				</template>
+				<p v-else class="text-sm text-gray-600">{{ availabilityLabel }}</p>
 			</UCard>
 			<UCard :ui="{ body: 'p-6' }">
 				<h1 class="text-2xl font-bold">Pozostałe wizyty</h1>
