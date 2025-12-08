@@ -1,4 +1,11 @@
-import { integer, pgTable, serial, text, timestamp } from 'drizzle-orm/pg-core';
+import {
+	boolean,
+	integer,
+	pgTable,
+	serial,
+	text,
+	timestamp,
+} from 'drizzle-orm/pg-core';
 import { doctors } from './doctors';
 import { appointmentStatusEnum, appointmentTypeEnum } from './enums';
 import { patients } from './patients';
@@ -16,6 +23,7 @@ export const appointments = pgTable('appointments', {
 	datetime: timestamp('datetime', { withTimezone: false }).notNull(),
 	status: appointmentStatusEnum('status').notNull(),
 	type: appointmentTypeEnum('type').notNull().default('consultation'),
+	isOnline: boolean('is_online').notNull().default(false),
 	notes: text('notes'),
 	recommendationId: integer('recommendation_id').references(
 		() => recommendations.recommendationId
