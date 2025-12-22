@@ -36,10 +36,16 @@
 	const items = computed<NavigationMenuItem[][]>(() => [
 		[
 			{
-				label: 'Kalendarze',
-				icon: 'i-lucide-calendar-days',
-				active: route.path === '/receptionist/calendars',
-				to: '/receptionist/calendars',
+				label: 'Strona główna',
+				icon: 'i-lucide-house',
+				active: route.path === '/receptionist/home',
+				to: '/receptionist/home',
+			},
+			{
+				label: 'Pacjenci i lekarze',
+				icon: 'i-lucide-users',
+				active: route.path.startsWith('/receptionist/directory'),
+				to: '/receptionist/directory',
 			},
 		],
 	]);
