@@ -50,6 +50,13 @@
 			"when": 1765121729827,
 			"tag": "0006_tearful_ma_gnuci",
 			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1766425015031,
+			"tag": "0007_spicy_squadron_sinister",
+			"breakpoints": true
 		}
 	]
 }
