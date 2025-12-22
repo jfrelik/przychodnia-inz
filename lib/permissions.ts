@@ -43,6 +43,7 @@ export const roles = {
 	receptionist: ac.newRole({
 		appointments: ['read', 'list', 'create', 'update'],
 		availability: ['read', 'list'],
+		users: ['read', 'list'],
 		doctors: ['read', 'list'],
 		patients: ['read', 'list'],
 		rooms: ['read', 'list'],
