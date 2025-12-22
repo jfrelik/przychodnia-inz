@@ -44,14 +44,19 @@ const querySchema = z
 		{ message: 'Provide a valid time window (from < to)' }
 	);
 
+const parseUtcDate = (date: string) => {
+	const [y, m, d] = date.split('-').map(Number);
+	return new Date(Date.UTC(y, m - 1, d));
+};
+
 const buildDateRange = (start: string, end: string) => {
 	const dates: string[] = [];
-	const startDate = new Date(`${start}T00:00:00`);
-	const endDate = new Date(`${end}T00:00:00`);
+	const startDate = parseUtcDate(start);
+	const endDate = parseUtcDate(end);
 	for (
 		let d = new Date(startDate.getTime());
 		d.getTime() <= endDate.getTime();
-		d.setDate(d.getDate() + 1)
+		d.setUTCDate(d.getUTCDate() + 1)
 	) {
 		dates.push(d.toISOString().slice(0, 10));
 	}
