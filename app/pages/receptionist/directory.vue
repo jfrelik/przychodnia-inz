@@ -153,8 +153,8 @@
 <template>
 	<PageContainer class="min-h-0 flex-1">
 		<PageHeader
-			title="Uzytkownicy i lekarze"
-			description="Przegladaj liste kont pacjentow i lekarzy. Filtruj po roli i wyszukuj po imieniu."
+			title="Użytkownicy i lekarze"
+			description="Przeglądaj liste kont pacjentów i lekarzy. Filtruj po roli i wyszukuj po imieniu."
 		/>
 
 		<div class="flex flex-wrap gap-3">
@@ -220,7 +220,7 @@
 					:empty-state="{
 						icon: 'i-lucide-users',
 						label: 'Brak wynikow',
-						description: 'Utworz uzytkownikow lub zmien filtry wyszukiwania.',
+						description: 'Nie znaleziono odpowiednich użytkowników.',
 					}"
 					:pagination-options="{
 						getPaginationRowModel: getPaginationRowModel(),
@@ -236,46 +236,31 @@
 
 					<template #expanded="{ row }">
 						<div
-							class="flex flex-col gap-3 rounded-md border border-neutral-200 p-3"
+							v-if="row.original.isDoctor"
+							class="flex flex-col gap-1 text-sm text-neutral-700"
 						>
-							<div class="flex flex-wrap items-center justify-between gap-2">
-								<UButton
-									variant="soft"
-									color="primary"
-									icon="i-lucide-corner-right-up"
-									class="cursor-pointer"
-									@click="handleAction(row.original)"
-								>
-									Wybierz
-								</UButton>
-								<UButton
-									v-if="row.original.role === 'user'"
-									variant="solid"
-									color="primary"
-									icon="i-lucide-calendar-plus"
-									class="cursor-pointer"
-									@click="scheduleForPatient(row.original)"
-								>
-									Umow wizyte
-								</UButton>
+							<div>
+								<span class="font-semibold">Specjalizacja:</span>
+								{{ formatDoctorValue(row.original.specializationName) }}
 							</div>
-							<div
-								v-if="row.original.isDoctor"
-								class="flex flex-col gap-1 text-sm text-neutral-700"
-							>
-								<div>
-									<span class="font-semibold">Specjalizacja:</span>
-									{{ formatDoctorValue(row.original.specializationName) }}
-								</div>
-								<div>
-									<span class="font-semibold">Nr licencji:</span>
-									{{ formatDoctorValue(row.original.licenseNumber) }}
-								</div>
+							<div>
+								<span class="font-semibold">Nr licencji:</span>
+								{{ formatDoctorValue(row.original.licenseNumber) }}
 							</div>
-							<p v-else class="text-sm text-neutral-500">
-								Brak dodatkowych danych dla pacjenta.
-							</p>
 						</div>
+						<p v-else class="text-sm text-neutral-500">
+							Brak dodatkowych danych dla pacjenta.
+						</p>
+						<UButton
+							v-if="row.original.role === 'user'"
+							variant="solid"
+							color="primary"
+							icon="i-lucide-calendar-plus"
+							class="cursor-pointer"
+							@click="scheduleForPatient(row.original)"
+						>
+							Umów wizyte
+						</UButton>
 					</template>
 				</UTable>
 
