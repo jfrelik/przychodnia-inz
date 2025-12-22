@@ -113,7 +113,7 @@
 	];
 	const visitType = ref<'consultation' | 'procedure'>('consultation');
 	const baseVisitModeOptions = [
-		{ label: 'W placowce', value: false },
+		{ label: 'W placówce', value: false },
 		{ label: 'Online / teleporada', value: true },
 	];
 	const visitModeOptions = computed(() =>
@@ -128,7 +128,7 @@
 	);
 
 	const visitSignupStep = [
-		'Wybierz specjalizacje',
+		'Wybierz specjalizację',
 		'Rodzaj i tryb wizyty',
 		'Wybierz termin wizyty',
 		'Zatwierdzenie wizyty',
@@ -139,25 +139,25 @@
 		{
 			id: 1,
 			title: 'Specjalizacja',
-			description: 'Wybierz specjalizacje lekarza',
+			description: 'Wybierz specjalizację lekarza',
 			icon: 'carbon:choices',
 		},
 		{
 			id: 2,
 			title: 'Rodzaj i tryb',
-			description: 'Okresl tryb wizyty',
+			description: 'Określ tryb wizyty',
 			icon: 'carbon:types',
 		},
 		{
 			id: 3,
 			title: 'Termin',
-			description: 'Znajdz wolny slot',
+			description: 'Znajdź wolny slot',
 			icon: 'carbon:calendar',
 		},
 		{
 			id: 4,
 			title: 'Zatwierdzenie',
-			description: 'Sprawdz szczegoly',
+			description: 'Sprawdź szczegóły',
 			icon: 'carbon:checkbox-checked',
 		},
 	];
@@ -280,7 +280,7 @@
 		if (!patient.value) {
 			toast.add({
 				title: 'Brak pacjenta',
-				description: 'Wybrany uzytkownik nie jest pacjentem.',
+				description: 'Wybrany użytkownik nie jest pacjentem.',
 				color: 'error',
 			});
 			return;
@@ -290,7 +290,7 @@
 		if (!parsed.success || !schemaState.value.specializationId) {
 			toast.add({
 				title: 'Brak danych',
-				description: 'Wybierz specjalizacje i tryb wizyty.',
+				description: 'Wybierz specjalizację i tryb wizyty.',
 				color: 'warning',
 			});
 			return;
@@ -306,8 +306,8 @@
 		}
 		if (!selectedDateRange.value.start) {
 			toast.add({
-				title: 'Brak daty poczatkowej',
-				description: 'Wybierz date poczatkowa przed wyszukiwaniem.',
+				title: 'Brak daty początkowej',
+				description: 'Wybierz datę początkową przed wyszukiwaniem.',
 				color: 'warning',
 			});
 			return;
@@ -318,7 +318,7 @@
 		const toMinutesValue = timeToMinutes(windowEnd);
 		if (!windowStart || !windowEnd || fromMinutes >= toMinutesValue) {
 			toast.add({
-				title: 'Nieprawidlowy zakres godzin',
+				title: 'Nieprawidłowy zakres godzin',
 				description: 'Ustaw godziny od i do (od < do).',
 				color: 'warning',
 			});
@@ -365,16 +365,16 @@
 
 			if (!flattened.length) {
 				toast.add({
-					title: 'Brak terminow',
-					description: 'Brak wolnych slotow dla wybranych kryteriow.',
+					title: 'Brak terminów',
+					description: 'Brak wolnych slotów dla wybranych kryteriów.',
 					color: 'warning',
 				});
 			}
 		} catch (error: unknown) {
 			toast.add({
-				title: 'Blad',
+				title: 'Błąd',
 				description:
-					extractErrorMessage(error) || 'Nie udalo sie pobrac terminow.',
+					extractErrorMessage(error) || 'Nie udało się pobrać terminów.',
 				color: 'error',
 			});
 		} finally {
@@ -402,7 +402,7 @@
 		if (!patient.value) {
 			toast.add({
 				title: 'Brak pacjenta',
-				description: 'Nie mozna zapisac wizyty bez pacjenta.',
+				description: 'Nie można zapisać wizyty bez pacjenta.',
 				color: 'error',
 			});
 			return;
@@ -411,7 +411,7 @@
 		if (!selectedSlot.value) {
 			toast.add({
 				title: 'Brak terminu',
-				description: 'Wybierz termin, aby potwierdzic wizyte.',
+				description: 'Wybierz termin, aby potwierdzić wizytę.',
 				color: 'warning',
 			});
 			return;
@@ -430,7 +430,7 @@
 			});
 
 			toast.add({
-				title: 'Zarezerwowano wizyte',
+				title: 'Zarezerwowano wizytę',
 				description: 'Pacjent otrzyma potwierdzenie e-mail.',
 				color: 'success',
 			});
@@ -440,9 +440,9 @@
 			selectedDay.value = null;
 		} catch (error: unknown) {
 			toast.add({
-				title: 'Nie udalo sie zarezerwowac',
+				title: 'Nie udało się zarezerwować',
 				description:
-					extractErrorMessage(error) || 'Sprawdz dane i sprobuj ponownie.',
+					extractErrorMessage(error) || 'Sprawdź dane i spróbuj ponownie.',
 				color: 'error',
 			});
 		}
@@ -457,18 +457,18 @@
 	<PageContainer>
 		<PageHeader
 			title="Nowa wizyta dla pacjenta"
-			description="Umow konsultacje lub procedure w imieniu pacjenta."
+			description="Umów konsultację lub procedurę w imieniu pacjenta."
 		/>
 
 		<div class="mb-4 flex flex-col gap-3">
 			<UAlert
 				v-if="patientError"
 				color="error"
-				title="Nie udalo sie pobrac danych pacjenta"
+				title="Nie udało się pobrać danych pacjenta"
 				:description="patientError.message"
 			>
 				<template #actions>
-					<UButton variant="soft" @click="refreshPatients()">Odswiez</UButton>
+					<UButton variant="soft" @click="refreshPatients()">Odśwież</UButton>
 				</template>
 			</UAlert>
 
@@ -493,10 +493,10 @@
 							class="cursor-pointer"
 							@click="backToDirectory"
 						>
-							Wroc do katalogu
+							Wróć do katalogu
 						</UButton>
 						<UBadge v-if="patientPending" variant="soft" color="primary">
-							Ladowanie...
+							Ładowanie...
 						</UBadge>
 					</div>
 				</div>
@@ -520,7 +520,7 @@
 								<USelect
 									v-model="schemaState.specializationId"
 									:items="specializationOptions"
-									placeholder="Wybierz specjalizacje"
+									placeholder="Wybierz specjalizację"
 									class="w-full cursor-pointer"
 									:disabled="patientPending || !patient"
 								/>
@@ -537,7 +537,7 @@
 							<UAlert
 								v-if="specsError"
 								color="error"
-								title="Nie udalo sie pobrac specjalizacji"
+								title="Nie udało się pobrać specjalizacji"
 								:description="specsError.message"
 							/>
 						</div>
@@ -642,7 +642,7 @@
 								<!-- Right: available days -->
 								<div class="flex flex-col gap-3">
 									<p class="text-sm text-neutral-600">
-										Wybierz dzien i odpowiadajaca wizyte. Mozesz zwezic godziny
+										Wybierz dzień i odpowiadającą wizytę. Możesz zawęzić godziny
 										wyszukiwania.
 									</p>
 
@@ -650,14 +650,14 @@
 										v-if="slotsPending"
 										class="rounded-lg border border-dashed p-4 text-sm text-neutral-600"
 									>
-										Ladowanie dostepnych terminow...
+										Ładowanie dostępnych terminów...
 									</div>
 
 									<div
 										v-else-if="!slots.length"
 										class="rounded-lg border border-dashed p-4 text-sm text-neutral-600"
 									>
-										Brak wynikow - wybierz inny zakres dat lub godzin.
+										Brak wyników - wybierz inny zakres dat lub godzin.
 									</div>
 
 									<div v-else class="flex flex-row flex-wrap gap-3">
@@ -700,7 +700,7 @@
 									class="rounded-lg border border-dashed p-4"
 								>
 									<p class="text-sm text-neutral-600">
-										Wybierz dzien z listy po prawej stronie.
+										Wybierz dzień z listy po prawej stronie.
 									</p>
 								</div>
 
@@ -732,7 +732,7 @@
 										v-if="selectedDay && !slotsForSelectedDay.length"
 										class="text-sm text-neutral-500"
 									>
-										Brak terminow w wybranym dniu.
+										Brak terminów w wybranym dniu.
 									</p>
 								</div>
 							</div>
@@ -747,7 +747,7 @@
 								@click="goPrev"
 							/>
 							<UButton
-								label="Zatwierdz termin"
+								label="Zatwierdź termin"
 								color="info"
 								class="w-full cursor-pointer"
 								:disabled="!selectedSlotId"
@@ -762,7 +762,7 @@
 								Podsumowanie wizyty
 							</p>
 							<p class="text-sm text-gray-500">
-								Sprawdz, czy ponizsze dane sa poprawne przed potwierdzeniem.
+								Sprawdź, czy poniższe dane są poprawne przed potwierdzeniem.
 							</p>
 						</div>
 
@@ -816,7 +816,7 @@
 									</p>
 									<p class="text-sm font-medium text-gray-900">
 										{{
-											schemaState.isOnline ? 'Online / telefon' : 'W placowce'
+											schemaState.isOnline ? 'Online / telefon' : 'W placówce'
 										}}
 									</p>
 								</div>
@@ -850,7 +850,7 @@
 								@click="goPrev"
 							/>
 							<UButton
-								label="Potwierdz wizyte"
+								label="Potwierdź wizytę"
 								color="success"
 								class="w-full cursor-pointer"
 								:disabled="!selectedSlotId || !patient"
