@@ -157,6 +157,9 @@
 					case 'doctor':
 						await navigateTo('/doctor/home');
 						break;
+					case 'receptionist':
+						await navigateTo('/receptionist/home');
+						break;
 					default:
 						await navigateTo('/');
 				}
