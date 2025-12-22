@@ -16,10 +16,6 @@ export default defineNuxtConfig({
 		},
 	},
 
-	routeRules: {
-		'/docs/**': { ssr: false },
-	},
-
 	modules: [
 		'@nuxt/eslint',
 		'@nuxt/fonts',
@@ -27,10 +23,10 @@ export default defineNuxtConfig({
 		'@nuxt/image',
 		'@nuxt/test-utils',
 		'@nuxt/ui',
-		'@scalar/nuxt',
 		'nuxt-nodemailer',
 		'nuxt-email-renderer',
 		'@nuxtjs/turnstile',
+		'nuxt-charts',
 	],
 
 	// Nitro OpenAPI runtime metadata
@@ -38,6 +34,7 @@ export default defineNuxtConfig({
 		public: {
 			appVersion: pkg.version,
 		},
+		defaultAdminEmail: 'admin@example.com',
 		nitro: {
 			openAPI: {
 				meta: {
@@ -46,14 +43,6 @@ export default defineNuxtConfig({
 				},
 			},
 		},
-	},
-
-	// Scalar API Reference configuration
-	scalar: {
-		pathRouting: { basePath: '/docs' },
-		url: '/_openapi.json',
-		theme: 'nuxt',
-		darkMode: true,
 	},
 
 	// Cloudflare Turnstile configuration
@@ -66,11 +55,11 @@ export default defineNuxtConfig({
 	nodemailer: {
 		from: '',
 		host: '',
-		port: 465,
+		port: 25,
 		secure: false,
 		auth: {
-			user: 'user@example.com',
-			pass: '123456',
+			user: '',
+			pass: '',
 		},
 	},
 });

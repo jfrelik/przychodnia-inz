@@ -1,9 +1,10 @@
 import { desc, eq } from 'drizzle-orm';
+import { createError, defineEventHandler } from 'h3';
 import { z } from 'zod';
+import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
 import { logs } from '~~/server/db/clinic';
 import db from '~~/server/util/db';
-import { withAuth } from '~~/server/util/withAuth';
 
 const uuidSchema = z.string().uuid();
 
@@ -25,77 +26,47 @@ const logEntrySchema = z.object({
 	userEmail: z.string().email().nullable(),
 });
 
-export default withAuth(
-	async (_event) => {
-		const rowsResult = await db
-			.select({
-				logId: logs.logId,
-				action: logs.action,
-				timestamp: logs.timestamp,
-				ipAddress: logs.ipAddress,
-				userId: logs.userId,
-				userName: user.name,
-				userEmail: user.email,
-			})
-			.from(logs)
-			.leftJoin(user, eq(logs.userId, user.id))
-			.orderBy(desc(logs.timestamp));
+export default defineEventHandler(async (event) => {
+	const session = await auth.api.getSession({ headers: event.headers });
 
-		const rows = rowsResult.map((row) =>
-			logEntrySchema.parse({
-				...row,
-				ipAddress: row.ipAddress ?? null,
-				userId: sanitizeNullableUuid(row.userId),
-				userName: row.userName ?? null,
-				userEmail: row.userEmail ?? null,
-			})
-		);
+	if (!session)
+		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
 
-		return rows;
-	},
-	['admin']
-);
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_ListLogs',
-		tags: ['Admin'],
-		summary: 'List audit logs',
-		description: 'Returns recent audit log entries (admin only).',
-		responses: {
-			200: {
-				description: 'OK',
-				content: {
-					'application/json': {
-						schema: {
-							type: 'array',
-							items: {
-								type: 'object',
-								properties: {
-									logId: { type: 'integer' },
-									action: { type: 'string' },
-									timestamp: { type: 'string', format: 'date-time' },
-									ipAddress: { type: 'string', nullable: true },
-									userId: {
-										type: 'string',
-										format: 'uuid',
-										nullable: true,
-									},
-									userName: { type: 'string', nullable: true },
-									userEmail: {
-										type: 'string',
-										format: 'email',
-										nullable: true,
-									},
-								},
-								required: ['logId', 'action', 'timestamp'],
-							},
-						},
-					},
-				},
+	const hasPermission = await auth.api.userHasPermission({
+		body: {
+			userId: session.user.id,
+			permissions: {
+				logs: ['list'],
 			},
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
 		},
-	},
+	});
+
+	if (!hasPermission.success)
+		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
+
+	const rowsResult = await db
+		.select({
+			logId: logs.logId,
+			action: logs.action,
+			timestamp: logs.timestamp,
+			ipAddress: logs.ipAddress,
+			userId: logs.userId,
+			userName: user.name,
+			userEmail: user.email,
+		})
+		.from(logs)
+		.leftJoin(user, eq(logs.userId, user.id))
+		.orderBy(desc(logs.timestamp));
+
+	const rows = rowsResult.map((row) =>
+		logEntrySchema.parse({
+			...row,
+			ipAddress: row.ipAddress ?? null,
+			userId: sanitizeNullableUuid(row.userId),
+			userName: row.userName ?? null,
+			userEmail: row.userEmail ?? null,
+		})
+	);
+
+	return rows;
 });

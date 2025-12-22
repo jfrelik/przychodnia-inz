@@ -4,11 +4,13 @@ import { appointments } from './appointments';
 import { availability } from './availability';
 import { doctors } from './doctors';
 import { logs } from './logs';
-import { medicalRecords, testResults } from './medical';
+import { medicalRecords } from './medical';
 import { patients } from './patients';
 import { prescriptions, recommendations } from './prescriptions';
 import { room } from './rooms';
+import { roomSpecializations } from './roomSpecializations';
 import { specializations } from './specializations';
+import { testResults } from './testResults';
 
 // users
 export const usersRelations = relations(user, ({ one, many }) => ({
@@ -78,7 +80,30 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
 // room
 export const roomRelations = relations(room, ({ many }) => ({
 	appointments: many(appointments),
+	roomSpecializations: many(roomSpecializations),
 }));
+
+export const specializationsRelations = relations(
+	specializations,
+	({ many }) => ({
+		roomSpecializations: many(roomSpecializations),
+		doctors: many(doctors),
+	})
+);
+
+export const roomSpecializationsRelations = relations(
+	roomSpecializations,
+	({ one }) => ({
+		room: one(room, {
+			fields: [roomSpecializations.roomId],
+			references: [room.roomId],
+		}),
+		specialization: one(specializations, {
+			fields: [roomSpecializations.specializationId],
+			references: [specializations.id],
+		}),
+	})
+);
 
 // roles/permissions are handled via Better Auth Access Control plugin in code.
 

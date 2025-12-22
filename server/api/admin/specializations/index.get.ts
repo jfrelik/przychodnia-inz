@@ -1,9 +1,27 @@
 import { asc, count, eq } from 'drizzle-orm';
+import { createError, defineEventHandler } from 'h3';
+import { auth } from '~~/lib/auth';
 import { doctors, specializations } from '~~/server/db/clinic';
 import db from '~~/server/util/db';
-import { withAuth } from '~~/server/util/withAuth';
 
-export default withAuth(async () => {
+export default defineEventHandler(async (event) => {
+	const session = await auth.api.getSession({ headers: event.headers });
+
+	if (!session)
+		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
+
+	const hasPermission = await auth.api.userHasPermission({
+		body: {
+			userId: session.user.id,
+			permissions: {
+				specializations: ['list'],
+			},
+		},
+	});
+
+	if (!hasPermission.success)
+		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
+
 	const rows = await db
 		.select({
 			id: specializations.id,
@@ -19,19 +37,4 @@ export default withAuth(async () => {
 		...row,
 		doctorCount: Number(row.doctorCount ?? 0),
 	}));
-}, ['admin']);
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_ListSpecializations',
-		tags: ['Admin'],
-		summary: 'List specializations',
-		description:
-			'Returns all medical specializations with assigned doctor counts.',
-		responses: {
-			200: { description: 'OK' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-		},
-	},
 });

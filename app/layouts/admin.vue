@@ -36,7 +36,7 @@
 	const items = computed<NavigationMenuItem[][]>(() => [
 		[
 			{
-				label: 'Strona Główna',
+				label: 'Strona główna',
 				icon: 'i-lucide-house',
 				active: route.path === '/admin/home',
 				to: '/admin/home',
@@ -44,7 +44,20 @@
 			{
 				label: 'Pacjenci',
 				icon: 'i-lucide-user',
-				disabled: true,
+				to: '/admin/patients',
+				active: route.path === '/admin/patients',
+			},
+			{
+				label: 'Wizyty',
+				icon: 'i-lucide-calendar',
+				to: '/admin/appointments',
+				active: route.path === '/admin/appointments',
+			},
+			{
+				label: 'Recepcjoniści',
+				icon: 'i-lucide-clipboard-list',
+				to: '/admin/receptionists',
+				active: route.path === '/admin/receptionists',
 			},
 			{
 				label: 'Lekarze',
@@ -77,6 +90,12 @@
 						icon: 'i-lucide-shield',
 						active: route.path === '/admin/admins',
 						to: '/admin/admins',
+					},
+					{
+						label: 'Gabinety',
+						icon: 'i-lucide-door-open',
+						active: route.path === '/admin/rooms',
+						to: '/admin/rooms',
 					},
 					{
 						label: 'Logi aktywności',
@@ -116,8 +135,9 @@
 						orientation="vertical"
 					/>
 				</template>
+
 				<template #footer="{ collapsed }">
-					<div class="">
+					<div>
 						<UButton
 							:label="collapsed ? undefined : 'Wyloguj się'"
 							color="neutral"
@@ -128,7 +148,7 @@
 							@click="handleSignout"
 						/>
 						<UButton
-							:label="collapsed ? undefined : 'Pomoc i Dokumentacja'"
+							:label="collapsed ? undefined : 'Pomoc i dokumentacja'"
 							color="neutral"
 							variant="ghost"
 							class="mt-2 w-full"
@@ -153,6 +173,7 @@
 					</div>
 				</template>
 			</UDashboardSidebar>
+
 			<UContainer
 				class="mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-y-auto px-6 py-8"
 			>

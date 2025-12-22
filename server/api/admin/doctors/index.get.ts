@@ -1,10 +1,28 @@
 import { asc, eq } from 'drizzle-orm';
+import { createError, defineEventHandler } from 'h3';
+import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
 import { doctors, specializations } from '~~/server/db/clinic';
 import db from '~~/server/util/db';
-import { withAuth } from '~~/server/util/withAuth';
 
-export default withAuth(async () => {
+export default defineEventHandler(async (event) => {
+	const session = await auth.api.getSession({ headers: event.headers });
+
+	if (!session)
+		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
+
+	const hasPermission = await auth.api.userHasPermission({
+		body: {
+			userId: session.user.id,
+			permissions: {
+				doctors: ['list'],
+			},
+		},
+	});
+
+	if (!hasPermission.success)
+		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
+
 	const rows = await db
 		.select({
 			userId: doctors.userId,
@@ -20,19 +38,4 @@ export default withAuth(async () => {
 		.orderBy(asc(user.name));
 
 	return rows;
-}, ['admin']);
-
-defineRouteMeta({
-	openAPI: {
-		operationId: 'Admin_ListDoctors',
-		tags: ['Admin'],
-		summary: 'List all doctors',
-		description:
-			'Returns all doctors with user details and specialization names (admin only).',
-		responses: {
-			200: { description: 'OK' },
-			401: { description: 'Unauthorized' },
-			403: { description: 'Forbidden' },
-		},
-	},
 });
