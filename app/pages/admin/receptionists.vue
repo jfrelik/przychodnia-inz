@@ -6,6 +6,7 @@
 		SortingState,
 	} from '@tanstack/vue-table';
 	import { getPaginationRowModel } from '@tanstack/vue-table';
+
 	type Receptionist = {
 		userId: string;
 		userName: string;
@@ -17,7 +18,7 @@
 	});
 
 	useHead({
-		title: 'Panel rejestratorów',
+		title: 'Panel recepcjonistów',
 	});
 
 	const toast = useToast();
@@ -121,7 +122,7 @@
 		if (!trimmedEmail || !emailPattern.test(trimmedEmail)) {
 			toast.add({
 				title: 'Nieprawidłowy adres email',
-				description: 'Podaj poprawny adres email rejestratora.',
+				description: 'Podaj poprawny adres email recepcjonisty.',
 				color: 'warning',
 				icon: 'i-lucide-alert-triangle',
 			});
@@ -134,7 +135,7 @@
 			toast.add({
 				title: 'Nieprawidłowe imię i nazwisko',
 				description:
-					'Imię i nazwisko rejestratora musi mieć co najmniej 2 znaki.',
+					'Imię i nazwisko recepcjonisty musi mieć co najmniej 2 znaki.',
 				color: 'warning',
 				icon: 'i-lucide-alert-triangle',
 			});
@@ -161,7 +162,7 @@
 				title: 'Dodawanie nie powiodło się',
 				description:
 					createError.value.message ??
-					'Wystąpił nieoczekiwany błąd podczas dodawania rejestratora.',
+					'Wystąpił nieoczekiwany błąd podczas dodawania recepcjonisty.',
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
@@ -169,9 +170,9 @@
 		}
 
 		toast.add({
-			title: 'Dodano rejestratora',
+			title: 'Dodano recepcjonistę',
 			description:
-				'Konto rejestratora utworzono i wysłano link do resetu hasła na podany email.',
+				'Konto recepcjonisty utworzono i wysłano link do resetu hasła na podany email.',
 			color: 'success',
 			icon: 'i-lucide-check',
 		});
@@ -189,7 +190,7 @@
 
 		toast.add({
 			title: 'Brak pól do edycji',
-			description: 'Aktualnie brak danych rejestratora do zmiany.',
+			description: 'Aktualnie brak danych recepcjonisty do zmiany.',
 			color: 'neutral',
 			icon: 'i-lucide-info',
 		});
@@ -219,7 +220,7 @@
 				title: 'Usuwanie nie powiodło się',
 				description:
 					deleteError.value.message ??
-					'Wystąpił błąd podczas usuwania rejestratora.',
+					'Wystąpił błąd podczas usuwania recepcjonisty.',
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
@@ -227,8 +228,8 @@
 		}
 
 		toast.add({
-			title: 'Usunięto rejestratora',
-			description: 'Rejestrator został usunięty z systemu.',
+			title: 'Usunięto recepcjonistę',
+			description: 'Recepcjonista został usunięty z systemu.',
 			color: 'success',
 			icon: 'i-lucide-check',
 		});
@@ -242,22 +243,22 @@
 	<PageContainer class="min-h-0 flex-1">
 		<div class="flex flex-wrap items-start justify-between gap-4">
 			<PageHeader
-				title="Panel rejestratorów"
-				description="Zarządzaj kontami rejestratorów w systemie."
+				title="Panel recepcjonistów"
+				description="Zarządzaj kontami recepcjonistów w systemie."
 			/>
 			<UButton
 				color="primary"
 				icon="i-lucide-user-plus"
 				@click="openCreateModal"
 			>
-				Dodaj rejestratora
+				Dodaj recepcjonistę
 			</UButton>
 		</div>
 
 		<UInput
 			v-model="globalFilter"
 			icon="i-lucide-search"
-			placeholder="Szukaj rejestratorów..."
+			placeholder="Szukaj recepcjonistów..."
 			clearable
 			class="max-w-sm"
 		/>
@@ -266,7 +267,7 @@
 			v-if="error"
 			color="error"
 			icon="i-lucide-alert-triangle"
-			description="Nie udało się pobrać listy rejestratorów. Spróbuj ponownie."
+			description="Nie udało się pobrać listy recepcjonistów. Spróbuj ponownie."
 		>
 			<template #actions>
 				<UButton variant="soft" @click="refresh()">Ponów próbę</UButton>
@@ -280,9 +281,9 @@
 			<template #header>
 				<div class="flex items-center justify-between">
 					<div>
-						<h2 class="text-lg font-semibold">Lista rejestratorów</h2>
+						<h2 class="text-lg font-semibold">Lista recepcjonistów</h2>
 						<p class="text-sm text-neutral-500">
-							Przeglądaj konta rejestratorów i zarządzaj dostępem.
+							Przeglądaj konta recepcjonistów i zarządzaj dostępem.
 						</p>
 					</div>
 					<UBadge
@@ -307,8 +308,8 @@
 					class="min-h-0 min-w-full flex-1 overflow-y-auto"
 					:empty-state="{
 						icon: 'i-lucide-user-x',
-						label: 'Brak rejestratorów',
-						description: 'Dodaj pierwszego rejestratora, aby rozpocząć.',
+						label: 'Brak recepcjonistów',
+						description: 'Dodaj pierwszego recepcjonistę, aby rozpocząć.',
 					}"
 					:pagination-options="{
 						getPaginationRowModel: getPaginationRowModel(),
@@ -355,7 +356,7 @@
 			<template #content>
 				<UCard>
 					<template #header>
-						<h3 class="text-lg font-semibold">Dodaj rejestratora</h3>
+						<h3 class="text-lg font-semibold">Dodaj recepcjonistę</h3>
 					</template>
 
 					<UForm
@@ -369,7 +370,7 @@
 								type="email"
 								:disabled="isCreatePending"
 								icon="i-lucide-mail"
-								placeholder="np. rejestrator@example.com"
+								placeholder="np. recepcjonista@example.com"
 							/>
 						</UFormField>
 						<UFormField label="Imię i nazwisko" name="name" required>
@@ -392,7 +393,7 @@
 								form="create-receptionist-form"
 								:loading="isCreatePending"
 							>
-								Dodaj rejestratora
+								Dodaj recepcjonistę
 							</UButton>
 						</div>
 					</template>
@@ -404,7 +405,7 @@
 			<template #content>
 				<UCard>
 					<template #header>
-						<h3 class="text-lg font-semibold">Edytuj rejestratora</h3>
+						<h3 class="text-lg font-semibold">Edytuj recepcjonistę</h3>
 					</template>
 
 					<UForm
@@ -430,7 +431,7 @@
 							variant="subtle"
 							icon="i-lucide-info"
 							title="Brak pól do edycji"
-							description="Aktualnie konto rejestratora nie posiada edytowalnych danych."
+							description="Aktualnie konto recepcjonisty nie posiada edytowalnych danych."
 						/>
 					</UForm>
 
@@ -457,14 +458,14 @@
 				<UCard>
 					<template #header>
 						<h3 class="text-lg font-semibold text-red-600">
-							Usuń rejestratora
+							Usuń recepcjonistę
 						</h3>
 					</template>
 
 					<p class="text-sm text-neutral-600">
-						Czy na pewno chcesz usunąć rejestratora
+						Czy na pewno chcesz usunąć recepcjonistę
 						<strong>{{ selectedReceptionist?.userName }}</strong>
-						? Użytkownik straci dostęp do panelu rejestratora. Operacja jest
+						? Użytkownik straci dostęp do panelu recepcjonisty. Operacja jest
 						nieodwracalna.
 					</p>
 
