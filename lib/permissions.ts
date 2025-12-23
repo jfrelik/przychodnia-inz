@@ -35,8 +35,10 @@ export const roles = {
 		appointments: ['read', 'list', 'update'],
 		users: ['read', 'list'],
 		availability: ['read', 'list', 'create', 'update'],
-		prescriptions: ['read', 'list'],
-		recommendations: ['read', 'list'],
+		prescriptions: ['read', 'list', 'create', 'update'],
+		recommendations: ['read', 'list', 'create', 'update'],
+		testResults: ['read', 'list', 'create', 'update'],
+		medicalRecords: ['read', 'list', 'create', 'update'],
 	}),
 
 	// Receptionist: manage appointments, view doctors and patients
