@@ -5,7 +5,7 @@
 		getLocalTimeZone,
 		today,
 	} from '@internationalized/date';
-	import { ref, shallowRef, watch } from 'vue';
+	import { computed, ref, shallowRef, watch } from 'vue';
 	import { z } from 'zod';
 
 	definePageMeta({
@@ -27,19 +27,13 @@
 		doctorUserId: string;
 	};
 
-	const { data: existingDispositions } = await useFetch<Disposition[]>(
-		'/api/doctor/dispositions',
-		{
-			key: 'doctor-dispositions',
-		}
-	);
-
 	const todayDate = today(getLocalTimeZone());
 	const nextMonth = todayDate.add({ months: 1 });
 	const minDate = new CalendarDate(nextMonth.year, nextMonth.month, 1);
 	const maxDate = minDate.add({ months: 1, days: -1 });
 
 	const value = shallowRef<CalendarDate[]>([]);
+	const calendarPlaceholder = shallowRef<CalendarDate>(minDate);
 
 	const formState = ref<{
 		dates: Record<string, { start: number; end: number }[]>;
@@ -52,16 +46,49 @@
 			date.day
 		).padStart(2, '0')}`;
 
+	const selectedMonthStart = computed(
+		() =>
+			new CalendarDate(
+				calendarPlaceholder.value.year,
+				calendarPlaceholder.value.month,
+				1
+			)
+	);
+	const selectedMonthEnd = computed(() =>
+		selectedMonthStart.value.add({ months: 1, days: -1 })
+	);
+	const dispositionQuery = computed(() => ({
+		startDate: dateKey(selectedMonthStart.value),
+		endDate: dateKey(selectedMonthEnd.value),
+	}));
+
+	const { data: existingDispositions } = await useFetch<Disposition[]>(
+		'/api/doctor/dispositions',
+		{
+			key: 'doctor-dispositions',
+			query: dispositionQuery,
+		}
+	);
+
 	const parseHour = (time: string) => {
 		const hour = Number.parseInt(time.split(':')[0] ?? '0', 10);
 		return Number.isFinite(hour) ? hour : 7;
 	};
 
+	watch(calendarPlaceholder, () => {
+		formState.value.dates = {};
+		value.value = [];
+	});
+
 	// Prefill calendar selection and time ranges using current dispositions
 	watch(
 		() => existingDispositions.value,
 		(list) => {
-			if (!list || list.length === 0) return;
+			if (!list || list.length === 0) {
+				formState.value.dates = {};
+				value.value = [];
+				return;
+			}
 
 			const nextDates: Record<string, { start: number; end: number }[]> = {};
 			const calendarDates: CalendarDate[] = [];
@@ -253,12 +280,12 @@
 			<div class="flex w-full justify-center">
 				<UCalendar
 					v-model="value"
+					v-model:placeholder="calendarPlaceholder"
 					multiple
 					class="w-2/3"
 					:week-starts-on="1"
 					:min-value="minDate"
 					:max-value="maxDate"
-					:placeholder="minDate"
 				/>
 			</div>
 		</UCard>

@@ -2,8 +2,6 @@ import { count, eq } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
 import { auth } from '~~/lib/auth';
 import { appointments, room } from '~~/server/db/clinic';
-import { recordAuditLog } from '~~/server/util/audit';
-import db from '~~/server/util/db';
 
 export default defineEventHandler(async (event) => {
 	const session = await auth.api.getSession({ headers: event.headers });
@@ -32,7 +30,7 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [current] = await db
+	const [current] = await useDb()
 		.select({
 			roomId: room.roomId,
 			number: room.number,
@@ -48,7 +46,7 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [assigned] = await db
+	const [assigned] = await useDb()
 		.select({ total: count(appointments.appointmentId) })
 		.from(appointments)
 		.where(eq(appointments.roomRoomId, roomId));
@@ -61,9 +59,9 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	await db.delete(room).where(eq(room.roomId, roomId));
+	await useDb().delete(room).where(eq(room.roomId, roomId));
 
-	await recordAuditLog(
+	await useAuditLog(
 		event,
 		session.user.id,
 		`Usunięto gabinet numer ${current.number}.`

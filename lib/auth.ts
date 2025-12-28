@@ -3,8 +3,11 @@ import { localization } from 'better-auth-localization';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { admin } from 'better-auth/plugins';
 import { account, session, user, verification } from '../server/db/schema';
-import db from '../server/util/db';
+import type { SendEmailJob, SendEmailResult } from '../server/types/bullmq';
 import { ac, roles } from './permissions';
+
+const queue = useQueue<SendEmailJob, SendEmailResult>('send-email');
+const db = useDb();
 
 export const auth = betterAuth({
 	database: drizzleAdapter(db, {
@@ -20,8 +23,6 @@ export const auth = betterAuth({
 		enabled: true,
 		requireEmailVerification: true,
 		sendResetPassword: async ({ user, url, token }, _request) => {
-			const { sendMail } = useNodeMailer();
-
 			const html = await renderEmailComponent(
 				'PasswordReset',
 				{
@@ -33,17 +34,15 @@ export const auth = betterAuth({
 				}
 			);
 
-			await sendMail({
+			await queue.add('email reset', {
 				to: user.email,
-				subject: 'Link do zmiany hasła',
+				subject: 'Resetowanie hasła',
 				html,
 			});
 		},
 	},
 	emailVerification: {
 		sendVerificationEmail: async ({ user, url, token }, request) => {
-			const { sendMail } = useNodeMailer();
-
 			const html = await renderEmailComponent(
 				'EmailConfirm',
 				{
@@ -55,9 +54,9 @@ export const auth = betterAuth({
 				}
 			);
 
-			await sendMail({
+			await queue.add('email confirmation', {
 				to: user.email,
-				subject: 'Zweryfikuj swój adres e-mail',
+				subject: 'Potwierdzenie adresu e-mail',
 				html,
 			});
 		},

@@ -31,7 +31,5 @@ export const appointments = pgTable('appointments', {
 	prescriptionId: integer('prescription_id').references(
 		() => prescriptions.prescriptionId
 	),
-	roomRoomId: integer('room_room_id')
-		.notNull()
-		.references(() => room.roomId),
+	roomRoomId: integer('room_room_id').references(() => room.roomId),
 });

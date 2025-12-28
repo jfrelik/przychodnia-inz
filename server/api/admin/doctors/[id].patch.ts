@@ -5,8 +5,6 @@ import { z } from 'zod';
 import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
 import { doctors, specializations } from '~~/server/db/clinic';
-import { recordAuditLog } from '~~/server/util/audit';
-import db from '~~/server/util/db';
 
 const payloadSchema = z
 	.object({
@@ -51,7 +49,7 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [current] = await db
+	const [current] = await useDb()
 		.select({
 			userId: doctors.userId,
 			specializationId: doctors.specializationId,
@@ -78,7 +76,7 @@ export default defineEventHandler(async (event) => {
 		payload.specializationId !== undefined &&
 		payload.specializationId !== null
 	) {
-		const [specialization] = await db
+		const [specialization] = await useDb()
 			.select({ id: specializations.id })
 			.from(specializations)
 			.where(eq(specializations.id, payload.specializationId))
@@ -121,7 +119,7 @@ export default defineEventHandler(async (event) => {
 	}
 
 	try {
-		await db.update(doctors).set(update).where(eq(doctors.userId, userId));
+		await useDb().update(doctors).set(update).where(eq(doctors.userId, userId));
 	} catch (error: unknown) {
 		const dbError = error as { code?: string };
 
@@ -141,7 +139,7 @@ export default defineEventHandler(async (event) => {
 		throw error;
 	}
 
-	const [updated] = await db
+	const [updated] = await useDb()
 		.select({
 			userId: doctors.userId,
 			userName: user.name,
@@ -156,7 +154,7 @@ export default defineEventHandler(async (event) => {
 		.where(eq(doctors.userId, userId))
 		.limit(1);
 
-	await recordAuditLog(
+	await useAuditLog(
 		event,
 		session.user.id,
 		`Zaktualizowano lekarza "${current.userName}": ${auditMessages.join(', ')}`

@@ -1,0 +1,1 @@
+ALTER TABLE "appointments" ALTER COLUMN "room_room_id" DROP NOT NULL;

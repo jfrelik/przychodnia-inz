@@ -1,9 +1,8 @@
 import type { H3Event } from 'h3';
 import { getRequestIP } from 'h3';
 import { logs } from '~~/server/db/clinic';
-import db from './db';
 
-export async function recordAuditLog(
+export async function useAuditLog(
 	event: H3Event,
 	userId: string | null,
 	action: string
@@ -14,7 +13,7 @@ export async function recordAuditLog(
 		event.node.req.socket.remoteAddress ??
 		'nieznany';
 
-	await db.insert(logs).values({
+	await useDb().insert(logs).values({
 		userId,
 		action,
 		ipAddress: ip,

@@ -11,8 +11,6 @@ import { z } from 'zod';
 import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
 import { receptionists } from '~~/server/db/clinic';
-import { recordAuditLog } from '~~/server/util/audit';
-import db from '~~/server/util/db';
 
 const payloadSchema = z
 	.object({
@@ -98,7 +96,7 @@ export default defineEventHandler(async (event) => {
 
 	const newUserId = createdUser.id;
 
-	await db.transaction(async (tx) => {
+	await useDb().transaction(async (tx) => {
 		await tx.insert(receptionists).values({
 			userId: newUserId,
 		});
@@ -124,7 +122,7 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [receptionistRow] = await db
+	const [receptionistRow] = await useDb()
 		.select({
 			userId: receptionists.userId,
 			userName: user.name,
@@ -135,7 +133,7 @@ export default defineEventHandler(async (event) => {
 		.where(eq(receptionists.userId, newUserId))
 		.limit(1);
 
-	await recordAuditLog(
+	await useAuditLog(
 		event,
 		session.user.id,
 		`Utworzono konto rejestratora "${receptionistRow?.userName ?? payload.name}" i wysłano link do ustawienia hasła.`

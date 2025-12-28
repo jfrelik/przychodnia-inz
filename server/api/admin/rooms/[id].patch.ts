@@ -9,8 +9,6 @@ import {
 	roomSpecializations,
 	specializations,
 } from '~~/server/db/clinic';
-import { recordAuditLog } from '~~/server/util/audit';
-import db from '~~/server/util/db';
 
 const payloadSchema = z
 	.object({
@@ -39,7 +37,7 @@ const normalizeIds = (ids?: (number | null)[]) =>
 	(ids ?? []).filter((id): id is number => id !== null);
 
 const fetchRoomWithMeta = async (roomId: number) =>
-	db
+	useDb()
 		.select({
 			roomId: room.roomId,
 			number: room.number,
@@ -133,7 +131,7 @@ export default defineEventHandler(async (event) => {
 
 	if (nextSpecializations !== undefined) {
 		if (nextSpecializations.length > 0) {
-			const found = await db
+			const found = await useDb()
 				.select({ id: specializations.id, name: specializations.name })
 				.from(specializations)
 				.where(inArray(specializations.id, nextSpecializations));
@@ -165,7 +163,7 @@ export default defineEventHandler(async (event) => {
 	}
 
 	try {
-		await db.transaction(async (tx) => {
+		await useDb().transaction(async (tx) => {
 			if (Object.keys(update).length > 0) {
 				await tx.update(room).set(update).where(eq(room.roomId, roomId));
 			}
@@ -224,7 +222,7 @@ export default defineEventHandler(async (event) => {
 	const updatedNumberForLog =
 		(update.number as number | undefined) ?? currentRaw.number;
 
-	await recordAuditLog(
+	await useAuditLog(
 		event,
 		session.user.id,
 		`Zaktualizowano gabinet ${updatedNumberForLog}: ${auditMessages.join(', ')}`

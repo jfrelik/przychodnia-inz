@@ -9,8 +9,6 @@ import {
 	doctors,
 	specializations,
 } from '~~/server/db/clinic';
-import { getDurationMinutes } from '~~/server/util/appointmentTypes';
-import db from '~~/server/util/db';
 
 type Frame = { start: string; end: string };
 
@@ -116,7 +114,7 @@ export default defineEventHandler(async (event) => {
 	const filterStartMinutes = query.startTime ? toMinutes(query.startTime) : 0;
 	const filterEndMinutes = query.endTime ? toMinutes(query.endTime) : 24 * 60;
 
-	const doctorRows = await db
+	const doctorRows = await useDb()
 		.select({
 			doctorId: doctors.userId,
 			specializationId: doctors.specializationId,
@@ -145,7 +143,7 @@ export default defineEventHandler(async (event) => {
 
 	for (const doc of doctorRows) {
 		// Availability over the range
-		const availabilities = await db
+		const availabilities = await useDb()
 			.select({
 				day: availability.day,
 				start: availability.timeStart,
@@ -173,7 +171,7 @@ export default defineEventHandler(async (event) => {
 		}
 
 		// Existing appointments over the range
-		const existing = await db
+		const existing = await useDb()
 			.select({
 				datetime: appointments.datetime,
 				type: appointments.type,

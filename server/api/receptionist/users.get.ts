@@ -3,7 +3,6 @@ import { createError, defineEventHandler } from 'h3';
 import { auth } from '~~/lib/auth';
 import { user as authUser } from '~~/server/db/auth';
 import { doctors, specializations } from '~~/server/db/clinic';
-import db from '~~/server/util/db';
 
 export default defineEventHandler(async (event) => {
 	const session = await auth.api.getSession({ headers: event.headers });
@@ -26,7 +25,7 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 	}
 
-	const rows = await db
+	const rows = await useDb()
 		.select({
 			userId: authUser.id,
 			name: authUser.name,

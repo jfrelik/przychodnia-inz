@@ -18,8 +18,8 @@
 		patientPesel: string;
 		doctorId: string;
 		doctorName: string;
-		roomId: number;
-		roomNumber: number;
+		roomId: number | null;
+		roomNumber: number | null;
 	};
 
 	definePageMeta({
@@ -203,6 +203,10 @@
 							:label="getStatusLabel(row.original.status)"
 							variant="soft"
 						/>
+					</template>
+
+					<template #roomNumber-cell="{ row }">
+						{{ row.original.roomNumber ?? 'Brak' }}
 					</template>
 
 					<template #notes-cell="{ row }">

@@ -1,0 +1,146 @@
+import { and, eq } from 'drizzle-orm';
+import { createError, defineEventHandler, readBody } from 'h3';
+import { z } from 'zod';
+import { auth } from '~~/lib/auth';
+import {
+	appointments,
+	prescriptions,
+	recommendations,
+} from '~~/server/db/clinic';
+
+const payloadSchema = z.object({
+	visitGoal: z.string().min(1, 'Cel wizyty jest wymagany'),
+	symptoms: z.string().optional(),
+	diagnosisDescription: z.string().optional(),
+	prescribedMedications: z.string().optional(),
+	recommendations: z.string().optional(),
+	proceduresPerformed: z.string().optional(),
+});
+
+const normalizeMedications = (input?: string | null) => {
+	if (!input) return null;
+	const parts = input
+		.split(/\r?\n/)
+		.map((s) => s.trim())
+		.filter(Boolean);
+	if (!parts.length) return null;
+	return parts;
+};
+
+const buildNotes = (payload: z.infer<typeof payloadSchema>) => {
+	const chunks: string[] = [];
+	chunks.push(`Cel wizyty: ${payload.visitGoal}`);
+	if (payload.symptoms) chunks.push(`Objawy: ${payload.symptoms}`);
+	if (payload.diagnosisDescription)
+		chunks.push(`Diagnoza: ${payload.diagnosisDescription}`);
+	if (payload.recommendations)
+		chunks.push(`Zalecenia: ${payload.recommendations}`);
+	if (payload.proceduresPerformed)
+		chunks.push(`Procedury: ${payload.proceduresPerformed}`);
+	return chunks.join('\n\n');
+};
+
+export default defineEventHandler(async (event) => {
+	const session = await auth.api.getSession({ headers: event.headers });
+
+	if (!session)
+		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
+
+	const hasPermission = await auth.api.userHasPermission({
+		body: {
+			userId: session.user.id,
+			permissions: {
+				appointments: ['update'],
+				prescriptions: ['create'],
+				recommendations: ['create'],
+			},
+		},
+	});
+
+	if (!hasPermission.success)
+		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
+
+	const appointmentId = Number(event.context.params?.id);
+	if (!Number.isFinite(appointmentId))
+		throw createError({
+			statusCode: 400,
+			statusMessage: 'Invalid appointment id',
+		});
+
+	const payload = payloadSchema.parse(await readBody(event));
+
+	const [appointmentRow] = await useDb()
+		.select({
+			appointmentId: appointments.appointmentId,
+			doctorId: appointments.doctorId,
+			status: appointments.status,
+		})
+		.from(appointments)
+		.where(eq(appointments.appointmentId, appointmentId))
+		.limit(1);
+
+	if (!appointmentRow)
+		throw createError({
+			statusCode: 404,
+			statusMessage: 'Appointment not found',
+		});
+
+	if (appointmentRow.doctorId !== session.user.id)
+		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
+
+	if (!['scheduled', 'checked_in'].includes(appointmentRow.status))
+		throw createError({
+			statusCode: 400,
+			statusMessage: 'Appointment is already closed',
+		});
+
+	const medications = normalizeMedications(payload.prescribedMedications);
+
+	const result = await useDb().transaction(async (tx) => {
+		let recommendationId: number | null = null;
+		if (payload.recommendations && payload.recommendations.trim().length > 0) {
+			const [rec] = await tx
+				.insert(recommendations)
+				.values({ content: payload.recommendations.trim() })
+				.returning({ recommendationId: recommendations.recommendationId });
+			recommendationId = rec.recommendationId;
+		}
+
+		let prescriptionId: number | null = null;
+		if (medications) {
+			const [prescription] = await tx
+				.insert(prescriptions)
+				.values({
+					medications,
+					status: 'active',
+				})
+				.returning({ prescriptionId: prescriptions.prescriptionId });
+			prescriptionId = prescription.prescriptionId;
+		}
+
+		const [updated] = await tx
+			.update(appointments)
+			.set({
+				status: 'completed',
+				notes: buildNotes(payload),
+				recommendationId: recommendationId ?? undefined,
+				prescriptionId: prescriptionId ?? undefined,
+			})
+			.where(
+				and(
+					eq(appointments.appointmentId, appointmentId),
+					eq(appointments.doctorId, session.user.id)
+				)
+			)
+			.returning({
+				appointmentId: appointments.appointmentId,
+				status: appointments.status,
+				recommendationId: appointments.recommendationId,
+				prescriptionId: appointments.prescriptionId,
+			});
+
+		return updated;
+	});
+
+	return result;
+});

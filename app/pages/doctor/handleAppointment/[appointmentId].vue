@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-	import { useRoute } from '#imports';
+	import { useRoute, useRouter } from '#imports';
 	import type { FormSubmitEvent, StepperItem } from '@nuxt/ui';
 	import { computed, ref } from 'vue';
 	import * as z from 'zod';
@@ -14,7 +14,24 @@
 
 	const toast = useToast();
 	const route = useRoute();
+	const router = useRouter();
 	const appointmentId = route.params.appointmentId as string;
+
+	type AppointmentDetails = {
+		appointmentId: number;
+		datetime: string | Date;
+		status: string;
+		type: string;
+		isOnline: boolean;
+		notes: string | null;
+		patientId: string;
+		patientName: string | null;
+		patientEmail: string | null;
+		roomId: number | null;
+		roomNumber: string | null;
+		recommendation: string | null;
+		prescription: unknown;
+	};
 
 	const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 	const ACCEPTED_FILE_TYPES = ['application/pdf'];
@@ -29,6 +46,32 @@
 			Number.parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
 		);
 	};
+
+	const formatDateTime = (value: string | Date) => {
+		const d = value instanceof Date ? value : new Date(value);
+		if (Number.isNaN(d.getTime())) return 'Brak danych';
+		return d.toLocaleString('pl-PL', {
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit',
+		});
+	};
+
+	const {
+		data: appointmentData,
+		pending: appointmentPending,
+		error: appointmentError,
+		refresh: refreshAppointment,
+	} = await useFetch<AppointmentDetails>(
+		`/api/doctor/appointments/${appointmentId}`,
+		{
+			key: `doctor-appointment-${appointmentId}`,
+		}
+	);
+
+	const appointment = computed(() => appointmentData.value ?? null);
 
 	const schema = z.object({
 		visitGoal: z.string().min(1, 'Cel wizyty jest wymagany'),
@@ -61,6 +104,8 @@
 		proceduresPerformed: '',
 		examResultsFile: undefined,
 	});
+
+	const submitting = ref(false);
 
 	const visitSteps: StepperItem[] = [
 		{
@@ -121,10 +166,43 @@
 
 	async function handleSubmit(event: FormSubmitEvent<Schema>) {
 		try {
-			// TODO: submit logic
-			console.log('appointmentId', appointmentId, event.data);
-		} catch (error) {
-			console.error(error);
+			submitting.value = true;
+
+			const { examResultsFile: _unusedFile, ...rest } = event.data;
+
+			await $fetch(`/api/doctor/appointments/${appointmentId}`, {
+				method: 'PATCH',
+				body: rest,
+			});
+
+			toast.add({
+				title: 'Wizyta zakończona',
+				description: 'Dane wizyty zostały zapisane.',
+				color: 'success',
+			});
+
+			await refreshAppointment();
+			currentStep.value = visitSteps.length;
+			await router.push('/doctor/home');
+		} catch (error: unknown) {
+			const e = error as {
+				message?: string;
+				data?: { message?: string };
+				response?: { _data?: { message?: string } };
+			};
+
+			const message =
+				(error instanceof Error ? error.message : undefined) ??
+				e?.data?.message ??
+				e?.response?._data?.message;
+
+			toast.add({
+				title: 'Nie udało się zapisać wizyty',
+				description: message ?? 'Spróbuj ponownie.',
+				color: 'error',
+			});
+		} finally {
+			submitting.value = false;
 		}
 	}
 </script>
@@ -135,6 +213,56 @@
 			title="Panel obsługi wizyty"
 			description="Obsługa wizyty krok po kroku."
 		/>
+
+		<UCard class="mb-4">
+			<div class="flex items-center justify-between">
+				<div class="space-y-1">
+					<p class="text-sm text-neutral-500">Pacjent</p>
+					<p class="text-lg font-semibold">
+						{{ appointment?.patientName || 'ładowanie...' }}
+					</p>
+					<p class="text-sm text-neutral-600">
+						{{ appointment?.patientEmail || appointment?.patientId || '' }}
+					</p>
+				</div>
+				<div class="text-right text-sm text-neutral-600">
+					<p>
+						Data wizyty:
+						<span class="font-medium">
+							{{
+								appointment?.datetime
+									? formatDateTime(appointment.datetime)
+									: '?adowanie...'
+							}}
+						</span>
+					</p>
+					<p v-if="appointment?.roomNumber">
+						Gabinet:
+						<span class="font-medium">{{ appointment.roomNumber }}</span>
+					</p>
+					<p class="capitalize">
+						Status:
+						<span class="font-medium">
+							{{ appointment?.status || (appointmentPending ? '...' : 'Brak') }}
+						</span>
+					</p>
+				</div>
+			</div>
+
+			<UAlert
+				v-if="appointmentError"
+				class="mt-3"
+				color="error"
+				title="Nie uda?o si? pobra? danych wizyty"
+				:description="appointmentError.message"
+			>
+				<template #actions>
+					<UButton variant="soft" @click="refreshAppointment()">
+						Od?wie?
+					</UButton>
+				</template>
+			</UAlert>
+		</UCard>
 		<h1 class="text-2xl font-bold">
 			Krok {{ currentStep }}: {{ visitSteps[currentStep - 1]?.title }}
 		</h1>
@@ -388,7 +516,8 @@
 								label="Zatwierdź i zakończ wizytę"
 								color="success"
 								class="w-full cursor-pointer"
-								submit
+								:loading="submitting"
+								type="submit"
 							/>
 						</div>
 					</UCard>

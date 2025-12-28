@@ -4,8 +4,6 @@ import { z } from 'zod';
 import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
 import { patients } from '~~/server/db/clinic';
-import { recordAuditLog } from '~~/server/util/audit';
-import db from '~~/server/util/db';
 
 const payloadSchema = z
 	.object({
@@ -69,7 +67,7 @@ export default defineEventHandler(async (event) => {
 
 	// Check if PESEL already exists to avoid creating orphaned auth user
 	// !TODO: Consider if we really want this check - RODO
-	// const existingPatient = await db
+	// const existingPatient = await useDb()
 	// 	.select({ pesel: patients.pesel })
 	// 	.from(patients)
 	// 	.where(eq(patients.pesel, payload.pesel))
@@ -156,7 +154,7 @@ export default defineEventHandler(async (event) => {
 
 	// Create patient profile and link to auth user
 	try {
-		await db.transaction(async (tx) => {
+		await useDb().transaction(async (tx) => {
 			await tx.insert(patients).values({
 				userId: newUserId,
 				firstName: payload.name,
@@ -193,7 +191,7 @@ export default defineEventHandler(async (event) => {
 	};
 
 	try {
-		const rows = await db
+		const rows = await useDb()
 			.select({
 				userId: patients.userId,
 				firstName: patients.firstName,
@@ -222,7 +220,7 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	await recordAuditLog(
+	await useAuditLog(
 		event,
 		newUserId,
 		'Zarejestrowano nowe konto pacjenta i wysłano link weryfikacyjny.'

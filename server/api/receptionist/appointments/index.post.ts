@@ -8,10 +8,7 @@ import {
 	availability,
 	doctors,
 	patients,
-	room,
 } from '~~/server/db/clinic';
-import { getDurationMinutes } from '~~/server/util/appointmentTypes';
-import db from '~~/server/util/db';
 
 const payloadSchema = z.object({
 	patientId: z.string(),
@@ -23,7 +20,6 @@ const payloadSchema = z.object({
 		}),
 	type: z.enum(['consultation', 'procedure']).default('consultation'),
 	isOnline: z.boolean().default(false),
-	roomId: z.number().optional(),
 	notes: z.string().max(500).optional(),
 });
 
@@ -45,10 +41,9 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const payload = payloadSchema.parse(await readBody(event));
-	const { patientId, doctorId, datetime, type, isOnline, roomId, notes } =
-		payload;
+	const { patientId, doctorId, datetime, type, isOnline, notes } = payload;
 
-	const [patientUser] = await db
+	const [patientUser] = await useDb()
 		.select()
 		.from(authUser)
 		.where(eq(authUser.id, patientId))
@@ -61,7 +56,7 @@ export default defineEventHandler(async (event) => {
 			statusMessage: 'Target user is not a patient',
 		});
 
-	const [patientRow] = await db
+	const [patientRow] = await useDb()
 		.select()
 		.from(patients)
 		.where(eq(patients.userId, patientId))
@@ -72,7 +67,7 @@ export default defineEventHandler(async (event) => {
 			statusMessage: 'Patient profile not found',
 		});
 
-	const [doctorRow] = await db
+	const [doctorRow] = await useDb()
 		.select()
 		.from(doctors)
 		.where(eq(doctors.userId, doctorId))
@@ -88,7 +83,7 @@ export default defineEventHandler(async (event) => {
 	const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60_000);
 	const dateStr = slotStart.toISOString().slice(0, 10);
 
-	const frames = await db
+	const frames = await useDb()
 		.select({ start: availability.timeStart, end: availability.timeEnd })
 		.from(availability)
 		.where(
@@ -120,7 +115,7 @@ export default defineEventHandler(async (event) => {
 	const dayStart = new Date(`${dateStr}T00:00:00`);
 	const dayEnd = new Date(`${dateStr}T23:59:59`);
 
-	const existing = await db
+	const existing = await useDb()
 		.select({
 			datetime: appointments.datetime,
 			type: appointments.type,
@@ -148,63 +143,7 @@ export default defineEventHandler(async (event) => {
 	if (conflict)
 		throw createError({ statusCode: 409, statusMessage: 'Slot already taken' });
 
-	let resolvedRoomId = roomId;
-
-	// Pick provided room or fall back to the first configured room.
-	if (resolvedRoomId === undefined) {
-		const [anyRoom] = await db.select().from(room).limit(1);
-		if (!anyRoom)
-			throw createError({
-				statusCode: 400,
-				statusMessage: 'No rooms configured',
-			});
-		resolvedRoomId = anyRoom.roomId;
-	}
-
-	const [roomRow] = await db
-		.select()
-		.from(room)
-		.where(eq(room.roomId, resolvedRoomId))
-		.limit(1);
-	if (!roomRow)
-		throw createError({ statusCode: 404, statusMessage: 'Room not found' });
-
-	if (!isOnline) {
-		const roomConflict = await db
-			.select({
-				datetime: appointments.datetime,
-				type: appointments.type,
-			})
-			.from(appointments)
-			.where(
-				and(
-					eq(appointments.roomRoomId, resolvedRoomId),
-					gte(appointments.datetime, dayStart),
-					lte(appointments.datetime, dayEnd),
-					inArray(appointments.status, ['scheduled', 'checked_in'])
-				)
-			)
-			.then((rows) =>
-				rows.some((row) => {
-					const existingStart = new Date(row.datetime);
-					const existingDuration = getDurationMinutes(
-						row.type as 'consultation' | 'procedure'
-					);
-					const existingEnd = new Date(
-						existingStart.getTime() + existingDuration * 60_000
-					);
-					return existingStart < slotEnd && slotStart < existingEnd;
-				})
-			);
-
-		if (roomConflict)
-			throw createError({
-				statusCode: 409,
-				statusMessage: 'Room not available',
-			});
-	}
-
-	const [created] = await db
+	const [created] = await useDb()
 		.insert(appointments)
 		.values({
 			patientId,
@@ -214,7 +153,7 @@ export default defineEventHandler(async (event) => {
 			type,
 			isOnline,
 			notes,
-			roomRoomId: resolvedRoomId ?? 1,
+			roomRoomId: null,
 		})
 		.returning();
 

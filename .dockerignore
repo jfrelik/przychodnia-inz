@@ -1,0 +1,28 @@
+# dependencies
+node_modules
+**/node_modules
+
+# build output
+.output
+.nuxt
+dist
+
+# logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# env / local
+.env
+.env.*
+.DS_Store
+
+# git
+.git
+.gitignore
+
+# cache
+.pnpm-store
+**/.cache
