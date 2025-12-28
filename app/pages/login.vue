@@ -14,6 +14,10 @@
 	const turnstile = ref();
 	const route = useRoute();
 
+	const turnstileOptions = {
+		language: 'pl',
+	};
+
 	const resetError = computed(() => {
 		const value = route.query.error;
 		return typeof value === 'string' ? value.toLowerCase() : '';
@@ -176,14 +180,14 @@
 
 <template>
 	<div
-		class="flex min-h-screen w-full flex-col items-center justify-center gap-10"
+		class="flex min-h-screen w-full flex-col items-center justify-center gap-6 px-4 py-10"
 	>
-		<div class="flex items-center gap-2 text-3xl font-bold">
+		<div class="flex items-center gap-2 text-2xl font-bold md:text-3xl">
 			<UIcon name="carbon:hospital" class="h-8 w-8" />
 			Nazwa Przychodni
 		</div>
 		<div
-			class="inline-block w-1/3 flex-col items-center rounded-xl border border-gray-300 p-6 shadow-xl"
+			class="w-full max-w-md flex-col items-center rounded-xl border border-gray-300 p-6 shadow-xl"
 		>
 			<div class="flex flex-col items-center pb-6">
 				<h1 class="text-2xl font-bold">Logowanie</h1>
@@ -248,8 +252,10 @@
 					</UInput>
 				</UFormField>
 
-				<div class="w-full">
-					<NuxtTurnstile v-model="turnstile" class="w-full" />
+				<div class="flex w-full items-center justify-center">
+					<div class="turnstile-wrap">
+						<NuxtTurnstile v-model="turnstile" :options="turnstileOptions" />
+					</div>
 				</div>
 
 				<UButton
@@ -262,7 +268,7 @@
 				</UButton>
 			</UForm>
 
-			<div class="flex flex-col items-center">
+			<div class="flex flex-col items-center gap-1">
 				<p class="pt-2">
 					Nie masz konta?
 					<ULink to="/register" class="text-primary">Zarejestruj się</ULink>
@@ -276,4 +282,18 @@
 	</div>
 </template>
 
-<style></style>
+<style scoped>
+	.turnstile-wrap {
+		transform: scale(0.95);
+		transform-origin: top center;
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	@media (max-width: 380px) {
+		.turnstile-wrap {
+			transform: scale(0.8);
+			transform-origin: top center;
+		}
+	}
+</style>
