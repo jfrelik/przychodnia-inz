@@ -10,6 +10,7 @@ const statements = {
 	medicalRecords: ['read', 'list', 'create', 'update', 'delete'] as const,
 	patients: ['read', 'list', 'create', 'update', 'delete'] as const,
 	prescriptions: ['read', 'list', 'create', 'update', 'delete'] as const,
+	queues: ['read', 'list'] as const,
 	testResults: ['read', 'list', 'create', 'update', 'delete'] as const,
 	recommendations: ['read', 'list', 'create', 'update', 'delete'] as const,
 	rooms: ['read', 'list', 'create', 'update', 'delete'] as const,

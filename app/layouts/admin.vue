@@ -98,6 +98,11 @@
 						active: route.path === '/admin/logs',
 						to: '/admin/logs',
 					},
+					{
+						label: 'Kolejki',
+						active: route.path === '/admin/queues',
+						to: '/admin/queues',
+					},
 				],
 			},
 		],

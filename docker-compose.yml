@@ -6,23 +6,32 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      valkey:
+        condition: service_healthy
     environment:
-      DATABASE_URL: postgres://postgres:postgres@db:5432/przychodnia
+      NUXT_DATABASE_URL: ${NUXT_DATABASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL}
-      NUXT_NODEMAILER_FROM: ${NUXT_NODEMAILER_FROM}
-      NUXT_NODEMAILER_HOST: ${NUXT_NODEMAILER_HOST}
-      NUXT_NODEMAILER_PORT: ${NUXT_NODEMAILER_PORT}
-      NUXT_NODEMAILER_SECURE: ${NUXT_NODEMAILER_SECURE}
       NUXT_TURNSTILE_SECRET_KEY: ${NUXT_TURNSTILE_SECRET_KEY}
+      NUXT_REDIS_URL: ${NUXT_REDIS_URL}
+      NUXT_DEFAULT_ADMIN_EMAIL: ${NUXT_DEFAULT_ADMIN_EMAIL}
+    restart: unless-stopped
+  valkey:
+    container_name: przychodnia-valkey
+    image: valkey/valkey:7
+    healthcheck:
+      test: ['CMD-SHELL', 'redis-cli ping | grep PONG']
+      interval: 1s
+      timeout: 3s
+      retries: 5
     restart: unless-stopped
 
   db:
     container_name: przychodnia-db
     image: postgres:17-alpine
     environment:
-      POSTGRES_DB: przychodnia
-      POSTGRES_USER: postgres
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
     volumes:
