@@ -3,6 +3,10 @@
 	import * as z from 'zod';
 	import { authClient } from '~~/lib/auth-client';
 
+	useHead({
+		title: 'Rejestracja',
+	});
+
 	const toast = useToast();
 	const session = authClient.useSession();
 	const show = ref(false);

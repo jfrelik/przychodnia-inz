@@ -1,5 +1,8 @@
 ﻿<script setup lang="ts">
 	import { computed, ref } from 'vue';
+	useHead({
+		title: 'Przychodnia',
+	});
 
 	const patientsCount = 1240;
 	const visitsToday = 87;
