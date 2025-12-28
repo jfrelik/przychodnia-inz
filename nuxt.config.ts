@@ -36,6 +36,12 @@ export default defineNuxtConfig({
 		'@formkit/auto-animate/nuxt',
 	],
 
+	routeRules: {
+		'/': {
+			swr: 3600, // cache homepage for 1 hour
+		},
+	},
+
 	// Nitro OpenAPI runtime metadata
 	runtimeConfig: {
 		public: {
