@@ -15,7 +15,8 @@
 		"lint:fix": "eslint . --fix",
 		"prettier": "prettier --write .",
 		"seed": "pnpm run server/scripts/seed.ts",
-		"db:studio": "drizzle-kit studio"
+		"db:studio": "drizzle-kit studio",
+		"db:generate": "drizzle-kit generate"
 	},
 	"engines": {
 		"node": ">=24.12.0"
