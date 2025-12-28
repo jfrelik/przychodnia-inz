@@ -27,6 +27,7 @@ export default defineNuxtConfig({
 		'nuxt-email-renderer',
 		'@nuxtjs/turnstile',
 		'nuxt-charts',
+		'@formkit/auto-animate/nuxt',
 	],
 
 	// Nitro OpenAPI runtime metadata
