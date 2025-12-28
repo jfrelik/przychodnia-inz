@@ -2,8 +2,6 @@ import { and, count, eq } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
 import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
-import { recordAuditLog } from '~~/server/util/audit';
-import db from '~~/server/util/db';
 
 export default defineEventHandler(async (event) => {
 	const session = await auth.api.getSession({ headers: event.headers });
@@ -39,7 +37,7 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [countResult] = await db
+	const [countResult] = await useDb()
 		.select({ count: count() })
 		.from(user)
 		.where(eq(user.role, 'admin'));
@@ -54,7 +52,7 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [current] = await db
+	const [current] = await useDb()
 		.select({
 			id: user.id,
 			name: user.name,
@@ -70,9 +68,9 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	await db.update(user).set({ role: 'user' }).where(eq(user.id, userId));
+	await useDb().update(user).set({ role: 'user' }).where(eq(user.id, userId));
 
-	await recordAuditLog(
+	await useAuditLog(
 		event,
 		session.user.id,
 		`Usunięto administratora "${current.name}" i zmieniono rolę na użytkownika.`

@@ -3,7 +3,6 @@ import { createError, defineEventHandler, getQuery } from 'h3';
 import { z } from 'zod';
 import { auth } from '~~/lib/auth';
 import { availability } from '~~/server/db/clinic';
-import db from '~~/server/util/db';
 
 const querySchema = z
 	.object({
@@ -48,7 +47,7 @@ export default defineEventHandler(async (event) => {
 		condition = and(condition, lte(availability.day, query.endDate));
 	}
 
-	const slots = await db
+	const slots = await useDb()
 		.select({
 			scheduleId: availability.scheduleId,
 			day: availability.day,

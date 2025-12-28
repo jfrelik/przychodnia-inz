@@ -10,8 +10,6 @@ import crypto from 'node:crypto';
 import { z } from 'zod';
 import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
-import { recordAuditLog } from '~~/server/util/audit';
-import db from '~~/server/util/db';
 
 const payloadSchema = z
 	.object({
@@ -62,7 +60,7 @@ export default defineEventHandler(async (event) => {
 			},
 		});
 
-		await db.transaction(async (tx) => {
+		await useDb().transaction(async (tx) => {
 			await tx
 				.update(user)
 				.set({ emailVerified: true })
@@ -117,7 +115,7 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [adminRow] = await db
+	const [adminRow] = await useDb()
 		.select({
 			id: user.id,
 			name: user.name,
@@ -128,7 +126,7 @@ export default defineEventHandler(async (event) => {
 		.where(eq(user.id, newUserId))
 		.limit(1);
 
-	await recordAuditLog(
+	await useAuditLog(
 		event,
 		session.user.id,
 		`Utworzono konto administratora "${adminRow?.name ?? payload.name}" i wysłano link do ustawienia hasła.`

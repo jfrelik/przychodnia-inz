@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
 import { logs } from '~~/server/db/clinic';
-import db from '~~/server/util/db';
 
 const uuidSchema = z.string().uuid();
 
@@ -44,7 +43,7 @@ export default defineEventHandler(async (event) => {
 	if (!hasPermission.success)
 		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-	const rowsResult = await db
+	const rowsResult = await useDb()
 		.select({
 			logId: logs.logId,
 			action: logs.action,

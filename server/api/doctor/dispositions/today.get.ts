@@ -2,7 +2,6 @@ import { and, asc, eq } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
 import { auth } from '~~/lib/auth';
 import { availability, doctors } from '~~/server/db/clinic';
-import db from '~~/server/util/db';
 
 type RawAvailability = {
 	scheduleId: string;
@@ -81,7 +80,7 @@ export default defineEventHandler(async (event) => {
 	if (!hasPermission.success)
 		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-	const [doctorRow] = await db
+	const [doctorRow] = await useDb()
 		.select({ userId: doctors.userId })
 		.from(doctors)
 		.where(eq(doctors.userId, session.user.id))
@@ -96,7 +95,7 @@ export default defineEventHandler(async (event) => {
 
 	const today = buildTodayDate();
 
-	const slots = await db
+	const slots = await useDb()
 		.select({
 			scheduleId: availability.scheduleId,
 			day: availability.day,

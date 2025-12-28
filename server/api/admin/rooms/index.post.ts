@@ -14,8 +14,6 @@ import {
 	roomSpecializations,
 	specializations,
 } from '~~/server/db/clinic';
-import { recordAuditLog } from '~~/server/util/audit';
-import db from '~~/server/util/db';
 
 const payloadSchema = z
 	.object({
@@ -39,7 +37,7 @@ const normalizeIds = (ids?: (number | null)[]) =>
 	(ids ?? []).filter((id): id is number => id !== null);
 
 const fetchRoomWithMeta = async (roomId: number) =>
-	db
+	useDb()
 		.select({
 			roomId: room.roomId,
 			number: room.number,
@@ -90,7 +88,7 @@ export default defineEventHandler(async (event) => {
 	let specializationNames: string[] = [];
 
 	if (specializationIds.length > 0) {
-		const found = await db
+		const found = await useDb()
 			.select({ id: specializations.id, name: specializations.name })
 			.from(specializations)
 			.where(inArray(specializations.id, specializationIds));
@@ -106,7 +104,7 @@ export default defineEventHandler(async (event) => {
 	}
 
 	try {
-		const createdRoom = await db.transaction(async (tx) => {
+		const createdRoom = await useDb().transaction(async (tx) => {
 			const [created] = await tx
 				.insert(room)
 				.values({
@@ -138,7 +136,7 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		await recordAuditLog(
+		await useAuditLog(
 			event,
 			session.user.id,
 			specializationNames.length > 0

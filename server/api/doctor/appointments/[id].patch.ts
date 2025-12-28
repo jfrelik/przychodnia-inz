@@ -7,7 +7,6 @@ import {
 	prescriptions,
 	recommendations,
 } from '~~/server/db/clinic';
-import db from '~~/server/util/db';
 
 const payloadSchema = z.object({
 	visitGoal: z.string().min(1, 'Cel wizyty jest wymagany'),
@@ -70,7 +69,7 @@ export default defineEventHandler(async (event) => {
 
 	const payload = payloadSchema.parse(await readBody(event));
 
-	const [appointmentRow] = await db
+	const [appointmentRow] = await useDb()
 		.select({
 			appointmentId: appointments.appointmentId,
 			doctorId: appointments.doctorId,
@@ -97,7 +96,7 @@ export default defineEventHandler(async (event) => {
 
 	const medications = normalizeMedications(payload.prescribedMedications);
 
-	const result = await db.transaction(async (tx) => {
+	const result = await useDb().transaction(async (tx) => {
 		let recommendationId: number | null = null;
 		if (payload.recommendations && payload.recommendations.trim().length > 0) {
 			const [rec] = await tx

@@ -2,7 +2,6 @@ import { asc, count, eq } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
 import { auth } from '~~/lib/auth';
 import { doctors, specializations } from '~~/server/db/clinic';
-import db from '~~/server/util/db';
 
 export default defineEventHandler(async (event) => {
 	const session = await auth.api.getSession({ headers: event.headers });
@@ -22,7 +21,7 @@ export default defineEventHandler(async (event) => {
 	if (!hasPermission.success)
 		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-	const rows = await db
+	const rows = await useDb()
 		.select({
 			id: specializations.id,
 			name: specializations.name,

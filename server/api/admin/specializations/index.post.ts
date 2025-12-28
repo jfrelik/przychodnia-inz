@@ -8,8 +8,6 @@ import {
 import { z } from 'zod';
 import { auth } from '~~/lib/auth';
 import { specializations } from '~~/server/db/clinic';
-import { recordAuditLog } from '~~/server/util/audit';
-import db from '~~/server/util/db';
 
 const payloadSchema = z
 	.object({
@@ -43,7 +41,7 @@ export default defineEventHandler(async (event) => {
 	const payload = payloadSchema.parse(body);
 
 	try {
-		const [created] = await db
+		const [created] = await useDb()
 			.insert(specializations)
 			.values({ name: payload.name })
 			.returning({
@@ -51,7 +49,7 @@ export default defineEventHandler(async (event) => {
 				name: specializations.name,
 			});
 
-		await recordAuditLog(
+		await useAuditLog(
 			event,
 			session.user.id,
 			`Dodano specjalizację "${created.name}".`

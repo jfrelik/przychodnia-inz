@@ -3,7 +3,6 @@ import { createError, defineEventHandler } from 'h3';
 import { auth } from '~~/lib/auth';
 import { user as authUser } from '~~/server/db/auth';
 import { appointments, doctors, patients } from '~~/server/db/clinic';
-import db from '~~/server/util/db';
 
 const buildPatientName = (
 	firstName?: string | null,
@@ -37,7 +36,7 @@ export default defineEventHandler(async (event) => {
 	if (!hasPermission.success)
 		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-	const [doctorRow] = await db
+	const [doctorRow] = await useDb()
 		.select({ userId: doctors.userId })
 		.from(doctors)
 		.where(eq(doctors.userId, session.user.id))
@@ -50,7 +49,7 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const rows = await db
+	const rows = await useDb()
 		.select({
 			patientId: appointments.patientId,
 			lastAppointmentId: appointments.appointmentId,

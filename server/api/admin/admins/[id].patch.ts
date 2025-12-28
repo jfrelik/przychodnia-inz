@@ -3,8 +3,6 @@ import { createError, defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
 import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
-import { recordAuditLog } from '~~/server/util/audit';
-import db from '~~/server/util/db';
 
 const payloadSchema = z
 	.object({
@@ -47,7 +45,7 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [current] = await db
+	const [current] = await useDb()
 		.select({
 			id: user.id,
 			name: user.name,
@@ -82,9 +80,9 @@ export default defineEventHandler(async (event) => {
 		};
 	}
 
-	await db.update(user).set(update).where(eq(user.id, userId));
+	await useDb().update(user).set(update).where(eq(user.id, userId));
 
-	const [updated] = await db
+	const [updated] = await useDb()
 		.select({
 			id: user.id,
 			name: user.name,
@@ -95,7 +93,7 @@ export default defineEventHandler(async (event) => {
 		.where(eq(user.id, userId))
 		.limit(1);
 
-	await recordAuditLog(
+	await useAuditLog(
 		event,
 		session.user.id,
 		`Zaktualizowano administratora "${current.name}": ${auditMessages.join(', ')}`

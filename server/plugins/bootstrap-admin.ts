@@ -2,16 +2,14 @@ import { count, eq } from 'drizzle-orm';
 import crypto from 'node:crypto';
 import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
-import db from '~~/server/util/db';
-import migrate from '../util/migrate';
 
 export default defineNitroPlugin(async () => {
 	const runtimeConfig = useRuntimeConfig();
 
 	// Migrate db first
-	await migrate;
+	await useMigrate();
 
-	const [{ admins }] = await db
+	const [{ admins }] = await useDb()
 		.select({ admins: count() })
 		.from(user)
 		.where(eq(user.role, 'admin'));
@@ -27,7 +25,7 @@ export default defineNitroPlugin(async () => {
 		},
 	});
 
-	await db
+	await useDb()
 		.update(user)
 		.set({ emailVerified: true })
 		.where(eq(user.id, created.id));
