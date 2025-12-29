@@ -1,5 +1,5 @@
 ﻿<script lang="ts" setup>
-	import { computed } from 'vue';
+	import { computed, ref, refreshNuxtData } from '#imports';
 
 	type VisitStatus = 'scheduled' | 'completed' | 'canceled';
 
@@ -25,12 +25,17 @@
 	);
 
 	const visits = computed(() => data.value ?? []);
+	const upcomingVisits = computed(() =>
+		visits.value.filter((visit) => visit.status === 'scheduled')
+	);
 	const showEmptyState = computed(
-		() => !pending.value && !error.value && visits.value.length === 0
+		() => !pending.value && !error.value && upcomingVisits.value.length === 0
 	);
 	const errorMessage = computed(
 		() => error.value?.message ?? 'Spróbuj ponownie później.'
 	);
+	const toast = useToast();
+	const cancelLoading = ref<number | null>(null);
 
 	const statusMeta: Record<VisitStatus, { label: string; color: StatusColor }> =
 		{
@@ -75,6 +80,31 @@
 		visit.roomNumber
 			? `Gabinet ${visit.roomNumber}`
 			: 'Bez przydzielonego gabinetu';
+
+	const handleCancel = async (appointmentId: number) => {
+		try {
+			cancelLoading.value = appointmentId;
+			await $fetch(`/api/patient/appointments/${appointmentId}`, {
+				method: 'PATCH',
+				body: { status: 'canceled' },
+			});
+			toast.add({
+				title: 'Wizyta anulowana',
+				color: 'success',
+			});
+			await Promise.all([refresh(), refreshNuxtData('patient-visits-summary')]);
+		} catch (err) {
+			const message =
+				err instanceof Error ? err.message : 'Nie udało się anulować wizyty.';
+			toast.add({
+				title: 'Błąd anulowania wizyty',
+				description: message,
+				color: 'error',
+			});
+		} finally {
+			cancelLoading.value = null;
+		}
+	};
 </script>
 
 <template>
@@ -143,29 +173,49 @@
 			</div>
 
 			<div v-else class="flex flex-col gap-4">
-				<UCard v-for="visit in visits" :key="visit.appointmentId">
-					<div class="flex items-center gap-4">
-						<div
-							class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100"
-						>
-							<Icon name="carbon:calendar" class-name="h-6 w-6 text-blue-600" />
-						</div>
-						<div class="flex flex-1 flex-col gap-1">
-							<p class="text-lg font-semibold text-gray-900">
-								{{ getDoctorLabel(visit) }}
-							</p>
-							<p class="text-sm text-gray-500">
-								{{ getLocationLabel(visit) }}
-							</p>
+				<UCard v-for="visit in upcomingVisits" :key="visit.appointmentId">
+					<div class="flex items-start gap-4">
+						<div class="flex flex-1 items-center gap-4">
 							<div
-								class="flex flex-wrap items-center gap-3 text-sm text-gray-600"
+								class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100"
 							>
-								<span>{{ formatDate(visit.datetime) }}</span>
-								<span>{{ formatTime(visit.datetime) }}</span>
-								<UBadge variant="subtle" :color="getStatusColor(visit.status)">
-									{{ getStatusLabel(visit.status) }}
-								</UBadge>
+								<Icon
+									name="carbon:calendar"
+									class-name="h-6 w-6 text-blue-600"
+								/>
 							</div>
+							<div class="flex flex-1 flex-col gap-1">
+								<p class="text-lg font-semibold text-gray-900">
+									{{ getDoctorLabel(visit) }}
+								</p>
+								<p class="text-sm text-gray-500">
+									{{ getLocationLabel(visit) }}
+								</p>
+								<div
+									class="flex flex-wrap items-center gap-3 text-sm text-gray-600"
+								>
+									<span>{{ formatDate(visit.datetime) }}</span>
+									<span>{{ formatTime(visit.datetime) }}</span>
+									<UBadge
+										variant="subtle"
+										:color="getStatusColor(visit.status)"
+									>
+										{{ getStatusLabel(visit.status) }}
+									</UBadge>
+								</div>
+							</div>
+						</div>
+						<div v-if="visit.status === 'scheduled'" class="flex items-start">
+							<UButton
+								color="error"
+								variant="soft"
+								size="sm"
+								class="cursor-pointer"
+								:loading="cancelLoading === visit.appointmentId"
+								@click="handleCancel(visit.appointmentId)"
+							>
+								Anuluj wizytę
+							</UButton>
 						</div>
 					</div>
 					<p v-if="visit.notes" class="mt-3 text-sm text-gray-600">
