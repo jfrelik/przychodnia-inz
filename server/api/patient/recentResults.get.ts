@@ -58,7 +58,6 @@ export default defineEventHandler(async (event) => {
 			testType: testResults.testType,
 			result: testResults.result,
 			testDate: testResults.testDate,
-			filePath: testResults.filePath,
 		})
 		.from(testResults)
 		.where(eq(testResults.recordId, record.recordId))

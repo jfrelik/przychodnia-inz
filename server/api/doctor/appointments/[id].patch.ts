@@ -4,8 +4,10 @@ import { z } from 'zod';
 import { auth } from '~~/lib/auth';
 import {
 	appointments,
+	medicalRecords,
 	prescriptions,
 	recommendations,
+	testResults,
 } from '~~/server/db/clinic';
 import db from '~~/server/util/db';
 
@@ -16,6 +18,7 @@ const payloadSchema = z.object({
 	prescribedMedications: z.string().optional(),
 	recommendations: z.string().optional(),
 	proceduresPerformed: z.string().optional(),
+	examResultCodes: z.array(z.string()).optional(),
 });
 
 const normalizeMedications = (input?: string | null) => {
@@ -39,6 +42,20 @@ const buildNotes = (payload: z.infer<typeof payloadSchema>) => {
 	if (payload.proceduresPerformed)
 		chunks.push(`Procedury: ${payload.proceduresPerformed}`);
 	return chunks.join('\n\n');
+};
+
+const normalizeExamCode = (value?: string | null) => {
+	if (!value) return null;
+	const trimmed = value.trim();
+	return trimmed.length ? trimmed : null;
+};
+
+const normalizeExamCodes = (values?: string[] | null) => {
+	if (!values || !values.length) return [];
+	const normalized = values
+		.map((code) => normalizeExamCode(code))
+		.filter((code): code is string => Boolean(code));
+	return Array.from(new Set(normalized));
 };
 
 export default defineEventHandler(async (event) => {
@@ -75,6 +92,7 @@ export default defineEventHandler(async (event) => {
 			appointmentId: appointments.appointmentId,
 			doctorId: appointments.doctorId,
 			status: appointments.status,
+			patientId: appointments.patientId,
 		})
 		.from(appointments)
 		.where(eq(appointments.appointmentId, appointmentId))
@@ -96,6 +114,7 @@ export default defineEventHandler(async (event) => {
 		});
 
 	const medications = normalizeMedications(payload.prescribedMedications);
+	const examResultCodes = normalizeExamCodes(payload.examResultCodes);
 
 	const result = await db.transaction(async (tx) => {
 		let recommendationId: number | null = null;
@@ -139,6 +158,33 @@ export default defineEventHandler(async (event) => {
 				recommendationId: appointments.recommendationId,
 				prescriptionId: appointments.prescriptionId,
 			});
+
+		if (examResultCodes.length) {
+			const [existingRecord] = await tx
+				.select({ recordId: medicalRecords.recordId })
+				.from(medicalRecords)
+				.where(eq(medicalRecords.patientId, appointmentRow.patientId))
+				.limit(1);
+
+			let recordId = existingRecord?.recordId;
+			if (!recordId) {
+				const [record] = await tx
+					.insert(medicalRecords)
+					.values({ patientId: appointmentRow.patientId })
+					.returning({ recordId: medicalRecords.recordId });
+				recordId = record.recordId;
+			}
+
+			const now = new Date();
+			await tx.insert(testResults).values(
+				examResultCodes.map((code) => ({
+					recordId,
+					testType: 'Kod badania',
+					result: code,
+					testDate: now,
+				}))
+			);
+		}
 
 		return updated;
 	});

@@ -47,7 +47,6 @@
 		testType: string;
 		result: string;
 		testDate: string | Date | null;
-		filePath: string | null;
 	};
 
 	type VisitStatusColor = 'primary' | 'success' | 'error' | 'neutral';
@@ -394,17 +393,6 @@
 									</p>
 								</div>
 							</div>
-
-							<UButton
-								variant="soft"
-								color="neutral"
-								icon="carbon:view"
-								size="xl"
-								class="cursor-pointer"
-								:disabled="!result.filePath"
-								:to="result.filePath ?? undefined"
-								target="_blank"
-							/>
 						</div>
 					</UCard>
 				</div>

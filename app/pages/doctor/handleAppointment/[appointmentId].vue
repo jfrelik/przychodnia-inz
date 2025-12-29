@@ -33,20 +33,6 @@
 		prescription: unknown;
 	};
 
-	const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
-	const ACCEPTED_FILE_TYPES = ['application/pdf'];
-
-	const formatBytes = (bytes: number, decimals = 2) => {
-		if (bytes === 0) return '0 Bytes';
-		const k = 1024;
-		const dm = decimals < 0 ? 0 : decimals;
-		const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-		const i = Math.floor(Math.log(bytes) / Math.log(k));
-		return (
-			Number.parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
-		);
-	};
-
 	const formatDateTime = (value: string | Date) => {
 		const d = value instanceof Date ? value : new Date(value);
 		if (Number.isNaN(d.getTime())) return 'Brak danych';
@@ -80,17 +66,7 @@
 		prescribedMedications: z.string().optional(),
 		recommendations: z.string().optional(),
 		proceduresPerformed: z.string().optional(),
-		examResultsFile: z
-			.instanceof(File, {
-				message: 'Dodaj plik z wynikami badań (PDF).',
-			})
-			.refine((file) => file.size <= MAX_FILE_SIZE, {
-				message: `Plik jest za duży. Maksymalny rozmiar to ${formatBytes(MAX_FILE_SIZE)}.`,
-			})
-			.refine((file) => ACCEPTED_FILE_TYPES.includes(file.type), {
-				message: 'Dozwolone są tylko pliki PDF.',
-			})
-			.optional(),
+		examResultCodes: z.array(z.string()).optional(),
 	});
 
 	type Schema = z.output<typeof schema>;
@@ -102,8 +78,78 @@
 		prescribedMedications: '',
 		recommendations: '',
 		proceduresPerformed: '',
-		examResultsFile: undefined,
+		examResultCodes: [],
 	});
+
+	const newExamCode = ref('');
+	const editingExamCodeIndex = ref<number | null>(null);
+	const editingExamCodeValue = ref('');
+
+	const resetExamCodeEditing = () => {
+		editingExamCodeIndex.value = null;
+		editingExamCodeValue.value = '';
+	};
+
+	const addExamCode = () => {
+		const value = newExamCode.value.trim();
+		if (!value) return;
+		if (!schemaState.value.examResultCodes?.includes(value))
+			schemaState.value.examResultCodes?.push(value);
+		newExamCode.value = '';
+	};
+
+	const startEditingExamCode = (index: number) => {
+		if (!schemaState.value.examResultCodes) return;
+		editingExamCodeIndex.value = index;
+		editingExamCodeValue.value = schemaState.value.examResultCodes[index] ?? '';
+	};
+
+	const saveExamCodeEdit = () => {
+		if (
+			editingExamCodeIndex.value === null ||
+			!schemaState.value.examResultCodes
+		)
+			return;
+
+		const value = editingExamCodeValue.value.trim();
+		if (!value) {
+			toast.add({
+				title: 'Kod nie może być pusty',
+				color: 'warning',
+			});
+			return;
+		}
+
+		const duplicateIndex = schemaState.value.examResultCodes.findIndex(
+			(code, idx) => code === value && idx !== editingExamCodeIndex.value
+		);
+		if (duplicateIndex !== -1) {
+			toast.add({
+				title: 'Kod jest już na liście',
+				description: 'Usuń lub edytuj istniejący kod.',
+				color: 'warning',
+			});
+			return;
+		}
+
+		schemaState.value.examResultCodes[editingExamCodeIndex.value] = value;
+		resetExamCodeEditing();
+	};
+
+	const cancelExamCodeEdit = () => resetExamCodeEditing();
+
+	const removeExamCode = (index: number) => {
+		if (!schemaState.value.examResultCodes) return;
+		schemaState.value.examResultCodes.splice(index, 1);
+		if (editingExamCodeIndex.value === index) {
+			resetExamCodeEditing();
+		} else if (
+			editingExamCodeIndex.value !== null &&
+			editingExamCodeIndex.value > index
+		) {
+			editingExamCodeIndex.value -= 1;
+		}
+	};
 
 	const submitting = ref(false);
 
@@ -116,7 +162,7 @@
 		},
 		{
 			id: 2,
-			title: 'Załącz wyniki badań',
+			title: 'Kody wyników badań',
 			description: 'Krok 2',
 			icon: 'carbon:document-add',
 		},
@@ -168,11 +214,19 @@
 		try {
 			submitting.value = true;
 
-			const { examResultsFile: _unusedFile, ...rest } = event.data;
+			const codes =
+				event.data.examResultCodes
+					?.map((code) => code.trim())
+					.filter((code) => code.length > 0) ?? [];
+
+			const payload = {
+				...event.data,
+				examResultCodes: codes.length ? codes : undefined,
+			};
 
 			await $fetch(`/api/doctor/appointments/${appointmentId}`, {
 				method: 'PATCH',
-				body: rest,
+				body: payload,
 			});
 
 			toast.add({
@@ -303,26 +357,95 @@
 							</div>
 						</section>
 
-						<!-- Step2: Załącz wyniki badań -->
+						<!-- Step2: Kody wyników badań -->
 						<section
 							v-else-if="item.id === 2"
 							class="mb-3 flex w-full justify-center"
 						>
 							<div class="mx-auto flex w-1/2 flex-col gap-3">
 								<UFormField
-									name="examResultsFile"
-									label="Załącz wyniki badań"
-									description="Dodaj plik PDF z wynikami badań pacjenta"
+									name="examResultCodes"
+									label="Kody wyników badań"
+									description="Dodaj jeden lub więcej kodów otrzymanych z laboratorium lub systemu badań"
 								>
-									<UFileUpload
-										v-model="schemaState.examResultsFile"
-										accept="application/pdf"
-										layout="list"
-										size="xl"
-										class="w-full"
-										icon="carbon:document-attachment"
-										description="Pliki .pdf, max 20MB"
-									/>
+									<div class="space-y-3">
+										<div class="flex items-center gap-2">
+											<UInput
+												v-model="newExamCode"
+												placeholder="np. ABC12345"
+												class="w-full"
+												@keyup.enter.prevent="addExamCode"
+											/>
+											<UButton type="button" color="info" @click="addExamCode">
+												Dodaj
+											</UButton>
+										</div>
+										<div
+											v-if="schemaState.examResultCodes?.length"
+											class="flex flex-col gap-2"
+										>
+											<div
+												v-for="(code, index) in schemaState.examResultCodes"
+												:key="`${code}-${index}`"
+												class="flex items-center gap-2"
+											>
+												<template v-if="editingExamCodeIndex === index">
+													<UInput
+														v-model="editingExamCodeValue"
+														placeholder="Edytuj kod"
+														class="w-full"
+														@keyup.enter.prevent="saveExamCodeEdit"
+													/>
+													<UButton
+														color="success"
+														variant="soft"
+														size="sm"
+														@click="saveExamCodeEdit"
+													>
+														Zapisz
+													</UButton>
+													<UButton
+														color="neutral"
+														variant="outline"
+														size="sm"
+														@click="cancelExamCodeEdit"
+													>
+														Anuluj
+													</UButton>
+												</template>
+												<template v-else>
+													<div class="flex w-full items-center gap-2">
+														<span class="text-sm font-medium text-gray-800">
+															{{ code }}
+														</span>
+														<div class="ml-auto flex items-center gap-2">
+															<UButton
+																color="info"
+																variant="ghost"
+																size="sm"
+																icon="carbon:edit"
+																@click="startEditingExamCode(index)"
+															>
+																Edytuj
+															</UButton>
+															<UButton
+																color="error"
+																variant="ghost"
+																size="sm"
+																icon="carbon:trash-can"
+																@click="removeExamCode(index)"
+															>
+																Usuń
+															</UButton>
+														</div>
+													</div>
+												</template>
+											</div>
+										</div>
+										<p v-else class="text-sm text-gray-500">
+											Brak dodanych kodów
+										</p>
+									</div>
 								</UFormField>
 							</div>
 						</section>
@@ -454,12 +577,20 @@
 											<p class="text-xs font-semibold text-gray-500 uppercase">
 												Wyniki badań
 											</p>
-											<p v-if="schemaState.examResultsFile" class="text-sm">
-												{{ schemaState.examResultsFile.name }}
-												({{ formatBytes(schemaState.examResultsFile.size) }})
-											</p>
+											<div
+												v-if="schemaState.examResultCodes?.length"
+												class="space-y-1"
+											>
+												<p
+													v-for="(code, idx) in schemaState.examResultCodes"
+													:key="`${code}-${idx}`"
+													class="text-sm"
+												>
+													{{ code }}
+												</p>
+											</div>
 											<p v-else class="text-sm text-gray-400">
-												Brak załączonych wyników badań
+												Brak kodów wyników badań
 											</p>
 										</div>
 

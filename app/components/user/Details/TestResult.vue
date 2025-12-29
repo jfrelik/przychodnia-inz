@@ -6,10 +6,7 @@
 		testType: string | null;
 		result: string | null;
 		testDate: string | Date | null;
-		filePath: string | null;
 	};
-
-	type ResultWithLink = TestResult & { downloadLink: string | null };
 
 	const { data, pending, error, refresh } = await useFetch<TestResult[]>(
 		'/api/patient/results',
@@ -52,20 +49,6 @@
 				})
 			: 'Brak danych';
 	};
-
-	const buildDownloadLink = (path: TestResult['filePath']) => {
-		if (!path) return null;
-		if (/^https?:\/\//i.test(path)) return path;
-		if (path.startsWith('/')) return path;
-		return `/${path.replace(/^\/+/, '')}`;
-	};
-
-	const resultsWithLinks = computed<ResultWithLink[]>(() =>
-		results.value.map((result) => ({
-			...result,
-			downloadLink: buildDownloadLink(result.filePath),
-		}))
-	);
 </script>
 
 <template>
@@ -127,7 +110,7 @@
 			</div>
 
 			<div v-else class="flex flex-col gap-4">
-				<UCard v-for="test in resultsWithLinks" :key="test.testId">
+				<UCard v-for="test in results" :key="test.testId">
 					<div class="flex items-start gap-4">
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100"
@@ -143,26 +126,11 @@
 								</p>
 								<p class="text-xs tracking-wider text-gray-500 uppercase">
 									{{ formatDate(test.testDate) }}
-									•
-									{{ formatTime(test.testDate) }}
 								</p>
 							</div>
 							<p class="text-sm whitespace-pre-line text-gray-700">
 								{{ test.result ?? 'Brak opisu wyniku.' }}
 							</p>
-							<div class="flex items-center gap-2">
-								<UButton
-									v-if="test.downloadLink"
-									variant="soft"
-									color="primary"
-									icon="carbon:download"
-									:to="test.downloadLink!"
-									target="_blank"
-									class="w-fit"
-								>
-									Pobierz wynik
-								</UButton>
-							</div>
 						</div>
 					</div>
 				</UCard>

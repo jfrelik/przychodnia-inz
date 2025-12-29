@@ -1,0 +1,1 @@
+ALTER TABLE "test_results" DROP COLUMN "file_name";

@@ -12,8 +12,9 @@
 
 	type TestResult = {
 		testId: number;
+		testType: string;
+		result: string;
 		testDate: string | Date | null;
-		filePath: string | null;
 	};
 
 	const { data } = await useFetch<TestResult[]>('/api/patient/results', {
@@ -37,13 +38,6 @@
 			return testDate != null && testDate >= threshold;
 		}).length;
 	});
-	const downloadableTestResultsCount = computed(
-		() =>
-			results.value.filter(
-				(result) =>
-					typeof result.filePath === 'string' && result.filePath !== ''
-			).length
-	);
 </script>
 
 <template>
@@ -81,22 +75,6 @@
 							{{ recentTestResultsCount }}
 						</p>
 						<p class="text-sm text-gray-600">Ostatnie 30 dni</p>
-					</div>
-				</div>
-			</UCard>
-
-			<UCard>
-				<div class="flex items-center gap-4">
-					<div
-						class="flex h-12 w-12 items-center justify-center rounded-full bg-lime-100 text-3xl"
-					>
-						<Icon name="carbon:download" class-name="w-6 h-6 text-lime-600" />
-					</div>
-					<div>
-						<p class="text-2xl font-bold text-gray-800">
-							{{ downloadableTestResultsCount }}
-						</p>
-						<p class="text-sm text-gray-600">Wyniki do pobrania</p>
 					</div>
 				</div>
 			</UCard>
