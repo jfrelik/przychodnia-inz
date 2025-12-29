@@ -5,7 +5,7 @@
 		getLocalTimeZone,
 		today,
 	} from '@internationalized/date';
-	import { computed, ref, shallowRef, watch } from 'vue';
+	import { ref, watch } from 'vue';
 	import { z } from 'zod';
 
 	definePageMeta({
@@ -32,8 +32,8 @@
 	const minDate = new CalendarDate(nextMonth.year, nextMonth.month, 1);
 	const maxDate = minDate.add({ months: 1, days: -1 });
 
-	const value = shallowRef<CalendarDate[]>([]);
-	const calendarPlaceholder = shallowRef<CalendarDate>(minDate);
+	const value = ref<CalendarDate[]>([]);
+	const calendarPlaceholder = ref<CalendarDate>(minDate);
 
 	const formState = ref<{
 		dates: Record<string, { start: number; end: number }[]>;
@@ -42,31 +42,18 @@
 	});
 
 	const dateKey = (date: CalendarDate) =>
-		`${date.year}-${String(date.month).padStart(2, '0')}-${String(
-			date.day
-		).padStart(2, '0')}`;
+		`${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
 
-	const selectedMonthStart = computed(
-		() =>
-			new CalendarDate(
-				calendarPlaceholder.value.year,
-				calendarPlaceholder.value.month,
-				1
-			)
-	);
-	const selectedMonthEnd = computed(() =>
-		selectedMonthStart.value.add({ months: 1, days: -1 })
-	);
-	const dispositionQuery = computed(() => ({
-		startDate: dateKey(selectedMonthStart.value),
-		endDate: dateKey(selectedMonthEnd.value),
-	}));
+	const periodStart = dateKey(minDate);
+	const periodEnd = dateKey(maxDate);
+	const dispositionQuery = { startDate: periodStart, endDate: periodEnd };
 
 	const { data: existingDispositions } = await useFetch<Disposition[]>(
 		'/api/doctor/dispositions',
 		{
-			key: 'doctor-dispositions',
+			key: `doctor-dispositions-${periodStart}-${periodEnd}`,
 			query: dispositionQuery,
+			watch: false,
 		}
 	);
 
@@ -75,14 +62,9 @@
 		return Number.isFinite(hour) ? hour : 7;
 	};
 
-	watch(calendarPlaceholder, () => {
-		formState.value.dates = {};
-		value.value = [];
-	});
-
 	// Prefill calendar selection and time ranges using current dispositions
 	watch(
-		() => existingDispositions.value,
+		existingDispositions,
 		(list) => {
 			if (!list || list.length === 0) {
 				formState.value.dates = {};
@@ -119,6 +101,7 @@
 		{ immediate: true }
 	);
 
+	// Keep formState.dates in sync with selected calendar days
 	watch(
 		value,
 		(newDates) => {
@@ -198,14 +181,9 @@
 
 	const addTimeframe = (date: CalendarDate) => {
 		const key = dateKey(date);
-		if (!formState.value.dates[key]) {
-			formState.value.dates[key] = [];
-		}
+		if (!formState.value.dates[key]) formState.value.dates[key] = [];
 
-		formState.value.dates[key].push({
-			start: 8,
-			end: 16,
-		});
+		formState.value.dates[key].push({ start: 8, end: 16 });
 	};
 
 	const removeTimeframe = (date: CalendarDate, index: number) => {
@@ -220,14 +198,8 @@
 		const { dates } = event.data;
 
 		const payload = {
-			periodStart: `${minDate.year}-${String(minDate.month).padStart(
-				2,
-				'0'
-			)}-${String(minDate.day).padStart(2, '0')}`,
-			periodEnd: `${maxDate.year}-${String(maxDate.month).padStart(
-				2,
-				'0'
-			)}-${String(maxDate.day).padStart(2, '0')}`,
+			periodStart: periodStart,
+			periodEnd: periodEnd,
 			days: Object.entries(dates).flatMap(([date, ranges]) =>
 				ranges.map(({ start, end }) => ({
 					date,
@@ -280,12 +252,12 @@
 			<div class="flex w-full justify-center">
 				<UCalendar
 					v-model="value"
-					v-model:placeholder="calendarPlaceholder"
 					multiple
 					class="w-2/3"
 					:week-starts-on="1"
 					:min-value="minDate"
 					:max-value="maxDate"
+					:placeholder="calendarPlaceholder"
 				/>
 			</div>
 		</UCard>
