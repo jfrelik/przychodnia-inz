@@ -1,7 +1,4 @@
 ﻿<script lang="ts" setup>
-	import { Icon } from '#components';
-	import { computed } from 'vue';
-
 	definePageMeta({
 		layout: 'user',
 	});
@@ -59,34 +56,31 @@
 
 	type DateInput = string | Date | null;
 
-	const props = withDefaults(
-		defineProps<{
-			upcomingVisits?: Visit[];
-			upcomingLoading?: boolean;
-			upcomingError?: Error | null;
-			activePrescriptions?: Prescription[];
-			activeLoading?: boolean;
-			activeError?: Error | null;
-			recentResults?: RecentResult[];
-			recentLoading?: boolean;
-			recentError?: Error | null;
-		}>(),
-		{
-			upcomingVisits: () => [],
-			upcomingLoading: false,
-			upcomingError: null,
-			activePrescriptions: () => [],
-			activeLoading: false,
-			activeError: null,
-			recentResults: () => [],
-			recentLoading: false,
-			recentError: null,
-		}
-	);
+	const router = useRouter();
 
-	const emit = defineEmits<{
-		(e: 'viewVisit' | 'viewPrescription', id?: number): void;
-	}>();
+	const {
+		data: visitsData,
+		pending: upcomingLoading,
+		error: upcomingError,
+	} = await useFetch<Visit[]>('/api/patient/visits', {
+		key: 'patient-home-upcoming-visits',
+	});
+
+	const {
+		data: recentResultsData,
+		pending: recentLoading,
+		error: recentError,
+	} = await useFetch<RecentResult[]>('/api/patient/results', {
+		key: 'patient-home-recent-results',
+	});
+
+	const {
+		data: prescriptionsData,
+		pending: activeLoading,
+		error: activeError,
+	} = await useFetch<Prescription[]>('/api/patient/prescriptions', {
+		key: 'patient-home-prescriptions',
+	});
 
 	const visitStatusMeta: Record<
 		VisitStatus,
@@ -105,38 +99,53 @@
 		fulfilled: { label: 'Zrealizowana', color: 'success' },
 	};
 
-	const upcomingCards = computed(() => props.upcomingVisits.slice(0, 2));
+	const upcomingVisits = computed(() => {
+		const rows = visitsData.value ?? [];
+		const now = Date.now();
+		return rows
+			.filter(
+				(v) => v.status === 'scheduled' && new Date(v.datetime).getTime() >= now
+			)
+			.sort(
+				(a, b) =>
+					new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+			);
+	});
+	const upcomingCards = computed(() => upcomingVisits.value.slice(0, 2));
 	const showUpcomingEmptyState = computed(
 		() =>
-			!props.upcomingLoading &&
-			!props.upcomingError &&
-			props.upcomingVisits.length === 0
+			!upcomingLoading.value &&
+			!upcomingError.value &&
+			upcomingVisits.value.length === 0
 	);
 	const upcomingErrorMessage = computed(
 		() =>
-			props.upcomingError?.message ??
+			upcomingError.value?.message ??
 			'Nie udalo sie pobrac nadchodzacych wizyt.'
 	);
 
-	const activeCards = computed(() => props.activePrescriptions.slice(0, 2));
-	const showActiveEmptyState = computed(
-		() =>
-			!props.activeLoading &&
-			!props.activeError &&
-			props.activePrescriptions.length === 0
-	);
-	const activeErrorMessage = computed(
-		() => props.activeError?.message ?? 'Nie udalo sie pobrac aktywnych recept.'
-	);
-	const recentResultCards = computed(() => props.recentResults.slice(0, 2));
+	const recentResults = computed(() => recentResultsData.value ?? []);
+	const recentResultCards = computed(() => recentResults.value.slice(0, 2));
 	const showRecentEmptyState = computed(
 		() =>
-			!props.recentLoading &&
-			!props.recentError &&
-			props.recentResults.length === 0
+			!recentLoading.value &&
+			!recentError.value &&
+			recentResults.value.length === 0
 	);
 	const recentErrorMessage = computed(
-		() => props.recentError?.message ?? 'Nie udalo sie pobrac wynikow badan.'
+		() => recentError.value?.message ?? 'Nie udalo sie pobrac wynikow badan.'
+	);
+
+	const activePrescriptions = computed(() => prescriptionsData.value ?? []);
+	const activeCards = computed(() => activePrescriptions.value.slice(0, 4));
+	const showActiveEmptyState = computed(
+		() =>
+			!activeLoading.value &&
+			!activeError.value &&
+			activePrescriptions.value.length === 0
+	);
+	const activeErrorMessage = computed(
+		() => activeError.value?.message ?? 'Nie udalo sie pobrac aktywnych recept.'
 	);
 
 	const normalizeDate = (value: DateInput) => {
@@ -214,10 +223,9 @@
 		return [JSON.stringify(medications)];
 	};
 
-	const viewVisit = (appointmentId?: number) =>
-		emit('viewVisit', appointmentId);
-	const viewPrescription = (prescriptionId?: number) =>
-		emit('viewPrescription', prescriptionId);
+	const viewVisit = () => router.push('/user/visits');
+	const viewResults = () => router.push('/user/testResults');
+	const viewPrescription = () => router.push('/user/prescriptions');
 </script>
 
 <template>
@@ -312,15 +320,6 @@
 									</div>
 								</div>
 							</div>
-
-							<UButton
-								variant="soft"
-								color="neutral"
-								icon="carbon:view"
-								size="xl"
-								class="cursor-pointer"
-								@click="viewVisit(visit.appointmentId)"
-							/>
 						</div>
 						<p v-if="visit.notes" class="mt-3 text-sm text-gray-600">
 							{{ visit.notes }}
@@ -332,7 +331,12 @@
 			<UCard>
 				<div class="flex items-center justify-between pb-6">
 					<h1 class="text-2xl font-bold">Ostatnie wyniki badań</h1>
-					<UButton variant="soft" color="neutral" class="w-fit cursor-pointer">
+					<UButton
+						variant="soft"
+						color="neutral"
+						class="w-fit cursor-pointer"
+						@click="viewResults()"
+					>
 						Pokaż wszystkie
 					</UButton>
 				</div>
@@ -409,7 +413,7 @@
 						class="w-fit cursor-pointer"
 						@click="viewPrescription()"
 					>
-						Pokaz wszystkie
+						Pokaż wszystkie
 					</UButton>
 				</div>
 				<div class="flex flex-col gap-4">
@@ -481,16 +485,6 @@
 								>
 									{{ getPrescriptionStatusLabel(prescription.status) }}
 								</UBadge>
-								<UButton
-									variant="soft"
-									color="neutral"
-									icon="carbon:view"
-									size="xl"
-									class="cursor-pointer"
-									@click="
-										viewPrescription(prescription.prescriptionId ?? undefined)
-									"
-								/>
 							</div>
 						</div>
 						<div class="mt-3">
