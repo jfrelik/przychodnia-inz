@@ -70,13 +70,6 @@
 				active: route.path === '/user/recommendations',
 				to: '/user/recommendations',
 			},
-			{
-				label: 'Umów Wizytę',
-				icon: 'carbon:calendar-add',
-				class: 'cursor-pointer',
-				active: route.path === '/user/newAppointment',
-				to: '/user/newAppointment',
-			},
 		],
 	]);
 </script>
