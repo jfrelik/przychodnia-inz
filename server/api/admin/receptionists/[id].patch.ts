@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
 import { receptionists } from '~~/server/db/clinic';
-import db from '~~/server/util/db';
 
 const payloadSchema = z.object({}).strict();
 
@@ -35,7 +34,7 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [current] = await db
+	const [current] = await useDb()
 		.select({
 			userId: receptionists.userId,
 			userName: user.name,

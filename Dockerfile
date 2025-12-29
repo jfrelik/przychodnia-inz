@@ -1,4 +1,4 @@
-FROM node:22-slim AS builder
+FROM node:24-slim AS builder
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -12,7 +12,7 @@ COPY . .
 
 RUN pnpm build
 
-FROM node:22-slim AS runner
+FROM node:24-slim AS runner
 
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
@@ -27,8 +27,6 @@ COPY .npmrc pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 ENV NODE_ENV=production \
     PORT=3000 \
     HUSKY=0
-
-# RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 
 COPY --from=builder /app/.output /app/.output
 COPY --from=builder /app/drizzle /app/drizzle

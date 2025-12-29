@@ -69,13 +69,11 @@
 						label: 'Lista lekarzy',
 						active: route.path === '/admin/doctors',
 						to: '/admin/doctors',
-						icon: 'i-lucide-list',
 					},
 					{
 						label: 'Specjalizacje',
 						active: route.path === '/admin/specializations',
 						to: '/admin/doctors/specializations',
-						icon: 'i-lucide-activity',
 					},
 				],
 			},
@@ -87,21 +85,23 @@
 				children: [
 					{
 						label: 'Administratorzy',
-						icon: 'i-lucide-shield',
 						active: route.path === '/admin/admins',
 						to: '/admin/admins',
 					},
 					{
 						label: 'Gabinety',
-						icon: 'i-lucide-door-open',
 						active: route.path === '/admin/rooms',
 						to: '/admin/rooms',
 					},
 					{
 						label: 'Logi aktywności',
-						icon: 'i-lucide-logs',
 						active: route.path === '/admin/logs',
 						to: '/admin/logs',
+					},
+					{
+						label: 'Kolejki',
+						active: route.path === '/admin/queues',
+						to: '/admin/queues',
 					},
 				],
 			},
@@ -117,15 +117,21 @@
 				:ui="{ footer: 'border-t border-default' }"
 			>
 				<template #header="{ collapsed }">
-					<div v-if="!collapsed" class="flex items-center gap-3">
-						<img class="h-5 w-auto shrink-0" src="/hospital.png" />
-						Przychodnia
+					<div class="flex w-full items-center gap-3">
+						<div v-if="!collapsed" class="flex items-center gap-3">
+							<img class="h-5 w-auto shrink-0" src="/hospital.png" />
+							Przychodnia
+						</div>
+						<UTooltip
+							:text="collapsed ? 'Rozwiń menu' : 'Zwiń menu'"
+							:content="{ side: 'right', sideOffset: 8 }"
+						>
+							<UDashboardSidebarCollapse
+								:class="!collapsed && 'ml-auto'"
+								class="cursor-pointer"
+							/>
+						</UTooltip>
 					</div>
-					<UIcon
-						v-else
-						name="i-simple-icons-nuxtdotjs"
-						class="text-primary mx-auto size-5"
-					/>
 				</template>
 
 				<template #default="{ collapsed }">
@@ -133,6 +139,8 @@
 						:collapsed="collapsed"
 						:items="items[0]"
 						orientation="vertical"
+						tooltip
+						popover
 					/>
 				</template>
 
@@ -177,6 +185,11 @@
 			<UContainer
 				class="mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-y-auto px-6 py-8"
 			>
+				<div class="mb-4 flex items-center gap-2 lg:hidden">
+					<UTooltip text="Menu" :content="{ side: 'bottom', sideOffset: 8 }">
+						<UDashboardSidebarToggle class="cursor-pointer border" />
+					</UTooltip>
+				</div>
 				<slot />
 			</UContainer>
 		</UDashboardGroup>

@@ -3,7 +3,6 @@ import { createError, defineEventHandler } from 'h3';
 import { auth } from '~~/lib/auth';
 import { user as authUser } from '~~/server/db/auth';
 import { medicalRecords, patients, testResults } from '~~/server/db/clinic';
-import db from '~~/server/util/db';
 
 export default defineEventHandler(async (event) => {
 	const session = await auth.api.getSession({ headers: event.headers });
@@ -26,7 +25,7 @@ export default defineEventHandler(async (event) => {
 
 	const email = session.user.email;
 
-	const [userRow] = await db
+	const [userRow] = await useDb()
 		.select()
 		.from(authUser)
 		.where(eq(authUser.email, email))
@@ -34,7 +33,7 @@ export default defineEventHandler(async (event) => {
 	if (!userRow)
 		throw createError({ statusCode: 404, statusMessage: 'User not found' });
 
-	const [patientRow] = await db
+	const [patientRow] = await useDb()
 		.select()
 		.from(patients)
 		.where(eq(patients.userId, userRow.id))
@@ -45,14 +44,14 @@ export default defineEventHandler(async (event) => {
 			statusMessage: 'Patient profile not found',
 		});
 
-	const [record] = await db
+	const [record] = await useDb()
 		.select()
 		.from(medicalRecords)
 		.where(eq(medicalRecords.patientId, patientRow.userId))
 		.limit(1);
 	if (!record) return [];
 
-	const rows = await db
+	const rows = await useDb()
 		.select({
 			testId: testResults.testId,
 			testType: testResults.testType,

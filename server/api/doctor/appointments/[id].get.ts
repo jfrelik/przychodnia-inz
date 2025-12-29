@@ -9,7 +9,6 @@ import {
 	recommendations,
 	room,
 } from '~~/server/db/clinic';
-import db from '~~/server/util/db';
 
 const buildPatientName = (
 	firstName?: string | null,
@@ -48,7 +47,7 @@ export default defineEventHandler(async (event) => {
 			statusMessage: 'Invalid appointment id',
 		});
 
-	const [row] = await db
+	const [row] = await useDb()
 		.select({
 			appointmentId: appointments.appointmentId,
 			datetime: appointments.datetime,

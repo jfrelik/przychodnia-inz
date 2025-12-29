@@ -4,8 +4,6 @@ import { createError, defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
 import { auth } from '~~/lib/auth';
 import { doctors, specializations } from '~~/server/db/clinic';
-import { recordAuditLog } from '~~/server/util/audit';
-import db from '~~/server/util/db';
 
 const payloadSchema = z
 	.object({
@@ -49,7 +47,7 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [current] = await db
+	const [current] = await useDb()
 		.select({
 			id: specializations.id,
 			name: specializations.name,
@@ -84,7 +82,7 @@ export default defineEventHandler(async (event) => {
 	}
 
 	try {
-		await db
+		await useDb()
 			.update(specializations)
 			.set(update)
 			.where(eq(specializations.id, specializationId));
@@ -107,7 +105,7 @@ export default defineEventHandler(async (event) => {
 		throw error;
 	}
 
-	const [updated] = await db
+	const [updated] = await useDb()
 		.select({
 			id: specializations.id,
 			name: specializations.name,
@@ -118,7 +116,7 @@ export default defineEventHandler(async (event) => {
 		.where(eq(specializations.id, specializationId))
 		.groupBy(specializations.id);
 
-	await recordAuditLog(
+	await useAuditLog(
 		event,
 		session.user.id,
 		`Zaktualizowano specjalizację "${current.name}": ${auditMessages.join(', ')}`

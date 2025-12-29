@@ -10,8 +10,6 @@ import {
 import { z } from 'zod';
 import { auth } from '~~/lib/auth';
 import { availability } from '~~/server/db/clinic';
-import { recordAuditLog } from '~~/server/util/audit';
-import db from '~~/server/util/db';
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -98,7 +96,7 @@ export default defineEventHandler(async (event) => {
 	let insertedCount = 0;
 
 	try {
-		await db.transaction(async (tx) => {
+		await useDb().transaction(async (tx) => {
 			// Collect unique dates for deletion
 			const uniqueDates = [...new Set(payload.days.map((item) => item.date))];
 
@@ -135,7 +133,7 @@ export default defineEventHandler(async (event) => {
 		throw error;
 	}
 
-	await recordAuditLog(
+	await useAuditLog(
 		event,
 		session.user.id,
 		`Zapisano dyspozycje na okres ${payload.periodStart} - ${payload.periodEnd} (${insertedCount} slotów)`

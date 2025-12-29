@@ -3,6 +3,10 @@
 	import * as z from 'zod';
 	import { requestPasswordReset, resetPassword } from '~~/lib/auth-client';
 
+	useHead({
+		title: 'Zmiana hasła',
+	});
+
 	const toast = useToast();
 	const route = useRoute();
 	const router = useRouter();

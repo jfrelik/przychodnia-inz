@@ -2,8 +2,8 @@
 	"name": "nuxt-app",
 	"private": true,
 	"type": "module",
-	"version": "0.2.0",
-	"packageManager": "pnpm@10.24.0+sha512.01ff8ae71b4419903b65c60fb2dc9d34cf8bb6e06d03bde112ef38f7a34d6904c424ba66bea5cdcf12890230bf39f9580473140ed9c946fef328b6e5238a345a",
+	"version": "1.0.0",
+	"packageManager": "pnpm@10.26.2+sha512.0e308ff2005fc7410366f154f625f6631ab2b16b1d2e70238444dd6ae9d630a8482d92a451144debc492416896ed16f7b114a86ec68b8404b2443869e68ffda6",
 	"scripts": {
 		"build": "nuxt build",
 		"dev": "nuxt dev",
@@ -15,12 +15,16 @@
 		"lint:fix": "eslint . --fix",
 		"prettier": "prettier --write .",
 		"seed": "pnpm run server/scripts/seed.ts",
-		"db:studio": "drizzle-kit studio"
+		"db:studio": "drizzle-kit studio",
+		"db:generate": "drizzle-kit generate"
 	},
 	"engines": {
-		"node": ">=22.18.0"
+		"node": ">=24.12.0"
 	},
 	"dependencies": {
+		"@bull-board/api": "^6.15.0",
+		"@bull-board/h3": "^6.15.0",
+		"@formkit/auto-animate": "^0.9.0",
 		"@internationalized/date": "^3.10.1",
 		"@nuxt/eslint": "1.12.1",
 		"@nuxt/fonts": "0.12.1",
@@ -36,9 +40,11 @@
 		"@schedule-x/vue": "^3.5.0",
 		"better-auth": "^1.4.7",
 		"better-auth-localization": "^2.2.2",
+		"bullmq": "^5.66.2",
 		"dotenv": "^17.2.3",
 		"drizzle-orm": "^0.45.1",
 		"eslint": "^9.39.2",
+		"ioredis": "^5.8.2",
 		"nodemailer": "^7.0.12",
 		"nuxt": "^4.2.2",
 		"nuxt-charts": "^1.0.2",

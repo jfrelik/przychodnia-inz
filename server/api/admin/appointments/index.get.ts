@@ -3,7 +3,6 @@ import { createError, defineEventHandler } from 'h3';
 import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
 import { appointments, patients, room } from '~~/server/db/clinic';
-import db from '~~/server/util/db';
 
 export default defineEventHandler(async (event) => {
 	const session = await auth.api.getSession({ headers: event.headers });
@@ -25,7 +24,7 @@ export default defineEventHandler(async (event) => {
 
 	const doctorUser = user;
 
-	const rows = await db
+	const rows = await useDb()
 		.select({
 			appointmentId: appointments.appointmentId,
 			datetime: appointments.datetime,

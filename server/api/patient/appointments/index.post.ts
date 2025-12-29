@@ -9,8 +9,6 @@ import {
 	doctors,
 	patients,
 } from '~~/server/db/clinic';
-import { getDurationMinutes } from '~~/server/util/appointmentTypes';
-import db from '~~/server/util/db';
 
 const payloadSchema = z.object({
 	doctorId: z.string(),
@@ -42,7 +40,7 @@ export default defineEventHandler(async (event) => {
 	const { doctorId, datetime, isOnline, notes } = payload;
 	const type = 'consultation' as const;
 
-	const [userRow] = await db
+	const [userRow] = await useDb()
 		.select()
 		.from(authUser)
 		.where(eq(authUser.id, session.user.id))
@@ -50,7 +48,7 @@ export default defineEventHandler(async (event) => {
 	if (!userRow)
 		throw createError({ statusCode: 404, statusMessage: 'User not found' });
 
-	const [patientRow] = await db
+	const [patientRow] = await useDb()
 		.select()
 		.from(patients)
 		.where(eq(patients.userId, userRow.id))
@@ -61,7 +59,7 @@ export default defineEventHandler(async (event) => {
 			statusMessage: 'Patient profile not found',
 		});
 
-	const [doctorRow] = await db
+	const [doctorRow] = await useDb()
 		.select()
 		.from(doctors)
 		.where(eq(doctors.userId, doctorId))
@@ -77,7 +75,7 @@ export default defineEventHandler(async (event) => {
 	const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60_000);
 	const dateStr = slotStart.toISOString().slice(0, 10);
 
-	const frames = await db
+	const frames = await useDb()
 		.select({ start: availability.timeStart, end: availability.timeEnd })
 		.from(availability)
 		.where(
@@ -109,7 +107,7 @@ export default defineEventHandler(async (event) => {
 	const dayStart = new Date(`${dateStr}T00:00:00`);
 	const dayEnd = new Date(`${dateStr}T23:59:59`);
 
-	const existing = await db
+	const existing = await useDb()
 		.select({
 			datetime: appointments.datetime,
 			type: appointments.type,
@@ -137,7 +135,7 @@ export default defineEventHandler(async (event) => {
 	if (conflict)
 		throw createError({ statusCode: 409, statusMessage: 'Slot already taken' });
 
-	const [created] = await db
+	const [created] = await useDb()
 		.insert(appointments)
 		.values({
 			patientId: patientRow.userId,

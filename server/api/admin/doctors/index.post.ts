@@ -11,8 +11,6 @@ import { z } from 'zod';
 import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
 import { doctors, specializations } from '~~/server/db/clinic';
-import { recordAuditLog } from '~~/server/util/audit';
-import db from '~~/server/util/db';
 
 const payloadSchema = z
 	.object({
@@ -105,7 +103,7 @@ export default defineEventHandler(async (event) => {
 	const newUserId = createdUser.id;
 
 	if (payload.specializationId !== null) {
-		const [specialization] = await db
+		const [specialization] = await useDb()
 			.select({ id: specializations.id })
 			.from(specializations)
 			.where(eq(specializations.id, payload.specializationId))
@@ -120,7 +118,7 @@ export default defineEventHandler(async (event) => {
 	}
 
 	try {
-		await db.transaction(async (tx) => {
+		await useDb().transaction(async (tx) => {
 			await tx.insert(doctors).values({
 				userId: newUserId,
 				specializationId: payload.specializationId,
@@ -168,7 +166,7 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [doctorRow] = await db
+	const [doctorRow] = await useDb()
 		.select({
 			userId: doctors.userId,
 			userName: user.name,
@@ -183,7 +181,7 @@ export default defineEventHandler(async (event) => {
 		.where(eq(doctors.userId, newUserId))
 		.limit(1);
 
-	await recordAuditLog(
+	await useAuditLog(
 		event,
 		session.user.id,
 		`Utworzono konto lekarza "${doctorRow?.userName ?? payload.name}", licencja: ${payload.licenseNumber}) i wysłano link do ustawienia hasła.`
