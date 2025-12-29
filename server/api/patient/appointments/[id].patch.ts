@@ -4,7 +4,6 @@ import { z } from 'zod';
 import { auth } from '~~/lib/auth';
 import { user as authUser } from '~~/server/db/auth';
 import { appointments, patients } from '~~/server/db/clinic';
-import db from '~~/server/util/db';
 
 const payloadSchema = z.object({
 	status: z.literal('canceled'),
@@ -30,7 +29,7 @@ export default defineEventHandler(async (event) => {
 
 	const email = session.user.email;
 
-	const [userRow] = await db
+	const [userRow] = await useDb()
 		.select()
 		.from(authUser)
 		.where(eq(authUser.email, email))
@@ -38,7 +37,7 @@ export default defineEventHandler(async (event) => {
 	if (!userRow)
 		throw createError({ statusCode: 404, statusMessage: 'User not found' });
 
-	const [patientRow] = await db
+	const [patientRow] = await useDb()
 		.select()
 		.from(patients)
 		.where(eq(patients.userId, userRow.id))
@@ -58,7 +57,7 @@ export default defineEventHandler(async (event) => {
 
 	const payload = payloadSchema.parse(await readBody(event));
 
-	const [appointmentRow] = await db
+	const [appointmentRow] = await useDb()
 		.select({
 			appointmentId: appointments.appointmentId,
 			status: appointments.status,
@@ -84,7 +83,7 @@ export default defineEventHandler(async (event) => {
 			statusMessage: 'Only scheduled appointments can be canceled',
 		});
 
-	const [updated] = await db
+	const [updated] = await useDb()
 		.update(appointments)
 		.set({ status: payload.status })
 		.where(
