@@ -70,13 +70,6 @@
 				active: route.path === '/doctor/workdays',
 				to: '/doctor/workdays',
 			},
-			{
-				label: 'Badania',
-				icon: 'carbon:document',
-				class: 'cursor-pointer',
-				active: route.path === '/doctor/testResults',
-				to: '/doctor/testResults',
-			},
 		],
 	]);
 </script>
