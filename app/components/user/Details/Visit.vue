@@ -205,11 +205,15 @@
 								</div>
 							</div>
 						</div>
-						<div v-if="visit.status === 'scheduled'" class="flex items-start">
+						<div
+							v-if="visit.status === 'scheduled'"
+							class="flex items-start self-center"
+						>
 							<UButton
 								color="error"
-								variant="soft"
+								variant="ghost"
 								size="sm"
+								icon="carbon:trash-can"
 								class="cursor-pointer"
 								:loading="cancelLoading === visit.appointmentId"
 								@click="handleCancel(visit.appointmentId)"
