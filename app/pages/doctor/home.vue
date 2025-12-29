@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-	import { Icon } from '#components';
-
 	definePageMeta({
 		layout: 'docs',
 	});
@@ -26,6 +24,14 @@
 		day: string;
 		timeframes: { start: string; end: string }[];
 	};
+	type HandledVisitsByWeek = {
+		weekStart: string;
+		count: number;
+	};
+	type VisitTypeBreakdown = {
+		onsite: number;
+		remote: number;
+	};
 
 	const { data: visitsData, pending: visitsLoading } = await useFetch<Visit[]>(
 		'/api/doctor/visits/today',
@@ -46,6 +52,20 @@
 	);
 
 	const visits = computed(() => visitsData.value ?? []);
+
+	const { data: handledVisitsData } = await useFetch<HandledVisitsByWeek[]>(
+		'/api/doctor/stats/handledVisits',
+		{
+			key: 'doctor-stats-handled-visits',
+		}
+	);
+
+	const { data: visitTypeStats } = await useFetch<VisitTypeBreakdown>(
+		'/api/doctor/stats/visitTypes',
+		{
+			key: 'doctor-stats-visit-types',
+		}
+	);
 
 	const nearestVisit = computed(() => {
 		const nowTs = Date.now();
@@ -81,6 +101,18 @@
 		return `${start}-${end}`;
 	};
 
+	const formatWeekRange = (weekStart: string) => {
+		const start = new Date(weekStart);
+		const end = new Date(start);
+		end.setDate(end.getDate() + 6);
+
+		const fmt = new Intl.DateTimeFormat('pl-PL', {
+			day: '2-digit',
+			month: '2-digit',
+		});
+		return `${fmt.format(start)} - ${fmt.format(end)}`;
+	};
+
 	const availabilityLabel = computed(() => {
 		if (dispositionLoading.value) return 'Ładowanie...';
 		if (dispositionError.value)
@@ -91,25 +123,24 @@
 
 	const dispositionReminder = ref(true);
 
-	// temp placeholders
-	const weeklyVisits = [
-		{ week: 'Tydzień 1', visits: 18 },
-		{ week: 'Tydzień 2', visits: 22 },
-		{ week: 'Tydzień 3', visits: 19 },
-		{ week: 'Tydzień 4', visits: 25 },
-		{ week: 'Tydzień 5', visits: 21 },
-		{ week: 'Tydzień 6', visits: 24 },
-		{ week: 'Tydzień 7', visits: 20 },
-		{ week: 'Tydzień 8', visits: 23 },
-	];
+	const weeklyVisits = computed(() =>
+		(handledVisitsData.value ?? []).map((item) => ({
+			week: formatWeekRange(item.weekStart),
+			visits: item.count,
+		}))
+	);
 	const weeklyVisitsCategories = {
 		visits: { name: 'Obsłużone wizyty', color: '#2563eb' },
 	} as const;
 
-	const weeklyTicks = weeklyVisits.map((_, idx) => idx);
-	const formatWeekTick = (tick: number) => weeklyVisits[tick]?.week ?? '';
+	const weeklyTicks = computed(() => weeklyVisits.value.map((_, idx) => idx));
+	const formatWeekTick = (tick: number) => weeklyVisits.value[tick]?.week ?? '';
 
-	const visitTypeData = [38, 22];
+	const visitTypeData = computed(() => {
+		const stats = visitTypeStats.value;
+		if (!stats) return [0, 0];
+		return [stats.onsite ?? 0, stats.remote ?? 0];
+	});
 	const visitTypeCategories = {
 		onsite: { name: 'Wizyty w placówce', color: '#2563eb' },
 		remote: { name: 'Konsultacje telefoniczne', color: '#10b981' },
