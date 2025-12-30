@@ -24,6 +24,10 @@ export const availabilityRelations = relations(availability, ({ one }) => ({
 		fields: [availability.doctorUserId],
 		references: [doctors.userId],
 	}),
+	room: one(room, {
+		fields: [availability.roomRoomId],
+		references: [room.roomId],
+	}),
 }));
 
 // doctors

@@ -37,15 +37,21 @@
 		[
 			{
 				label: 'Strona główna',
-				icon: 'i-lucide-house',
+				icon: 'carbon:home',
 				active: route.path === '/receptionist/home',
 				to: '/receptionist/home',
 			},
 			{
 				label: 'Pacjenci i lekarze',
-				icon: 'i-lucide-users',
+				icon: 'carbon:user-multiple',
 				active: route.path.startsWith('/receptionist/directory'),
 				to: '/receptionist/directory',
+			},
+			{
+				label: 'Przypisywanie pokoi',
+				icon: 'carbon:document-configuration',
+				active: route.path.startsWith('/receptionist/assignRoom'),
+				to: '/receptionist/assignRoom',
 			},
 		],
 	]);

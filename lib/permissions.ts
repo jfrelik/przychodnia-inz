@@ -45,7 +45,7 @@ export const roles = {
 	// Receptionist: manage appointments, view doctors and patients
 	receptionist: ac.newRole({
 		appointments: ['read', 'list', 'create', 'update'],
-		availability: ['read', 'list'],
+		availability: ['read', 'list', 'update'],
 		users: ['read', 'list'],
 		doctors: ['read', 'list'],
 		patients: ['read', 'list'],
