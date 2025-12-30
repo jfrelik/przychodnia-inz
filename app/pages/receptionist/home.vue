@@ -9,81 +9,113 @@
 		title: 'Panel recepcji',
 	});
 
-	const headlineStats = [
-		{
-			label: 'Dzisiejsze wizyty',
-			value: 24,
-			icon: 'i-lucide-calendar-days',
-			accent: 'bg-blue-100 text-blue-600',
-		},
-		{
-			label: 'Oczekujące check-in',
-			value: 6,
-			icon: 'i-lucide-clock-3',
-			accent: 'bg-amber-100 text-amber-600',
-		},
-		{
-			label: 'Nowi pacjenci',
-			value: 3,
-			icon: 'i-lucide-user-plus',
-			accent: 'bg-emerald-100 text-emerald-600',
-		},
-		{
-			label: 'Zwolnione sloty',
-			value: 4,
-			icon: 'i-lucide-door-open',
-			accent: 'bg-slate-100 text-slate-600',
-		},
-	];
+	type VisitBuckets = {
+		day: string;
+		buckets: { hour: number; label: string; onsite: number; remote: number }[];
+		totals: { onsite: number; remote: number };
+	};
 
-	const queuePreview = [
-		{
-			name: 'Anna Nowak',
-			time: '10:20',
-			doctor: 'dr K. Malinowski',
-			room: '201',
-			type: 'Stacjonarna',
-		},
-		{
-			name: 'Piotr Zieliński',
-			time: '10:40',
-			doctor: 'dr J. Nowak',
-			room: '105',
-			type: 'Kontrola',
-		},
-		{
-			name: 'Marta Lewandowska',
-			time: '11:00',
-			doctor: 'dr A. Wysocka',
-			room: 'Teleporada',
-			type: 'Teleporada',
-		},
-	];
+	type QueueVisit = {
+		appointmentId: number;
+		datetime: string | Date;
+		status: 'scheduled' | 'checked_in';
+		isOnline: boolean;
+		type: 'consultation' | 'procedure';
+		patientName: string | null;
+		patientEmail: string | null;
+		doctorName: string | null;
+		doctorEmail: string | null;
+		roomNumber: number | null;
+	};
 
-	const dailyFlow = [
-		{ slot: '08:00', arrivals: 6, registrations: 5 },
-		{ slot: '09:00', arrivals: 8, registrations: 7 },
-		{ slot: '10:00', arrivals: 11, registrations: 9 },
-		{ slot: '11:00', arrivals: 9, registrations: 8 },
-		{ slot: '12:00', arrivals: 7, registrations: 6 },
-		{ slot: '13:00', arrivals: 5, registrations: 4 },
-		{ slot: '14:00', arrivals: 4, registrations: 4 },
-	];
+	const {
+		data: visitsData,
+		pending: visitsPending,
+		error: visitsError,
+		refresh: refreshVisits,
+	} = await useFetch<VisitBuckets>('/api/receptionist/stats/visitsToday', {
+		key: 'receptionist-visits-today',
+	});
 
-	const dailyFlowCategories = {
-		arrivals: { name: 'Wejścia do placówki', color: '#2563eb' },
-		registrations: { name: 'Zarejestrowane wizyty', color: '#10b981' },
-	} as const;
+	const {
+		data: queueData,
+		pending: queuePending,
+		error: queueError,
+		refresh: refreshQueue,
+	} = await useFetch<QueueVisit[]>('/api/receptionist/visits/today', {
+		key: 'receptionist-queue-today',
+		default: () => [],
+	});
 
-	const dailyFlowTicks = dailyFlow.map((_, idx) => idx);
-	const formatDailyTick = (tick: number) => dailyFlow[tick]?.slot ?? '';
+	const queueVisits = computed(() => queueData.value ?? []);
+	const queuePage = ref(1);
+	const queuePageSize = 5;
+	const queuePageCount = computed(() =>
+		Math.max(1, Math.ceil(queueVisits.value.length / queuePageSize))
+	);
 
-	const visitTypes = [28, 12, 7];
-	const visitTypeCategories = {
-		onsite: { name: 'Stacjonarne', color: '#2563eb' },
-		followup: { name: 'Kontrolne', color: '#f59e0b' },
+	watch(
+		() => queueVisits.value.length,
+		() => {
+			if (queuePage.value > queuePageCount.value)
+				queuePage.value = queuePageCount.value;
+		}
+	);
+
+	const pagedQueue = computed(() => {
+		const start = (queuePage.value - 1) * queuePageSize;
+		return queueVisits.value.slice(start, start + queuePageSize);
+	});
+
+	const formatTime = (value: string | Date) =>
+		new Intl.DateTimeFormat('pl-PL', {
+			hour: '2-digit',
+			minute: '2-digit',
+		}).format(new Date(value));
+
+	const headlineStats = computed(() => {
+		const totals = visitsData.value?.totals ?? { onsite: 0, remote: 0 };
+		const total = totals.onsite + totals.remote;
+
+		return [
+			{
+				label: 'Dzisiejsze wizyty',
+				value: total,
+				icon: 'carbon:calendar',
+				accent: 'bg-blue-100 text-blue-600',
+			},
+			{
+				label: 'Stacjonarne',
+				value: totals.onsite,
+				icon: 'carbon:building',
+				accent: 'bg-emerald-100 text-emerald-700',
+			},
+			{
+				label: 'Zdalne',
+				value: totals.remote,
+				icon: 'carbon:phone',
+				accent: 'bg-sky-100 text-sky-700',
+			},
+		];
+	});
+
+	const visitCategories = {
+		onsite: { name: 'Wizyty w placówce', color: '#2563eb' },
 		remote: { name: 'Teleporady', color: '#10b981' },
 	} as const;
+
+	const visitChartData = computed(
+		() =>
+			(visitsData.value?.buckets ?? []).map((bucket) => ({
+				label: bucket.label,
+				onsite: bucket.onsite,
+				remote: bucket.remote,
+			})) ?? []
+	);
+
+	const visitTicks = computed(() => visitChartData.value.map((_, idx) => idx));
+	const formatVisitTick = (tick: number) =>
+		visitChartData.value[tick]?.label ?? '';
 </script>
 
 <template>
@@ -93,7 +125,7 @@
 			description="Szybki podgląd dnia: wizyty, check-in oraz obciążenie recepcji."
 		/>
 
-		<div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+		<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
 			<UCard
 				v-for="stat in headlineStats"
 				:key="stat.label"
@@ -122,68 +154,152 @@
 					<UButton
 						variant="soft"
 						color="neutral"
-						icon="i-lucide-list"
+						icon="i-lucide-refresh-ccw"
 						class="cursor-pointer"
+						@click="refreshQueue()"
 					>
-						Zobacz wszystkie
+						Odśwież
 					</UButton>
 				</div>
-				<div class="space-y-3">
-					<div
-						v-for="item in queuePreview"
-						:key="item.name + item.time"
-						class="flex items-center justify-between rounded-lg border border-neutral-100 px-3 py-2"
-					>
-						<div>
-							<p class="font-medium text-neutral-800">{{ item.name }}</p>
-							<p class="text-xs text-neutral-500">
-								{{ item.doctor }} • {{ item.time }}
-							</p>
+
+				<UAlert
+					v-if="queueError"
+					color="error"
+					icon="i-lucide-alert-triangle"
+					title="Nie udało się pobrać wizyt"
+					description="Spróbuj ponownie za chwilę."
+					class="mb-3"
+				/>
+
+				<div v-if="queuePending" class="space-y-2">
+					<div class="h-4 w-32 animate-pulse rounded bg-gray-200" />
+					<div class="h-28 animate-pulse rounded bg-gray-100" />
+				</div>
+				<div v-else>
+					<p v-if="!queueVisits.length" class="text-sm text-neutral-500">
+						Brak oczekujących wizyt na dziś.
+					</p>
+					<div v-else class="space-y-3">
+						<div
+							v-for="item in pagedQueue"
+							:key="item.appointmentId"
+							class="flex flex-col gap-1 rounded-lg border border-neutral-100 px-3 py-2"
+						>
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<UBadge
+										:color="item.isOnline ? 'info' : 'primary'"
+										variant="subtle"
+									>
+										{{ item.isOnline ? 'Zdalna' : 'Stacjonarna' }}
+									</UBadge>
+								</div>
+								<span class="text-sm font-medium text-neutral-800">
+									{{ formatTime(item.datetime) }}
+								</span>
+							</div>
+							<div
+								class="flex flex-wrap items-center gap-3 text-sm text-neutral-700"
+							>
+								<div class="flex items-center gap-1">
+									<Icon
+										name="carbon:user"
+										class-name="h-4 w-4 text-neutral-500"
+									/>
+									<span>{{ item.patientName || 'Pacjent' }}</span>
+								</div>
+								<span class="text-neutral-400">|</span>
+								<div class="flex items-center gap-1">
+									<Icon
+										name="carbon:stethoscope"
+										class-name="h-4 w-4 text-neutral-500"
+									/>
+									<span>{{ item.doctorName || 'Lekarz' }}</span>
+								</div>
+								<span class="text-neutral-400">|</span>
+								<div class="flex items-center gap-1">
+									<Icon
+										name="carbon:location"
+										class-name="h-4 w-4 text-neutral-500"
+									/>
+									<span>
+										{{
+											item.isOnline
+												? 'Teleporada'
+												: item.roomNumber
+													? `Gabinet ${item.roomNumber}`
+													: 'Gabinet do przydziału'
+										}}
+									</span>
+								</div>
+							</div>
 						</div>
-						<div class="flex items-center gap-2 text-sm text-neutral-600">
-							<UBadge variant="soft" color="primary">{{ item.type }}</UBadge>
-							<span class="text-neutral-400">|</span>
-							<span>{{ item.room }}</span>
+
+						<div class="flex justify-center pt-2">
+							<UPagination
+								v-model="queuePage"
+								:page-count="queuePageCount"
+								:total="queueVisits.length"
+								:items-per-page="queuePageSize"
+							/>
 						</div>
 					</div>
 				</div>
 			</UCard>
 		</div>
 
-		<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+		<div class="grid grid-cols-1 gap-4">
 			<UCard :ui="{ body: 'p-5' }">
 				<div class="flex items-center justify-between pb-3">
-					<h2 class="text-lg font-semibold">Ruch w ciągu dnia</h2>
-					<UBadge variant="soft" color="primary">Dane poglądowe</UBadge>
+					<div>
+						<h2 class="text-lg font-semibold">
+							Wizyty dzisiaj (stacjonarne vs zdalne)
+						</h2>
+						<p class="text-sm text-neutral-500">
+							Dwukolumnowy wykres dla bieżącego dnia.
+						</p>
+					</div>
+					<UButton
+						variant="soft"
+						color="neutral"
+						icon="i-lucide-refresh-ccw"
+						class="cursor-pointer"
+						@click="refreshVisits()"
+					>
+						Odśwież
+					</UButton>
 				</div>
-				<ClientOnly>
-					<BarChart
-						:data="dailyFlow"
-						:categories="dailyFlowCategories"
-						:y-axis="['arrivals', 'registrations']"
-						:x-explicit-ticks="dailyFlowTicks"
-						:x-formatter="formatDailyTick"
-						:height="280"
-						:bar-padding="0.25"
-						:group-padding="0.2"
-					/>
-				</ClientOnly>
-			</UCard>
 
-			<UCard :ui="{ body: 'p-5' }">
-				<div class="flex items-center justify-between pb-3">
-					<h2 class="text-lg font-semibold">Typy wizyt</h2>
-					<UBadge variant="soft" color="primary">Poglądowe</UBadge>
+				<UAlert
+					v-if="visitsError"
+					color="error"
+					icon="i-lucide-alert-triangle"
+					title="Nie udało się pobrać danych"
+					description="Spróbuj ponownie za chwilę."
+					class="mb-3"
+				/>
+
+				<div v-if="visitsPending" class="space-y-2">
+					<div class="h-4 w-32 animate-pulse rounded bg-gray-200" />
+					<div class="h-64 animate-pulse rounded bg-gray-100" />
 				</div>
-				<ClientOnly>
-					<DonutChart
-						:data="visitTypes"
-						:categories="visitTypeCategories"
-						:height="280"
-						:radius="110"
-						:arc-width="36"
-					/>
-				</ClientOnly>
+				<div v-else>
+					<p v-if="!visitChartData.length" class="text-sm text-neutral-500">
+						Brak wizyt zaplanowanych na dziś.
+					</p>
+					<ClientOnly v-else>
+						<BarChart
+							:data="visitChartData"
+							:categories="visitCategories"
+							:y-axis="['onsite', 'remote']"
+							:x-explicit-ticks="visitTicks"
+							:x-formatter="formatVisitTick"
+							:height="320"
+							:bar-padding="0.25"
+							:group-padding="0.2"
+						/>
+					</ClientOnly>
+				</div>
 			</UCard>
 		</div>
 	</PageContainer>
