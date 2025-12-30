@@ -96,7 +96,7 @@
 				h(UButton, {
 					color: 'neutral',
 					variant: 'ghost',
-					icon: 'i-lucide-chevron-down',
+					icon: 'carbon:chevron-down',
 					square: true,
 					'aria-label': 'Expand',
 					ui: {
@@ -141,7 +141,7 @@
 			title: 'Wybrano uzytkownika',
 			description: `${user.name} (${formatRole(user.role)})`,
 			color: 'primary',
-			icon: 'i-lucide-user',
+			icon: 'carbon:user',
 		});
 	};
 
@@ -160,7 +160,7 @@
 		<div class="flex flex-wrap gap-3">
 			<UInput
 				v-model="globalFilter"
-				icon="i-lucide-search"
+				icon="carbon:search"
 				placeholder="Szukaj po imieniu lub nazwisku"
 				clearable
 				class="w-full max-w-md"
@@ -177,7 +177,7 @@
 		<UAlert
 			v-if="error"
 			color="error"
-			icon="i-lucide-alert-triangle"
+			icon="carbon:warning"
 			description="Nie udalo sie pobrac listy kont. Sprobuj ponownie."
 		>
 			<template #actions>
@@ -218,7 +218,7 @@
 					sticky="header"
 					class="min-h-0 min-w-full flex-1 overflow-y-auto"
 					:empty-state="{
-						icon: 'i-lucide-users',
+						icon: 'carbon:user',
 						label: 'Brak wynikow',
 						description: 'Nie znaleziono odpowiednich użytkowników.',
 					}"
@@ -255,7 +255,7 @@
 							v-if="row.original.role === 'user'"
 							variant="solid"
 							color="primary"
-							icon="i-lucide-calendar-plus"
+							icon="carbon:calendar-add"
 							class="cursor-pointer"
 							@click="scheduleForPatient(row.original)"
 						>
