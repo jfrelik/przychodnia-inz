@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { createError, defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
 import { auth } from '~~/lib/auth';
@@ -75,24 +75,24 @@ export default defineEventHandler(async (event) => {
 		return { status: 'ok', roomId: null };
 	}
 
-	const [roomRow] = await useDb()
+	const roomRows = await useDb()
 		.select({
 			roomId: room.roomId,
-			number: room.number,
-			specializationIds: sql<
-				number[]
-			>`coalesce(array_agg(DISTINCT ${roomSpecializations.specializationId}), '{}'::int[])`,
+			specializationId: roomSpecializations.specializationId,
 		})
 		.from(room)
 		.leftJoin(roomSpecializations, eq(room.roomId, roomSpecializations.roomId))
-		.where(eq(room.roomId, payload.roomId))
-		.groupBy(room.roomId, room.number);
+		.where(eq(room.roomId, payload.roomId));
 
-	if (!roomRow)
+	if (roomRows.length === 0)
 		throw createError({ statusCode: 404, statusMessage: 'Room not found' });
 
-	const roomSpecIds = (roomRow.specializationIds ?? []).filter(
-		(id): id is number => id !== null
+	const roomSpecIds = Array.from(
+		new Set(
+			roomRows
+				.map((row) => row.specializationId)
+				.filter((id): id is number => id !== null && id !== undefined)
+		)
 	);
 
 	if (!roomSpecIds.includes(slot.specializationId)) {
