@@ -36,7 +36,7 @@
 		'/api/receptionist/assignRoom',
 		{
 			key: 'receptionist-assign-room',
-			query: { day: '2026-01-15' },
+			// query: { day: '2026-01-01' },
 			default: () => ({ day: '', timeframes: [] }),
 		}
 	);
