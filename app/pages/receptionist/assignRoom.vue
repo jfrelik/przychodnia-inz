@@ -36,7 +36,7 @@
 		'/api/receptionist/assignRoom',
 		{
 			key: 'receptionist-assign-room',
-			// query: { day: '2025-01-15' },
+			query: { day: '2026-01-15' },
 			default: () => ({ day: '', timeframes: [] }),
 		}
 	);
@@ -158,15 +158,15 @@
 					<p class="text-sm text-neutral-500">
 						Każdy przedział czasowy lekarza jako oddzielny wiersz.
 					</p>
-				</div>
-				<div class="flex flex-wrap items-center gap-2">
 					<UInput
 						v-model="globalFilter"
 						icon="i-lucide-search"
 						placeholder="Szukaj lekarza, specjalizacji lub pokoju"
 						clearable
-						class="w-full max-w-xs"
+						class="mt-4 w-full"
 					/>
+				</div>
+				<div class="flex flex-wrap items-center gap-2">
 					<UButton
 						variant="soft"
 						color="neutral"
@@ -232,9 +232,11 @@
 						<UButton
 							size="sm"
 							color="primary"
+							icon="carbon:edit"
+							variant="ghost"
 							:loading="saving[row.original.scheduleId]"
 							:disabled="!row.original.compatibleRooms.length"
-							class="cursor-pointer"
+							class="cursor-pointer justify-center"
 							@click="assignRoom(row.original)"
 						>
 							Zapisz
