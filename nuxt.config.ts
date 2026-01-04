@@ -16,12 +16,6 @@ export default defineNuxtConfig({
 		fallback: 'light',
 	},
 
-	nitro: {
-		experimental: {
-			openAPI: true,
-		},
-	},
-
 	modules: [
 		'@nuxt/eslint',
 		'@nuxt/fonts',
