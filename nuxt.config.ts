@@ -34,6 +34,7 @@ export default defineNuxtConfig({
 		'@nuxtjs/turnstile',
 		'nuxt-charts',
 		'@formkit/auto-animate/nuxt',
+		'@vueuse/nuxt',
 	],
 
 	routeRules: {
