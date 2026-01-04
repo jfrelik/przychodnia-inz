@@ -27,7 +27,7 @@ export const roles = {
 		appointments: ['read', 'list', 'create', 'update'],
 		testResults: ['read', 'list'],
 		medicalRecords: ['read', 'list'],
-		prescriptions: ['read', 'list'],
+		prescriptions: ['read', 'list', 'update'],
 		recommendations: ['read', 'list'],
 	}),
 
