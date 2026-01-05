@@ -23,7 +23,7 @@
 	},
 	"dependencies": {
 		"@bull-board/api": "^6.15.0",
-		"@bull-board/h3": "^6.15.0",
+		"@bull-board/h3": "^6.16.2",
 		"@formkit/auto-animate": "^0.9.0",
 		"@internationalized/date": "^3.10.1",
 		"@nuxt/eslint": "1.12.1",
