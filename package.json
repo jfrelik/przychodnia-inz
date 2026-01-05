@@ -48,7 +48,7 @@
 		"ioredis": "^5.8.2",
 		"nodemailer": "^7.0.12",
 		"nuxt": "^4.2.2",
-		"nuxt-charts": "^1.0.2",
+		"nuxt-charts": "^2.0.0",
 		"nuxt-email-renderer": "^2.1.2",
 		"nuxt-nodemailer": "^1.1.4",
 		"pg": "^8.16.3",
