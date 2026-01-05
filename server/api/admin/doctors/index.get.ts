@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
 import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
@@ -22,19 +22,32 @@ export default defineEventHandler(async (event) => {
 	if (!hasPermission.success)
 		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-	const rows = await useDb()
-		.select({
-			userId: doctors.userId,
-			userName: user.name,
-			userEmail: user.email,
-			specializationId: doctors.specializationId,
-			specializationName: specializations.name,
-			licenseNumber: doctors.licenseNumber,
-		})
-		.from(doctors)
-		.leftJoin(user, eq(doctors.userId, user.id))
-		.leftJoin(specializations, eq(doctors.specializationId, specializations.id))
-		.orderBy(asc(user.name));
+	try {
+		const rows = await useDb()
+			.select({
+				userId: doctors.userId,
+				userName: user.name,
+				userEmail: user.email,
+				specializationId: doctors.specializationId,
+				specializationName: specializations.name,
+				licenseNumber: doctors.licenseNumber,
+			})
+			.from(doctors)
+			.leftJoin(user, eq(doctors.userId, user.id))
+			.leftJoin(
+				specializations,
+				eq(doctors.specializationId, specializations.id)
+			)
+			.where(and(eq(user.banned, false)))
+			.orderBy(asc(user.name));
 
-	return rows;
+		return rows;
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });

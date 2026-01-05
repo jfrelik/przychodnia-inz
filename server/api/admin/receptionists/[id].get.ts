@@ -31,16 +31,33 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [receptionist] = await useDb()
-		.select({
-			userId: receptionists.userId,
-			userName: user.name,
-			userEmail: user.email,
-		})
-		.from(receptionists)
-		.leftJoin(user, eq(receptionists.userId, user.id))
-		.where(eq(receptionists.userId, userId))
-		.limit(1);
+	let receptionist:
+		| {
+				userId: string;
+				userName: string | null;
+				userEmail: string | null;
+		  }
+		| undefined;
+
+	try {
+		[receptionist] = await useDb()
+			.select({
+				userId: receptionists.userId,
+				userName: user.name,
+				userEmail: user.email,
+			})
+			.from(receptionists)
+			.leftJoin(user, eq(receptionists.userId, user.id))
+			.where(eq(receptionists.userId, userId))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 
 	if (!receptionist) {
 		throw createError({

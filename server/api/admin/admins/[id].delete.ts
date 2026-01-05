@@ -37,10 +37,21 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [countResult] = await useDb()
-		.select({ count: count() })
-		.from(user)
-		.where(eq(user.role, 'admin'));
+	let countResult: { count: number } | undefined;
+
+	try {
+		[countResult] = await useDb()
+			.select({ count: count() })
+			.from(user)
+			.where(eq(user.role, 'admin'));
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 
 	const totalAdmins = Number(countResult?.count ?? 0);
 
@@ -52,14 +63,25 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [current] = await useDb()
-		.select({
-			id: user.id,
-			name: user.name,
-		})
-		.from(user)
-		.where(and(eq(user.id, userId), eq(user.role, 'admin')))
-		.limit(1);
+	let current: { id: string; name: string | null } | undefined;
+
+	try {
+		[current] = await useDb()
+			.select({
+				id: user.id,
+				name: user.name,
+			})
+			.from(user)
+			.where(and(eq(user.id, userId), eq(user.role, 'admin')))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 
 	if (!current) {
 		throw createError({
@@ -68,15 +90,24 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	await useDb().update(user).set({ role: 'user' }).where(eq(user.id, userId));
+	try {
+		await useDb().delete(user).where(eq(user.id, userId));
 
-	await useAuditLog(
-		event,
-		session.user.id,
-		`Usunięto administratora "${current.name}" i zmieniono rolę na użytkownika.`
-	);
+		await useAuditLog(
+			event,
+			session.user.id,
+			`Usunięto administratora "${current.name}".`
+		);
 
-	return {
-		status: 'ok',
-	};
+		return {
+			status: 'ok',
+		};
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });

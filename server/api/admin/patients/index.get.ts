@@ -22,20 +22,29 @@ export default defineEventHandler(async (event) => {
 	if (!hasPermission.success)
 		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-	const rows = await useDb()
-		.select({
-			userId: patients.userId,
-			firstName: patients.firstName,
-			lastName: patients.lastName,
-			pesel: patients.pesel,
-			phone: patients.phone,
-			address: patients.address,
-			email: user.email,
-			createdAt: user.createdAt,
-		})
-		.from(patients)
-		.leftJoin(user, eq(patients.userId, user.id))
-		.orderBy(asc(patients.lastName));
+	try {
+		const rows = await useDb()
+			.select({
+				userId: patients.userId,
+				firstName: patients.firstName,
+				lastName: patients.lastName,
+				pesel: patients.pesel,
+				phone: patients.phone,
+				address: patients.address,
+				email: user.email,
+				createdAt: user.createdAt,
+			})
+			.from(patients)
+			.leftJoin(user, eq(patients.userId, user.id))
+			.orderBy(asc(patients.lastName));
 
-	return rows;
+		return rows;
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });

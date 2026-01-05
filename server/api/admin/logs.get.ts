@@ -43,29 +43,38 @@ export default defineEventHandler(async (event) => {
 	if (!hasPermission.success)
 		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-	const rowsResult = await useDb()
-		.select({
-			logId: logs.logId,
-			action: logs.action,
-			timestamp: logs.timestamp,
-			ipAddress: logs.ipAddress,
-			userId: logs.userId,
-			userName: user.name,
-			userEmail: user.email,
-		})
-		.from(logs)
-		.leftJoin(user, eq(logs.userId, user.id))
-		.orderBy(desc(logs.timestamp));
+	try {
+		const rowsResult = await useDb()
+			.select({
+				logId: logs.logId,
+				action: logs.action,
+				timestamp: logs.timestamp,
+				ipAddress: logs.ipAddress,
+				userId: logs.userId,
+				userName: user.name,
+				userEmail: user.email,
+			})
+			.from(logs)
+			.leftJoin(user, eq(logs.userId, user.id))
+			.orderBy(desc(logs.timestamp));
 
-	const rows = rowsResult.map((row) =>
-		logEntrySchema.parse({
-			...row,
-			ipAddress: row.ipAddress ?? null,
-			userId: sanitizeNullableUuid(row.userId),
-			userName: row.userName ?? null,
-			userEmail: row.userEmail ?? null,
-		})
-	);
+		const rows = rowsResult.map((row) =>
+			logEntrySchema.parse({
+				...row,
+				ipAddress: row.ipAddress ?? null,
+				userId: sanitizeNullableUuid(row.userId),
+				userName: row.userName ?? null,
+				userEmail: row.userEmail ?? null,
+			})
+		);
 
-	return rows;
+		return rows;
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });

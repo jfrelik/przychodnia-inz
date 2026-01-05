@@ -21,19 +21,30 @@ export default defineEventHandler(async (event) => {
 	if (!hasPermission.success)
 		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-	const rows = await useDb()
-		.select({
-			id: specializations.id,
-			name: specializations.name,
-			doctorCount: count(doctors.userId),
-		})
-		.from(specializations)
-		.leftJoin(doctors, eq(doctors.specializationId, specializations.id))
-		.groupBy(specializations.id)
-		.orderBy(asc(specializations.name));
+	try {
+		const rows = await useDb()
+			.select({
+				id: specializations.id,
+				name: specializations.name,
+				description: specializations.description,
+				icon: specializations.icon,
+				doctorCount: count(doctors.userId),
+			})
+			.from(specializations)
+			.leftJoin(doctors, eq(doctors.specializationId, specializations.id))
+			.groupBy(specializations.id)
+			.orderBy(asc(specializations.name));
 
-	return rows.map((row) => ({
-		...row,
-		doctorCount: Number(row.doctorCount ?? 0),
-	}));
+		return rows.map((row) => ({
+			...row,
+			doctorCount: Number(row.doctorCount ?? 0),
+		}));
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });

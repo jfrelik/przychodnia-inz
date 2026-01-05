@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
 import { auth } from '~~/lib/auth';
 import {
@@ -34,26 +34,25 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [current] = await useDb()
-		.select({
-			roomId: room.roomId,
-			number: room.number,
-			specializationIds: sql<
-				number[]
-			>`coalesce(array_agg(DISTINCT ${roomSpecializations.specializationId}), '{}'::integer[])`,
-			specializationNames: sql<
-				string[]
-			>`coalesce(array_agg(DISTINCT ${specializations.name}), '{}'::text[])`,
-		})
-		.from(room)
-		.leftJoin(roomSpecializations, eq(room.roomId, roomSpecializations.roomId))
-		.leftJoin(
-			specializations,
-			eq(roomSpecializations.specializationId, specializations.id)
-		)
-		.where(eq(room.roomId, roomId))
-		.groupBy(room.roomId, room.number)
-		.limit(1);
+	let current: { roomId: number; number: number } | undefined;
+
+	try {
+		[current] = await useDb()
+			.select({
+				roomId: room.roomId,
+				number: room.number,
+			})
+			.from(room)
+			.where(eq(room.roomId, roomId))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 
 	if (!current) {
 		throw createError({
@@ -62,13 +61,42 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
+	let specializationRows: {
+		specializationId: number;
+		specializationName: string | null;
+	}[] = [];
+
+	try {
+		specializationRows = await useDb()
+			.select({
+				specializationId: roomSpecializations.specializationId,
+				specializationName: specializations.name,
+			})
+			.from(roomSpecializations)
+			.leftJoin(
+				specializations,
+				eq(roomSpecializations.specializationId, specializations.id)
+			)
+			.where(eq(roomSpecializations.roomId, roomId));
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
+
+	const specializationIds = specializationRows.map(
+		(row) => row.specializationId
+	);
+	const specializationNames = specializationRows
+		.map((row) => row.specializationName)
+		.filter((name): name is string => !!name);
+
 	return {
 		...current,
-		specializationIds: (current.specializationIds ?? []).filter(
-			(id): id is number => id !== null
-		),
-		specializationNames: (current.specializationNames ?? []).filter(
-			(name): name is string => name !== null && name !== undefined
-		),
+		specializationIds,
+		specializationNames,
 	};
 });

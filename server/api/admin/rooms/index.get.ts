@@ -1,4 +1,4 @@
-import { asc, eq, sql } from 'drizzle-orm';
+import { asc, count, eq, isNotNull } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
 import { auth } from '~~/lib/auth';
 import {
@@ -26,37 +26,67 @@ export default defineEventHandler(async (event) => {
 	if (!hasPermission.success)
 		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-	const rows = await useDb()
-		.select({
-			roomId: room.roomId,
-			number: room.number,
-			appointmentCount: sql<number>`count(DISTINCT ${appointments.appointmentId})`,
-			specializationIds: sql<
-				number[]
-			>`coalesce(array_agg(DISTINCT ${roomSpecializations.specializationId}), '{}'::int[])`,
-			specializationNames: sql<
-				string[]
-			>`coalesce(array_agg(DISTINCT ${specializations.name}), '{}'::text[])`,
-		})
-		.from(room)
-		.leftJoin(appointments, eq(appointments.roomRoomId, room.roomId))
-		.leftJoin(roomSpecializations, eq(room.roomId, roomSpecializations.roomId))
-		.leftJoin(
-			specializations,
-			eq(roomSpecializations.specializationId, specializations.id)
-		)
-		.groupBy(room.roomId, room.number)
-		.orderBy(asc(room.number));
+	try {
+		const roomsList = await useDb()
+			.select({
+				roomId: room.roomId,
+				number: room.number,
+			})
+			.from(room)
+			.orderBy(asc(room.number));
 
-	return rows.map((row) => ({
-		roomId: row.roomId,
-		number: row.number,
-		appointmentCount: Number(row.appointmentCount ?? 0),
-		specializationIds: (row.specializationIds ?? []).filter(
-			(id): id is number => id !== null
-		),
-		specializationNames: (row.specializationNames ?? []).filter(
-			(name): name is string => name !== null && name !== undefined
-		),
-	}));
+		const appointmentCounts = await useDb()
+			.select({
+				roomId: appointments.roomRoomId,
+				appointmentCount: count(appointments.appointmentId),
+			})
+			.from(appointments)
+			.where(isNotNull(appointments.roomRoomId))
+			.groupBy(appointments.roomRoomId);
+
+		const roomSpecializationRows = await useDb()
+			.select({
+				roomId: roomSpecializations.roomId,
+				specializationId: roomSpecializations.specializationId,
+				specializationName: specializations.name,
+			})
+			.from(roomSpecializations)
+			.leftJoin(
+				specializations,
+				eq(roomSpecializations.specializationId, specializations.id)
+			);
+
+		const appointmentCountMap = new Map(
+			appointmentCounts.map((row) => [row.roomId, Number(row.appointmentCount)])
+		);
+		const specializationIdsMap = new Map<number, number[]>();
+		const specializationNamesMap = new Map<number, string[]>();
+
+		for (const row of roomSpecializationRows) {
+			const roomId = row.roomId;
+			if (!specializationIdsMap.has(roomId)) {
+				specializationIdsMap.set(roomId, []);
+				specializationNamesMap.set(roomId, []);
+			}
+			specializationIdsMap.get(roomId)?.push(row.specializationId);
+			if (row.specializationName) {
+				specializationNamesMap.get(roomId)?.push(row.specializationName);
+			}
+		}
+
+		return roomsList.map((roomRow) => ({
+			roomId: roomRow.roomId,
+			number: roomRow.number,
+			appointmentCount: appointmentCountMap.get(roomRow.roomId) ?? 0,
+			specializationIds: specializationIdsMap.get(roomRow.roomId) ?? [],
+			specializationNames: specializationNamesMap.get(roomRow.roomId) ?? [],
+		}));
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });

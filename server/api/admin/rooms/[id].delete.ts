@@ -30,14 +30,25 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [current] = await useDb()
-		.select({
-			roomId: room.roomId,
-			number: room.number,
-		})
-		.from(room)
-		.where(eq(room.roomId, roomId))
-		.limit(1);
+	let current: { roomId: number; number: number } | undefined;
+
+	try {
+		[current] = await useDb()
+			.select({
+				roomId: room.roomId,
+				number: room.number,
+			})
+			.from(room)
+			.where(eq(room.roomId, roomId))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 
 	if (!current) {
 		throw createError({
@@ -46,10 +57,21 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [assigned] = await useDb()
-		.select({ total: count(appointments.appointmentId) })
-		.from(appointments)
-		.where(eq(appointments.roomRoomId, roomId));
+	let assigned: { total: number } | undefined;
+
+	try {
+		[assigned] = await useDb()
+			.select({ total: count(appointments.appointmentId) })
+			.from(appointments)
+			.where(eq(appointments.roomRoomId, roomId));
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 
 	if (Number(assigned?.total ?? 0) > 0) {
 		throw createError({
@@ -59,15 +81,24 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	await useDb().delete(room).where(eq(room.roomId, roomId));
+	try {
+		await useDb().delete(room).where(eq(room.roomId, roomId));
 
-	await useAuditLog(
-		event,
-		session.user.id,
-		`Usunięto gabinet numer ${current.number}.`
-	);
+		await useAuditLog(
+			event,
+			session.user.id,
+			`Usunięto gabinet numer ${current.number}.`
+		);
 
-	return {
-		status: 'ok',
-	};
+		return {
+			status: 'ok',
+		};
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });

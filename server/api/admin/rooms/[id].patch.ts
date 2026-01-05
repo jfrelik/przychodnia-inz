@@ -1,5 +1,4 @@
-import consola from 'consola';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { count, eq, inArray } from 'drizzle-orm';
 import { createError, defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
 import { auth } from '~~/lib/auth';
@@ -36,29 +35,48 @@ const payloadSchema = z
 const normalizeIds = (ids?: (number | null)[]) =>
 	(ids ?? []).filter((id): id is number => id !== null);
 
-const fetchRoomWithMeta = async (roomId: number) =>
-	useDb()
+const fetchRoomWithMeta = async (roomId: number) => {
+	const [roomRow] = await useDb()
 		.select({
 			roomId: room.roomId,
 			number: room.number,
-			appointmentCount: sql<number>`count(DISTINCT ${appointments.appointmentId})`,
-			specializationIds: sql<
-				number[]
-			>`coalesce(array_agg(DISTINCT ${roomSpecializations.specializationId}), '{}'::int[])`,
-			specializationNames: sql<
-				string[]
-			>`coalesce(array_agg(DISTINCT ${specializations.name}), '{}'::text[])`,
 		})
 		.from(room)
-		.leftJoin(appointments, eq(appointments.roomRoomId, room.roomId))
-		.leftJoin(roomSpecializations, eq(room.roomId, roomSpecializations.roomId))
+		.where(eq(room.roomId, roomId))
+		.limit(1);
+
+	if (!roomRow) {
+		return undefined;
+	}
+
+	const [appointmentCountRow] = await useDb()
+		.select({
+			appointmentCount: count(appointments.appointmentId),
+		})
+		.from(appointments)
+		.where(eq(appointments.roomRoomId, roomId));
+
+	const specializationRows = await useDb()
+		.select({
+			specializationId: roomSpecializations.specializationId,
+			specializationName: specializations.name,
+		})
+		.from(roomSpecializations)
 		.leftJoin(
 			specializations,
 			eq(roomSpecializations.specializationId, specializations.id)
 		)
-		.where(eq(room.roomId, roomId))
-		.groupBy(room.roomId, room.number)
-		.limit(1);
+		.where(eq(roomSpecializations.roomId, roomId));
+
+	return {
+		...roomRow,
+		appointmentCount: Number(appointmentCountRow?.appointmentCount ?? 0),
+		specializationIds: specializationRows.map((row) => row.specializationId),
+		specializationNames: specializationRows
+			.map((row) => row.specializationName)
+			.filter((name): name is string => !!name),
+	};
+};
 
 export default defineEventHandler(async (event) => {
 	const session = await auth.api.getSession({ headers: event.headers });
@@ -87,7 +105,26 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [currentRaw] = await fetchRoomWithMeta(roomId);
+	let currentRaw:
+		| {
+				roomId: number;
+				number: number;
+				appointmentCount: number;
+				specializationIds: number[];
+				specializationNames: string[];
+		  }
+		| undefined;
+
+	try {
+		currentRaw = await fetchRoomWithMeta(roomId);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 
 	if (!currentRaw) {
 		throw createError({
@@ -99,21 +136,37 @@ export default defineEventHandler(async (event) => {
 	const currentSpecializations = normalizeIds(currentRaw.specializationIds);
 
 	const body = await readBody(event);
-	const payload = payloadSchema.parse(body);
+	const payload = payloadSchema.safeParse(body);
+
+	if (payload.error) {
+		const flat = z.flattenError(payload.error);
+
+		const firstFieldError = Object.values(flat.fieldErrors)
+			.flat()
+			.find((m): m is string => !!m);
+
+		throw createError({
+			statusCode: 400,
+			message: firstFieldError ?? 'Nieprawidłowe dane wejściowe.',
+		});
+	}
 
 	const update: Record<string, unknown> = {};
 	const auditMessages: string[] = [];
 
-	if (payload.number !== undefined && payload.number !== currentRaw.number) {
-		update.number = payload.number;
-		auditMessages.push(`zmieniono numer na ${payload.number}`);
+	if (
+		payload.data.number !== undefined &&
+		payload.data.number !== currentRaw.number
+	) {
+		update.number = payload.data.number;
+		auditMessages.push(`zmieniono numer na ${payload.data.number}`);
 	}
 
 	const nextSpecializations =
-		payload.specializations?.length === 0
+		payload.data.specializations?.length === 0
 			? []
-			: payload.specializations
-				? Array.from(new Set(payload.specializations))
+			: payload.data.specializations
+				? Array.from(new Set(payload.data.specializations))
 				: undefined;
 
 	const currentSorted = [...currentSpecializations].sort((a, b) => a - b);
@@ -131,10 +184,21 @@ export default defineEventHandler(async (event) => {
 
 	if (nextSpecializations !== undefined) {
 		if (nextSpecializations.length > 0) {
-			const found = await useDb()
-				.select({ id: specializations.id, name: specializations.name })
-				.from(specializations)
-				.where(inArray(specializations.id, nextSpecializations));
+			let found: { id: number; name: string }[] = [];
+
+			try {
+				found = await useDb()
+					.select({ id: specializations.id, name: specializations.name })
+					.from(specializations)
+					.where(inArray(specializations.id, nextSpecializations));
+			} catch (error) {
+				const { message } = getDbErrorMessage(error);
+
+				throw createError({
+					statusCode: 500,
+					message,
+				});
+			}
 
 			if (found.length !== nextSpecializations.length) {
 				throw createError({
@@ -186,13 +250,6 @@ export default defineEventHandler(async (event) => {
 	} catch (error: unknown) {
 		const dbError = error as { code?: string };
 
-		consola.error({
-			operation: 'AdminUpdateRoom',
-			targetId: roomId,
-			errorCode: dbError?.code,
-			error,
-		});
-
 		if (dbError?.code === '23505') {
 			throw createError({
 				statusCode: 409,
@@ -207,36 +264,64 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		throw error;
-	}
+		const { message } = getDbErrorMessage(error);
 
-	const [updated] = await fetchRoomWithMeta(roomId);
-
-	if (!updated) {
 		throw createError({
 			statusCode: 500,
-			statusMessage: 'Nie udało się wczytać gabinetu po aktualizacji.',
+			message,
 		});
 	}
 
-	const updatedNumberForLog =
-		(update.number as number | undefined) ?? currentRaw.number;
+	let updated:
+		| {
+				roomId: number;
+				number: number;
+				appointmentCount: number;
+				specializationIds: number[];
+				specializationNames: string[];
+		  }
+		| undefined;
 
-	await useAuditLog(
-		event,
-		session.user.id,
-		`Zaktualizowano gabinet ${updatedNumberForLog}: ${auditMessages.join(', ')}`
-	);
+	try {
+		updated = await fetchRoomWithMeta(roomId);
 
-	return {
-		status: 'ok',
-		room: {
-			...updated,
-			appointmentCount: Number(updated?.appointmentCount ?? 0),
-			specializationIds: normalizeIds(updated?.specializationIds),
-			specializationNames: (updated?.specializationNames ?? []).filter(
-				(name): name is string => name !== null && name !== undefined
-			),
-		},
-	};
+		if (!updated) {
+			throw createError({
+				statusCode: 500,
+				statusMessage: 'Nie udało się wczytać gabinetu po aktualizacji.',
+			});
+		}
+
+		const updatedNumberForLog =
+			(update.number as number | undefined) ?? currentRaw.number;
+
+		await useAuditLog(
+			event,
+			session.user.id,
+			`Zaktualizowano gabinet ${updatedNumberForLog}: ${auditMessages.join(', ')}`
+		);
+
+		return {
+			status: 'ok',
+			room: {
+				...updated,
+				appointmentCount: Number(updated?.appointmentCount ?? 0),
+				specializationIds: normalizeIds(updated?.specializationIds),
+				specializationNames: (updated?.specializationNames ?? []).filter(
+					(name): name is string => name !== null && name !== undefined
+				),
+			},
+		};
+	} catch (error) {
+		if (typeof error === 'object' && error !== null && 'statusCode' in error) {
+			throw error;
+		}
+
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });

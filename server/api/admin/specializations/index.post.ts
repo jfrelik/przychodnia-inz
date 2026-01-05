@@ -1,4 +1,3 @@
-import consola from 'consola';
 import {
 	createError,
 	defineEventHandler,
@@ -16,6 +15,18 @@ const payloadSchema = z
 			.trim()
 			.min(2, 'Nazwa specjalizacji musi zawierać co najmniej 2 znaki.')
 			.max(120, 'Nazwa specjalizacji może mieć maksymalnie 120 znaków.'),
+		description: z
+			.string()
+			.trim()
+			.min(5, 'Opis specjalizacji musi zawierać co najmniej 5 znaków.')
+			.max(500, 'Opis specjalizacji może mieć maksymalnie 500 znaków.'),
+		icon: z
+			.string()
+			.trim()
+			.regex(
+				/^lucide:[a-z0-9-]+$/,
+				'Nazwa ikonki musi zaczynać się od "lucide:" i zawierać tylko małe litery.'
+			),
 	})
 	.strict();
 
@@ -38,15 +49,34 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const body = await readBody(event);
-	const payload = payloadSchema.parse(body);
+	const payload = payloadSchema.safeParse(body);
+
+	if (payload.error) {
+		const flat = z.flattenError(payload.error);
+
+		const firstFieldError = Object.values(flat.fieldErrors)
+			.flat()
+			.find((m): m is string => !!m);
+
+		throw createError({
+			statusCode: 400,
+			message: firstFieldError ?? 'Nieprawidłowe dane wejściowe.',
+		});
+	}
 
 	try {
 		const [created] = await useDb()
 			.insert(specializations)
-			.values({ name: payload.name })
+			.values({
+				name: payload.data.name,
+				description: payload.data.description,
+				icon: payload.data.icon,
+			})
 			.returning({
 				id: specializations.id,
 				name: specializations.name,
+				description: specializations.description,
+				icon: specializations.icon,
 			});
 
 		await useAuditLog(
@@ -61,23 +91,12 @@ export default defineEventHandler(async (event) => {
 			status: 'ok',
 			specialization: { ...created, doctorCount: 0 },
 		};
-	} catch (error: unknown) {
-		const dbError = error as { code?: string };
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
 
-		consola.error({
-			operation: 'AdminCreateSpecialization',
-			targetName: payload.name,
-			errorCode: dbError?.code,
-			error,
+		throw createError({
+			statusCode: 500,
+			message,
 		});
-
-		if (dbError?.code === '23505') {
-			throw createError({
-				statusCode: 409,
-				statusMessage: 'Specjalizacja o takiej nazwie już istnieje.',
-			});
-		}
-
-		throw error;
 	}
 });

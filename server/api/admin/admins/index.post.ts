@@ -40,7 +40,20 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const body = await readBody(event);
-	const payload = payloadSchema.parse(body);
+	const payload = payloadSchema.safeParse(body);
+
+	if (payload.error) {
+		const flat = z.flattenError(payload.error);
+
+		const firstFieldError = Object.values(flat.fieldErrors)
+			.flat()
+			.find((m): m is string => !!m);
+
+		throw createError({
+			statusCode: 400,
+			message: firstFieldError ?? 'Nieprawidłowe dane wejściowe.',
+		});
+	}
 
 	const tempPassword = crypto.randomBytes(32).toString('hex');
 
@@ -53,9 +66,9 @@ export default defineEventHandler(async (event) => {
 	try {
 		const signUpResult = await auth.api.createUser({
 			body: {
-				email: payload.email,
+				email: payload.data.email,
 				password: tempPassword,
-				name: payload.name,
+				name: payload.data.name,
 				role: 'admin',
 			},
 		});
@@ -80,7 +93,7 @@ export default defineEventHandler(async (event) => {
 
 		consola.error({
 			operation: 'AdminCreateAdmin',
-			targetEmail: payload.email,
+			targetEmail: payload.data.email,
 			errorCode: apiError?.body?.code ?? apiError?.statusCode,
 			error: apiError,
 		});
@@ -95,7 +108,12 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		throw error;
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
 	}
 
 	const newUserId = createdUser.id;
@@ -103,7 +121,7 @@ export default defineEventHandler(async (event) => {
 	try {
 		await auth.api.requestPasswordReset({
 			body: {
-				email: payload.email,
+				email: payload.data.email,
 				redirectTo: '/change-password',
 			},
 		});
@@ -115,27 +133,36 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [adminRow] = await useDb()
-		.select({
-			id: user.id,
-			name: user.name,
-			email: user.email,
-			createdAt: user.createdAt,
-		})
-		.from(user)
-		.where(eq(user.id, newUserId))
-		.limit(1);
+	try {
+		const [adminRow] = await useDb()
+			.select({
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				createdAt: user.createdAt,
+			})
+			.from(user)
+			.where(eq(user.id, newUserId))
+			.limit(1);
 
-	await useAuditLog(
-		event,
-		session.user.id,
-		`Utworzono konto administratora "${adminRow?.name ?? payload.name}" i wysłano link do ustawienia hasła.`
-	);
+		await useAuditLog(
+			event,
+			session.user.id,
+			`Utworzono konto administratora "${adminRow?.name ?? payload.data.name}" i wysłano link do ustawienia hasła.`
+		);
 
-	setResponseStatus(event, 201);
+		setResponseStatus(event, 201);
 
-	return {
-		status: 'ok',
-		admin: adminRow,
-	};
+		return {
+			status: 'ok',
+			admin: adminRow,
+		};
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });

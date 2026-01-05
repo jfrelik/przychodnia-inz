@@ -63,14 +63,27 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const body = await readBody(event);
-	const payload = payloadSchema.parse(body);
+	const payload = payloadSchema.safeParse(body);
+
+	if (payload.error) {
+		const flat = z.flattenError(payload.error);
+
+		const firstFieldError = Object.values(flat.fieldErrors)
+			.flat()
+			.find((m): m is string => !!m);
+
+		throw createError({
+			statusCode: 400,
+			message: firstFieldError ?? 'Nieprawidłowe dane wejściowe.',
+		});
+	}
 
 	const update: Record<string, unknown> = {};
 	const auditMessages: string[] = [];
 
-	if (payload.name && payload.name !== current.name) {
-		update.name = payload.name;
-		auditMessages.push(`zmieniono imię i nazwisko na "${payload.name}"`);
+	if (payload.data.name && payload.data.name !== current.name) {
+		update.name = payload.data.name;
+		auditMessages.push(`zmieniono imię i nazwisko na "${payload.data.name}"`);
 	}
 
 	if (Object.keys(update).length === 0) {
@@ -80,27 +93,36 @@ export default defineEventHandler(async (event) => {
 		};
 	}
 
-	await useDb().update(user).set(update).where(eq(user.id, userId));
+	try {
+		await useDb().update(user).set(update).where(eq(user.id, userId));
 
-	const [updated] = await useDb()
-		.select({
-			id: user.id,
-			name: user.name,
-			email: user.email,
-			createdAt: user.createdAt,
-		})
-		.from(user)
-		.where(eq(user.id, userId))
-		.limit(1);
+		const [updated] = await useDb()
+			.select({
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				createdAt: user.createdAt,
+			})
+			.from(user)
+			.where(eq(user.id, userId))
+			.limit(1);
 
-	await useAuditLog(
-		event,
-		session.user.id,
-		`Zaktualizowano administratora "${current.name}": ${auditMessages.join(', ')}`
-	);
+		await useAuditLog(
+			event,
+			session.user.id,
+			`Zaktualizowano administratora "${current.name}": ${auditMessages.join(', ')}`
+		);
 
-	return {
-		status: 'ok',
-		admin: updated,
-	};
+		return {
+			status: 'ok',
+			admin: updated,
+		};
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });

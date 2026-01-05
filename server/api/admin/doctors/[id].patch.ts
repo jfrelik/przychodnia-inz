@@ -1,4 +1,3 @@
-import consola from 'consola';
 import { eq } from 'drizzle-orm';
 import { createError, defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
@@ -49,18 +48,37 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [current] = await useDb()
-		.select({
-			userId: doctors.userId,
-			specializationId: doctors.specializationId,
-			licenseNumber: doctors.licenseNumber,
-			userName: user.name,
-			userEmail: user.email,
-		})
-		.from(doctors)
-		.leftJoin(user, eq(doctors.userId, user.id))
-		.where(eq(doctors.userId, userId))
-		.limit(1);
+	let current:
+		| {
+				userId: string;
+				specializationId: number | null;
+				licenseNumber: string;
+				userName: string | null;
+				userEmail: string | null;
+		  }
+		| undefined;
+
+	try {
+		[current] = await useDb()
+			.select({
+				userId: doctors.userId,
+				specializationId: doctors.specializationId,
+				licenseNumber: doctors.licenseNumber,
+				userName: user.name,
+				userEmail: user.email,
+			})
+			.from(doctors)
+			.leftJoin(user, eq(doctors.userId, user.id))
+			.where(eq(doctors.userId, userId))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 
 	if (!current) {
 		throw createError({
@@ -70,17 +88,41 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const body = await readBody(event);
-	const payload = payloadSchema.parse(body);
+	const payload = payloadSchema.safeParse(body);
+
+	if (payload.error) {
+		const flat = z.flattenError(payload.error);
+
+		const firstFieldError = Object.values(flat.fieldErrors)
+			.flat()
+			.find((m): m is string => !!m);
+
+		throw createError({
+			statusCode: 400,
+			message: firstFieldError ?? 'Nieprawidłowe dane wejściowe.',
+		});
+	}
 
 	if (
-		payload.specializationId !== undefined &&
-		payload.specializationId !== null
+		payload.data.specializationId !== undefined &&
+		payload.data.specializationId !== null
 	) {
-		const [specialization] = await useDb()
-			.select({ id: specializations.id })
-			.from(specializations)
-			.where(eq(specializations.id, payload.specializationId))
-			.limit(1);
+		let specialization: { id: number } | undefined;
+
+		try {
+			[specialization] = await useDb()
+				.select({ id: specializations.id })
+				.from(specializations)
+				.where(eq(specializations.id, payload.data.specializationId))
+				.limit(1);
+		} catch (error) {
+			const { message } = getDbErrorMessage(error);
+
+			throw createError({
+				statusCode: 500,
+				message,
+			});
+		}
 
 		if (!specialization) {
 			throw createError({
@@ -94,20 +136,20 @@ export default defineEventHandler(async (event) => {
 	const auditMessages: string[] = [];
 
 	if (
-		Object.prototype.hasOwnProperty.call(payload, 'specializationId') &&
-		payload.specializationId !== current.specializationId
+		Object.prototype.hasOwnProperty.call(payload.data, 'specializationId') &&
+		payload.data.specializationId !== current.specializationId
 	) {
-		update.specializationId = payload.specializationId ?? null;
+		update.specializationId = payload.data.specializationId ?? null;
 		auditMessages.push('zmieniono specjalizację');
 	}
 
 	if (
-		payload.licenseNumber &&
-		payload.licenseNumber !== current.licenseNumber
+		payload.data.licenseNumber &&
+		payload.data.licenseNumber !== current.licenseNumber
 	) {
-		update.licenseNumber = payload.licenseNumber;
+		update.licenseNumber = payload.data.licenseNumber;
 		auditMessages.push(
-			`zmieniono numer licencji na "${payload.licenseNumber}"`
+			`zmieniono numer licencji na "${payload.data.licenseNumber}"`
 		);
 	}
 
@@ -123,45 +165,55 @@ export default defineEventHandler(async (event) => {
 	} catch (error: unknown) {
 		const dbError = error as { code?: string };
 
-		consola.error({
-			operation: 'AdminUpdateDoctor',
-			targetUserId: userId,
-			errorCode: dbError?.code,
-			error,
-		});
-
 		if (dbError?.code === '23505') {
 			throw createError({
 				statusCode: 409,
 				statusMessage: 'Lekarz o takim numerze licencji już istnieje.',
 			});
 		}
-		throw error;
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
 	}
 
-	const [updated] = await useDb()
-		.select({
-			userId: doctors.userId,
-			userName: user.name,
-			userEmail: user.email,
-			specializationId: doctors.specializationId,
-			specializationName: specializations.name,
-			licenseNumber: doctors.licenseNumber,
-		})
-		.from(doctors)
-		.leftJoin(user, eq(doctors.userId, user.id))
-		.leftJoin(specializations, eq(doctors.specializationId, specializations.id))
-		.where(eq(doctors.userId, userId))
-		.limit(1);
+	try {
+		const [updated] = await useDb()
+			.select({
+				userId: doctors.userId,
+				userName: user.name,
+				userEmail: user.email,
+				specializationId: doctors.specializationId,
+				specializationName: specializations.name,
+				licenseNumber: doctors.licenseNumber,
+			})
+			.from(doctors)
+			.leftJoin(user, eq(doctors.userId, user.id))
+			.leftJoin(
+				specializations,
+				eq(doctors.specializationId, specializations.id)
+			)
+			.where(eq(doctors.userId, userId))
+			.limit(1);
 
-	await useAuditLog(
-		event,
-		session.user.id,
-		`Zaktualizowano lekarza "${current.userName}": ${auditMessages.join(', ')}`
-	);
+		await useAuditLog(
+			event,
+			session.user.id,
+			`Zaktualizowano lekarza "${current.userName}": ${auditMessages.join(', ')}`
+		);
 
-	return {
-		status: 'ok',
-		doctor: updated,
-	};
+		return {
+			status: 'ok',
+			doctor: updated,
+		};
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });

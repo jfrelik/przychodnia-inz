@@ -31,15 +31,26 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const [current] = await useDb()
-		.select({
-			userId: receptionists.userId,
-			userName: user.name,
-		})
-		.from(receptionists)
-		.leftJoin(user, eq(receptionists.userId, user.id))
-		.where(eq(receptionists.userId, userId))
-		.limit(1);
+	let current: { userId: string; userName: string | null } | undefined;
+
+	try {
+		[current] = await useDb()
+			.select({
+				userId: receptionists.userId,
+				userName: user.name,
+			})
+			.from(receptionists)
+			.leftJoin(user, eq(receptionists.userId, user.id))
+			.where(eq(receptionists.userId, userId))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 
 	if (!current) {
 		throw createError({
@@ -48,19 +59,28 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	await useDb().transaction(async (tx) => {
-		await tx.delete(receptionists).where(eq(receptionists.userId, userId));
+	try {
+		await useDb().transaction(async (tx) => {
+			await tx.delete(receptionists).where(eq(receptionists.userId, userId));
 
-		await tx.update(user).set({ role: 'user' }).where(eq(user.id, userId));
-	});
+			await tx.update(user).set({ role: 'user' }).where(eq(user.id, userId));
+		});
 
-	await useAuditLog(
-		event,
-		session.user.id,
-		`Usunięto rejestratora "${current.userName}".`
-	);
+		await useAuditLog(
+			event,
+			session.user.id,
+			`Usunięto rejestratora "${current.userName}".`
+		);
 
-	return {
-		status: 'ok',
-	};
+		return {
+			status: 'ok',
+		};
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });

@@ -59,17 +59,26 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	await useDb()
-		.delete(specializations)
-		.where(eq(specializations.id, specializationId));
+	try {
+		await useDb()
+			.delete(specializations)
+			.where(eq(specializations.id, specializationId));
 
-	await useAuditLog(
-		event,
-		session.user.id,
-		`Usunięto specjalizację "${current.name}".`
-	);
+		await useAuditLog(
+			event,
+			session.user.id,
+			`Usunięto specjalizację "${current.name}".`
+		);
 
-	return {
-		status: 'ok',
-	};
+		return {
+			status: 'ok',
+		};
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });
