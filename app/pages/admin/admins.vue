@@ -31,11 +31,22 @@
 		pending,
 		error,
 		refresh,
-	} = await useFetch<Admin[]>('/api/admin/admins', {
+	} = await useLazyFetch<Admin[]>('/api/admin/admins', {
 		default: () => [],
+		server: false,
 	});
 
 	const admins = computed(() => adminsData.value ?? []);
+
+	const tableKey = ref(0);
+
+	watch(
+		() => adminsData.value,
+		() => {
+			tableKey.value++;
+		},
+		{ deep: false }
+	);
 
 	const table = ref();
 	const globalFilter = ref('');
@@ -156,27 +167,29 @@
 
 		isCreatePending.value = true;
 
-		const { error: createError } = await useFetch('/api/admin/admins', {
-			method: 'POST',
-			body: {
-				email: trimmedEmail,
-				name: trimmedName,
-			},
-		});
-
-		isCreatePending.value = false;
-
-		if (createError.value) {
+		try {
+			await $fetch('/api/admin/admins', {
+				method: 'POST',
+				body: {
+					email: trimmedEmail,
+					name: trimmedName,
+				},
+			});
+		} catch (error) {
 			toast.add({
 				title: 'Dodawanie nie powiodło się',
-				description:
-					createError.value.message ??
-					'Wystąpił nieoczekiwany błąd podczas dodawania administratora.',
+				description: getErrorMessage(
+					error,
+					'Wystąpił nieoczekiwany błąd podczas dodawania administratora.'
+				),
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
+			isCreatePending.value = false;
 			return;
 		}
+
+		isCreatePending.value = false;
 
 		toast.add({
 			title: 'Dodano administratora',
@@ -220,27 +233,26 @@
 
 		isEditPending.value = true;
 
-		const { error: editError } = await useFetch(
-			`/api/admin/admins/${selectedAdmin.value.id}`,
-			{
+		try {
+			await $fetch(`/api/admin/admins/${selectedAdmin.value.id}`, {
 				method: 'PATCH',
 				body: payload,
-			}
-		);
-
-		isEditPending.value = false;
-
-		if (editError.value) {
+			});
+		} catch (error) {
 			toast.add({
 				title: 'Aktualizacja nie powiodła się',
-				description:
-					editError.value.message ??
-					'Wystąpił błąd podczas aktualizacji administratora.',
+				description: getErrorMessage(
+					error,
+					'Wystąpił błąd podczas aktualizacji administratora.'
+				),
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
+			isEditPending.value = false;
 			return;
 		}
+
+		isEditPending.value = false;
 
 		toast.add({
 			title: 'Zaktualizowano administratora',
@@ -272,26 +284,25 @@
 
 		isDeletePending.value = true;
 
-		const { error: deleteError } = await useFetch(
-			`/api/admin/admins/${selectedAdmin.value.id}`,
-			{
+		try {
+			await $fetch(`/api/admin/admins/${selectedAdmin.value.id}`, {
 				method: 'DELETE',
-			}
-		);
-
-		isDeletePending.value = false;
-
-		if (deleteError.value) {
+			});
+		} catch (error) {
 			toast.add({
 				title: 'Usuwanie nie powiodło się',
-				description:
-					deleteError.value.message ??
-					'Wystąpił błąd podczas usuwania administratora.',
+				description: getErrorMessage(
+					error,
+					'Wystąpił błąd podczas usuwania administratora.'
+				),
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
+			isDeletePending.value = false;
 			return;
 		}
+
+		isDeletePending.value = false;
 
 		toast.add({
 			title: 'Usunięto administratora',
@@ -352,73 +363,74 @@
 							Przeglądaj konta administratorów oraz zarządzaj dostępem.
 						</p>
 					</div>
-					<UBadge
-						variant="soft"
-						color="primary"
-						:label="`${admins.length} pozycji`"
-					/>
+					<ClientOnly>
+						<UBadge
+							variant="soft"
+							color="primary"
+							:label="`${admins.length} pozycji`"
+						/>
+					</ClientOnly>
 				</div>
 			</template>
 
 			<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-				<UTable
-					ref="table"
-					v-model:global-filter="globalFilter"
-					v-model:column-filters="columnFilters"
-					v-model:sorting="sorting"
-					v-model:pagination="pagination"
-					:data="admins"
-					sticky="header"
-					:columns="columns"
-					:loading="pending"
-					class="min-h-0 min-w-full flex-1 overflow-y-auto"
-					:empty-state="{
-						icon: 'i-lucide-user-x',
-						label: 'Brak administratorów',
-						description: 'Dodaj pierwszego administratora, aby rozpocząć.',
-					}"
-					:pagination-options="{
-						getPaginationRowModel: getPaginationRowModel(),
-					}"
-				>
-					<template #createdAt-cell="{ row }">
-						{{ new Date(row.original.createdAt).toLocaleDateString('pl-PL') }}
-					</template>
+				<ClientOnly>
+					<UTable
+						:key="tableKey"
+						ref="table"
+						v-model:global-filter="globalFilter"
+						v-model:column-filters="columnFilters"
+						v-model:sorting="sorting"
+						v-model:pagination="pagination"
+						:data="admins"
+						sticky="header"
+						:columns="columns"
+						:loading="pending"
+						class="min-h-0 min-w-full flex-1 overflow-y-auto"
+						empty="Nie ma administratorów."
+						:pagination-options="{
+							getPaginationRowModel: getPaginationRowModel(),
+						}"
+					>
+						<template #createdAt-cell="{ row }">
+							{{ new Date(row.original.createdAt).toLocaleDateString('pl-PL') }}
+						</template>
 
-					<template #actions-cell="{ row }">
-						<div class="flex justify-end gap-2">
-							<UButton
-								size="xs"
-								variant="ghost"
-								icon="i-lucide-pencil"
-								class="cursor-pointer"
-								@click="openEditModal(row.original)"
-							>
-								Edytuj
-							</UButton>
-							<UButton
-								size="xs"
-								color="error"
-								variant="ghost"
-								icon="i-lucide-trash"
-								class="cursor-pointer"
-								@click="openDeleteModal(row.original)"
-							>
-								Usuń
-							</UButton>
-						</div>
-					</template>
-				</UTable>
-				<div class="flex justify-center pt-4">
-					<UPagination
-						:default-page="
-							(table?.tableApi?.getState().pagination.pageIndex || 0) + 1
-						"
-						:items-per-page="table?.tableApi?.getState().pagination.pageSize"
-						:total="table?.tableApi?.getFilteredRowModel().rows.length || 0"
-						@update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
-					/>
-				</div>
+						<template #actions-cell="{ row }">
+							<div class="flex justify-end gap-2">
+								<UButton
+									size="xs"
+									variant="ghost"
+									icon="i-lucide-pencil"
+									class="cursor-pointer"
+									@click="openEditModal(row.original)"
+								>
+									Edytuj
+								</UButton>
+								<UButton
+									size="xs"
+									color="error"
+									variant="ghost"
+									icon="i-lucide-trash"
+									class="cursor-pointer"
+									@click="openDeleteModal(row.original)"
+								>
+									Usuń
+								</UButton>
+							</div>
+						</template>
+					</UTable>
+					<div class="flex justify-center pt-4">
+						<UPagination
+							:default-page="
+								(table?.tableApi?.getState().pagination.pageIndex || 0) + 1
+							"
+							:items-per-page="table?.tableApi?.getState().pagination.pageSize"
+							:total="table?.tableApi?.getFilteredRowModel().rows.length || 0"
+							@update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
+						/>
+					</div>
+				</ClientOnly>
 			</div>
 		</UCard>
 

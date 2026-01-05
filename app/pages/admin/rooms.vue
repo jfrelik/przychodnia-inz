@@ -36,18 +36,29 @@
 		pending,
 		error,
 		refresh,
-	} = await useFetch<Room[]>('/api/admin/rooms', {
+	} = await useLazyFetch<Room[]>('/api/admin/rooms', {
 		default: () => [],
+		server: false,
 	});
 
 	const rooms = computed(() => roomsData.value ?? []);
 
-	const { data: specializationsData } = await useFetch<Specialization[]>(
+	const { data: specializationsData } = await useLazyFetch<Specialization[]>(
 		'/api/admin/specializations',
-		{ default: () => [] }
+		{ default: () => [], server: false }
 	);
 
 	const specializations = computed(() => specializationsData.value ?? []);
+
+	const tableKey = ref(0);
+
+	watch(
+		() => roomsData.value,
+		() => {
+			tableKey.value++;
+		},
+		{ deep: false }
+	);
 
 	const specializationOptions = computed(() =>
 		specializations.value.map((s) => ({ label: s.name, value: s.id }))
@@ -126,30 +137,32 @@
 
 		isCreatePending.value = true;
 
-		const { error: createError } = await useFetch('/api/admin/rooms', {
-			method: 'POST',
-			body: {
-				number: createForm.number,
-				specializations:
-					createForm.specializations.length > 0
-						? createForm.specializations
-						: undefined,
-			},
-		});
-
-		isCreatePending.value = false;
-
-		if (createError.value) {
+		try {
+			await $fetch('/api/admin/rooms', {
+				method: 'POST',
+				body: {
+					number: createForm.number,
+					specializations:
+						createForm.specializations.length > 0
+							? createForm.specializations
+							: undefined,
+				},
+			});
+		} catch (error) {
 			toast.add({
 				title: 'Dodawanie nie powiodło się',
-				description:
-					createError.value.message ??
-					'Wystąpił błąd podczas dodawania gabinetu.',
+				description: getErrorMessage(
+					error,
+					'Wystąpił błąd podczas dodawania gabinetu.'
+				),
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
+			isCreatePending.value = false;
 			return;
 		}
+
+		isCreatePending.value = false;
 
 		toast.add({
 			title: 'Dodano gabinet',
@@ -217,27 +230,26 @@
 
 		isEditPending.value = true;
 
-		const { error: editError } = await useFetch(
-			`/api/admin/rooms/${selectedRoom.value.roomId}`,
-			{
+		try {
+			await $fetch(`/api/admin/rooms/${selectedRoom.value.roomId}`, {
 				method: 'PATCH',
 				body: payload,
-			}
-		);
-
-		isEditPending.value = false;
-
-		if (editError.value) {
+			});
+		} catch (error) {
 			toast.add({
 				title: 'Aktualizacja nie powiodła się',
-				description:
-					editError.value.message ??
-					'Wystąpił błąd podczas aktualizacji gabinetu.',
+				description: getErrorMessage(
+					error,
+					'Wystąpił błąd podczas aktualizacji gabinetu.'
+				),
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
+			isEditPending.value = false;
 			return;
 		}
+
+		isEditPending.value = false;
 
 		toast.add({
 			title: 'Zaktualizowano gabinet',
@@ -268,26 +280,25 @@
 
 		isDeletePending.value = true;
 
-		const { error: deleteError } = await useFetch(
-			`/api/admin/rooms/${selectedRoom.value.roomId}`,
-			{
+		try {
+			await $fetch(`/api/admin/rooms/${selectedRoom.value.roomId}`, {
 				method: 'DELETE',
-			}
-		);
-
-		isDeletePending.value = false;
-
-		if (deleteError.value) {
+			});
+		} catch (error) {
 			toast.add({
 				title: 'Usuwanie nie powiodło się',
-				description:
-					deleteError.value.message ??
-					'Wystąpił błąd podczas usuwania gabinetu.',
+				description: getErrorMessage(
+					error,
+					'Wystąpił błąd podczas usuwania gabinetu.'
+				),
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
+			isDeletePending.value = false;
 			return;
 		}
+
+		isDeletePending.value = false;
 
 		toast.add({
 			title: 'Usunięto gabinet',
@@ -346,88 +357,89 @@
 							Przeglądaj gabinety oraz przypisane do nich specjalizacje.
 						</p>
 					</div>
-					<UBadge
-						variant="soft"
-						color="primary"
-						:label="`${rooms.length} pozycji`"
-					/>
+					<ClientOnly>
+						<UBadge
+							variant="soft"
+							color="primary"
+							:label="`${rooms.length} pozycji`"
+						/>
+					</ClientOnly>
 				</div>
 			</template>
 
 			<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-				<UTable
-					ref="table"
-					v-model:global-filter="globalFilter"
-					v-model:column-filters="columnFilters"
-					v-model:sorting="sorting"
-					v-model:pagination="pagination"
-					:data="rooms"
-					:columns="columns"
-					:loading="pending"
-					sticky="header"
-					class="min-h-0 min-w-full flex-1 overflow-y-auto"
-					:empty-state="{
-						icon: 'i-lucide-door-open',
-						label: 'Brak gabinetów',
-						description: 'Dodaj pierwszy gabinet, aby rozpocząć.',
-					}"
-					:pagination-options="{
-						getPaginationRowModel: getPaginationRowModel(),
-					}"
-				>
-					<template #specializationNames-cell="{ row }">
-						<div class="flex flex-wrap gap-1">
-							<UBadge
-								v-for="name in row.original.specializationNames"
-								:key="name"
-								variant="soft"
-								color="primary"
-								size="xs"
-								:label="name"
-							/>
-							<span
-								v-if="row.original.specializationNames.length === 0"
-								class="text-neutral-400"
-							>
-								Brak
-							</span>
-						</div>
-					</template>
+				<ClientOnly>
+					<UTable
+						:key="tableKey"
+						ref="table"
+						v-model:global-filter="globalFilter"
+						v-model:column-filters="columnFilters"
+						v-model:sorting="sorting"
+						v-model:pagination="pagination"
+						:data="rooms"
+						:columns="columns"
+						:loading="pending"
+						sticky="header"
+						class="min-h-0 min-w-full flex-1 overflow-y-auto"
+						empty="Nie ma gabinetów."
+						:pagination-options="{
+							getPaginationRowModel: getPaginationRowModel(),
+						}"
+					>
+						<template #specializationNames-cell="{ row }">
+							<div class="flex flex-wrap gap-1">
+								<UBadge
+									v-for="name in row.original.specializationNames"
+									:key="name"
+									variant="soft"
+									color="primary"
+									size="xs"
+									:label="name"
+								/>
+								<span
+									v-if="row.original.specializationNames.length === 0"
+									class="text-neutral-400"
+								>
+									Brak
+								</span>
+							</div>
+						</template>
 
-					<template #actions-cell="{ row }">
-						<div class="flex justify-end gap-2">
-							<UButton
-								size="xs"
-								variant="ghost"
-								icon="i-lucide-pencil"
-								class="cursor-pointer"
-								@click="openEditModal(row.original)"
-							>
-								Edytuj
-							</UButton>
-							<UButton
-								size="xs"
-								color="error"
-								variant="ghost"
-								icon="i-lucide-trash"
-								class="cursor-pointer"
-								@click="openDeleteModal(row.original)"
-							>
-								Usuń
-							</UButton>
-						</div>
-					</template>
-				</UTable>
-				<div class="flex justify-center pt-4">
-					<UPagination
-						:default-page="
-							(table?.tableApi?.getState().pagination.pageIndex || 0) + 1
-						"
-						:items-per-page="table?.tableApi?.getState().pagination.pageSize"
-						:total="table?.tableApi?.getFilteredRowModel().rows.length || 0"
-						@update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
-					/>
-				</div>
+						<template #actions-cell="{ row }">
+							<div class="flex justify-end gap-2">
+								<UButton
+									size="xs"
+									variant="ghost"
+									icon="i-lucide-pencil"
+									class="cursor-pointer"
+									@click="openEditModal(row.original)"
+								>
+									Edytuj
+								</UButton>
+								<UButton
+									size="xs"
+									color="error"
+									variant="ghost"
+									icon="i-lucide-trash"
+									class="cursor-pointer"
+									@click="openDeleteModal(row.original)"
+								>
+									Usuń
+								</UButton>
+							</div>
+						</template>
+					</UTable>
+					<div class="flex justify-center pt-4">
+						<UPagination
+							:default-page="
+								(table?.tableApi?.getState().pagination.pageIndex || 0) + 1
+							"
+							:items-per-page="table?.tableApi?.getState().pagination.pageSize"
+							:total="table?.tableApi?.getFilteredRowModel().rows.length || 0"
+							@update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
+						/>
+					</div>
+				</ClientOnly>
 			</div>
 		</UCard>
 

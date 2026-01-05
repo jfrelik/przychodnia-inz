@@ -53,12 +53,22 @@
 		error,
 		refresh,
 		pending,
-	} = await useFetch<QueueSummary[]>('/api/admin/queues', {
+	} = await useLazyFetch<QueueSummary[]>('/api/admin/queues', {
 		default: () => [],
+		server: false,
 	});
 
 	const queues = computed(() => queuesResponse.value ?? []);
 	const selectedQueueName = ref<string | null>(null);
+	const tableKey = ref(0);
+
+	watch(
+		() => queuesResponse.value,
+		() => {
+			tableKey.value++;
+		},
+		{ deep: false }
+	);
 
 	watch(
 		queues,
@@ -142,27 +152,10 @@
 			size: 220,
 		},
 		{
-			accessorKey: 'attemptsMade',
-			header: 'Podejścia',
-			size: 90,
-		},
-		{
 			accessorKey: 'timestamp',
 			header: 'Dodano',
 			cell: ({ row }) => formatDate(row.original.timestamp),
 			size: 140,
-		},
-		{
-			accessorKey: 'finishedOn',
-			header: 'Zakończono',
-			cell: ({ row }) => formatDate(row.original.finishedOn),
-			size: 140,
-		},
-		{
-			accessorKey: 'failedReason',
-			header: 'Błąd',
-			cell: ({ row }) => row.original.failedReason ?? '—',
-			size: 240,
 		},
 		{
 			id: 'details',
@@ -281,24 +274,24 @@
 				</div>
 
 				<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-					<UTable
-						:data="jobs"
-						:columns="columns"
-						:loading="pending"
-						class="min-h-0 min-w-full flex-1 overflow-y-auto"
-						:empty-state="{
-							icon: 'i-lucide-inbox',
-							label: 'Brak zadań w kolejce',
-						}"
-					>
-						<template #state-cell="{ row }">
-							<UBadge
-								variant="soft"
-								:color="stateColors[row.original.state] ?? 'neutral'"
-								:label="row.original.state"
-							/>
-						</template>
-					</UTable>
+					<ClientOnly>
+						<UTable
+							:key="tableKey"
+							:data="jobs"
+							:columns="columns"
+							:loading="pending"
+							class="min-h-0 min-w-full flex-1 overflow-y-auto"
+							empty="Nie ma zadań w kolejce."
+						>
+							<template #state-cell="{ row }">
+								<UBadge
+									variant="soft"
+									:color="stateColors[row.original.state] ?? 'neutral'"
+									:label="row.original.state"
+								/>
+							</template>
+						</UTable>
+					</ClientOnly>
 				</div>
 			</UCard>
 		</div>

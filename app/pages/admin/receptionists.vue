@@ -28,11 +28,22 @@
 		pending,
 		error,
 		refresh,
-	} = await useFetch<Receptionist[]>('/api/admin/receptionists', {
+	} = await useLazyFetch<Receptionist[]>('/api/admin/receptionists', {
 		default: () => [],
+		server: false,
 	});
 
 	const receptionists = computed(() => receptionistsData.value ?? []);
+
+	const tableKey = ref(0);
+
+	watch(
+		() => receptionistsData.value,
+		() => {
+			tableKey.value++;
+		},
+		{ deep: false }
+	);
 
 	const table = ref();
 	const globalFilter = ref('');
@@ -147,27 +158,29 @@
 
 		isCreatePending.value = true;
 
-		const { error: createError } = await useFetch('/api/admin/receptionists', {
-			method: 'POST',
-			body: {
-				email: trimmedEmail,
-				name: trimmedName,
-			},
-		});
-
-		isCreatePending.value = false;
-
-		if (createError.value) {
+		try {
+			await $fetch('/api/admin/receptionists', {
+				method: 'POST',
+				body: {
+					email: trimmedEmail,
+					name: trimmedName,
+				},
+			});
+		} catch (error) {
 			toast.add({
 				title: 'Dodawanie nie powiodło się',
-				description:
-					createError.value.message ??
-					'Wystąpił nieoczekiwany błąd podczas dodawania recepcjonisty.',
+				description: getErrorMessage(
+					error,
+					'Wystąpił nieoczekiwany błąd podczas dodawania recepcjonisty.'
+				),
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
+			isCreatePending.value = false;
 			return;
 		}
+
+		isCreatePending.value = false;
 
 		toast.add({
 			title: 'Dodano recepcjonistę',
@@ -206,26 +219,28 @@
 
 		isDeletePending.value = true;
 
-		const { error: deleteError } = await useFetch(
-			`/api/admin/receptionists/${selectedReceptionist.value.userId}`,
-			{
-				method: 'DELETE',
-			}
-		);
-
-		isDeletePending.value = false;
-
-		if (deleteError.value) {
+		try {
+			await $fetch(
+				`/api/admin/receptionists/${selectedReceptionist.value.userId}`,
+				{
+					method: 'DELETE',
+				}
+			);
+		} catch (error) {
 			toast.add({
 				title: 'Usuwanie nie powiodło się',
-				description:
-					deleteError.value.message ??
-					'Wystąpił błąd podczas usuwania recepcjonisty.',
+				description: getErrorMessage(
+					error,
+					'Wystąpił błąd podczas usuwania recepcjonisty.'
+				),
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
+			isDeletePending.value = false;
 			return;
 		}
+
+		isDeletePending.value = false;
 
 		toast.add({
 			title: 'Usunięto recepcjonistę',
@@ -286,69 +301,70 @@
 							Przeglądaj konta recepcjonistów i zarządzaj dostępem.
 						</p>
 					</div>
-					<UBadge
-						variant="soft"
-						color="primary"
-						:label="`${receptionists.length} pozycji`"
-					/>
+					<ClientOnly>
+						<UBadge
+							variant="soft"
+							color="primary"
+							:label="`${receptionists.length} pozycji`"
+						/>
+					</ClientOnly>
 				</div>
 			</template>
 
 			<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-				<UTable
-					ref="table"
-					v-model:global-filter="globalFilter"
-					v-model:column-filters="columnFilters"
-					v-model:sorting="sorting"
-					v-model:pagination="pagination"
-					:data="receptionists"
-					sticky="header"
-					:columns="columns"
-					:loading="pending"
-					class="min-h-0 min-w-full flex-1 overflow-y-auto"
-					:empty-state="{
-						icon: 'i-lucide-user-x',
-						label: 'Brak recepcjonistów',
-						description: 'Dodaj pierwszego recepcjonistę, aby rozpocząć.',
-					}"
-					:pagination-options="{
-						getPaginationRowModel: getPaginationRowModel(),
-					}"
-				>
-					<template #actions-cell="{ row }">
-						<div class="flex justify-end gap-2">
-							<UButton
-								size="xs"
-								variant="ghost"
-								icon="i-lucide-pencil"
-								class="cursor-pointer"
-								@click="openEditModal(row.original)"
-							>
-								Edytuj
-							</UButton>
-							<UButton
-								size="xs"
-								color="error"
-								variant="ghost"
-								icon="i-lucide-trash"
-								class="cursor-pointer"
-								@click="openDeleteModal(row.original)"
-							>
-								Usuń
-							</UButton>
-						</div>
-					</template>
-				</UTable>
-				<div class="flex justify-center pt-4">
-					<UPagination
-						:default-page="
-							(table?.tableApi?.getState().pagination.pageIndex || 0) + 1
-						"
-						:items-per-page="table?.tableApi?.getState().pagination.pageSize"
-						:total="table?.tableApi?.getFilteredRowModel().rows.length || 0"
-						@update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
-					/>
-				</div>
+				<ClientOnly>
+					<UTable
+						:key="tableKey"
+						ref="table"
+						v-model:global-filter="globalFilter"
+						v-model:column-filters="columnFilters"
+						v-model:sorting="sorting"
+						v-model:pagination="pagination"
+						:data="receptionists"
+						sticky="header"
+						:columns="columns"
+						:loading="pending"
+						class="min-h-0 min-w-full flex-1 overflow-y-auto"
+						empty="Nie ma recepcjonistów."
+						:pagination-options="{
+							getPaginationRowModel: getPaginationRowModel(),
+						}"
+					>
+						<template #actions-cell="{ row }">
+							<div class="flex justify-end gap-2">
+								<UButton
+									size="xs"
+									variant="ghost"
+									icon="i-lucide-pencil"
+									class="cursor-pointer"
+									@click="openEditModal(row.original)"
+								>
+									Edytuj
+								</UButton>
+								<UButton
+									size="xs"
+									color="error"
+									variant="ghost"
+									icon="i-lucide-trash"
+									class="cursor-pointer"
+									@click="openDeleteModal(row.original)"
+								>
+									Usuń
+								</UButton>
+							</div>
+						</template>
+					</UTable>
+					<div class="flex justify-center pt-4">
+						<UPagination
+							:default-page="
+								(table?.tableApi?.getState().pagination.pageIndex || 0) + 1
+							"
+							:items-per-page="table?.tableApi?.getState().pagination.pageSize"
+							:total="table?.tableApi?.getFilteredRowModel().rows.length || 0"
+							@update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
+						/>
+					</div>
+				</ClientOnly>
 			</div>
 		</UCard>
 

@@ -23,10 +23,11 @@
 		totalLogs: 0,
 	};
 
-	const { data, pending, error, refresh } = await useFetch<Statistics>(
+	const { data, pending, error, refresh } = await useLazyFetch<Statistics>(
 		'/api/admin/statistics',
 		{
 			default: () => defaultStatistics,
+			server: false,
 		}
 	);
 

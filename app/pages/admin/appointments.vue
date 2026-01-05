@@ -35,11 +35,22 @@
 		pending,
 		error,
 		refresh,
-	} = await useFetch<Appointment[]>('/api/admin/appointments', {
+	} = await useLazyFetch<Appointment[]>('/api/admin/appointments', {
 		default: () => [],
+		server: false,
 	});
 
 	const appointments = computed(() => appointmentsData.value ?? []);
+
+	const tableKey = ref(0);
+
+	watch(
+		() => appointmentsData.value,
+		() => {
+			tableKey.value++;
+		},
+		{ deep: false }
+	);
 
 	const table = ref();
 	const globalFilter = ref('');
@@ -85,12 +96,6 @@
 			accessorKey: 'status',
 			header: 'Status',
 			enableSorting: true,
-			enableGlobalFilter: true,
-		},
-		{
-			accessorKey: 'notes',
-			header: 'Notatki',
-			enableSorting: false,
 			enableGlobalFilter: true,
 		},
 	];
@@ -155,74 +160,80 @@
 							Wszystkie wizyty zarejestrowane w systemie
 						</p>
 					</div>
-					<UBadge
-						variant="soft"
-						color="primary"
-						:label="`${appointments.length} pozycji`"
-					/>
+					<ClientOnly>
+						<UBadge
+							variant="soft"
+							color="primary"
+							:label="`${appointments.length} pozycji`"
+						/>
+					</ClientOnly>
 				</div>
 			</template>
 
 			<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-				<UTable
-					ref="table"
-					v-model:global-filter="globalFilter"
-					v-model:column-filters="columnFilters"
-					v-model:sorting="sorting"
-					v-model:pagination="pagination"
-					:data="appointments"
-					sticky="header"
-					:columns="columns"
-					:loading="pending"
-					class="min-h-0 min-w-full flex-1 overflow-y-auto"
-					:empty-state="{
-						icon: 'i-lucide-calendar-x',
-						label: 'Brak wizyt',
-					}"
-					:pagination-options="{
-						getPaginationRowModel: getPaginationRowModel(),
-					}"
-				>
-					<template #datetime-cell="{ row }">
-						{{
-							new Date(row.original.datetime).toLocaleString('pl-PL', {
-								dateStyle: 'short',
-								timeStyle: 'short',
-							})
-						}}
-					</template>
+				<ClientOnly>
+					<UTable
+						:key="tableKey"
+						ref="table"
+						v-model:global-filter="globalFilter"
+						v-model:column-filters="columnFilters"
+						v-model:sorting="sorting"
+						v-model:pagination="pagination"
+						:data="appointments"
+						sticky="header"
+						:columns="columns"
+						:loading="pending"
+						class="min-h-0 min-w-full flex-1 overflow-y-auto"
+						empty="Nie ma wizyt."
+						:pagination-options="{
+							getPaginationRowModel: getPaginationRowModel(),
+						}"
+					>
+						<template #datetime-cell="{ row }">
+							{{
+								new Date(row.original.datetime).toLocaleString('pl-PL', {
+									dateStyle: 'short',
+									timeStyle: 'short',
+								})
+							}}
+						</template>
 
-					<template #patientName-cell="{ row }">
-						{{ row.original.patientFirstName }}
-						{{ row.original.patientLastName }}
-					</template>
+						<template #patientName-cell="{ row }">
+							{{ row.original.patientFirstName }}
+							{{ row.original.patientLastName }}
+						</template>
 
-					<template #status-cell="{ row }">
-						<UBadge
-							:color="getStatusColor(row.original.status)"
-							:label="getStatusLabel(row.original.status)"
-							variant="soft"
+						<template #patientPesel-cell="{ row }">
+							<span
+								class="cursor-default rounded px-1 text-sm font-medium text-neutral-700 blur-sm transition duration-200 hover:blur-none"
+							>
+								{{ row.original.patientPesel || '—' }}
+							</span>
+						</template>
+
+						<template #status-cell="{ row }">
+							<UBadge
+								:color="getStatusColor(row.original.status)"
+								:label="getStatusLabel(row.original.status)"
+								variant="soft"
+							/>
+						</template>
+
+						<template #roomNumber-cell="{ row }">
+							{{ row.original.roomNumber ?? 'Brak' }}
+						</template>
+					</UTable>
+					<div class="flex justify-center pt-4">
+						<UPagination
+							:default-page="
+								(table?.tableApi?.getState().pagination.pageIndex || 0) + 1
+							"
+							:items-per-page="table?.tableApi?.getState().pagination.pageSize"
+							:total="table?.tableApi?.getFilteredRowModel().rows.length || 0"
+							@update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
 						/>
-					</template>
-
-					<template #roomNumber-cell="{ row }">
-						{{ row.original.roomNumber ?? 'Brak' }}
-					</template>
-
-					<template #notes-cell="{ row }">
-						{{ row.original.notes || '—' }}
-					</template>
-				</UTable>
-				<div class="flex justify-center pt-4">
-					<UPagination
-						:default-page="
-							(table?.tableApi?.getState().pagination.pageIndex || 0) + 1
-						"
-						:items-per-page="table?.tableApi?.getState().pagination.pageSize"
-						:total="table?.tableApi?.getFilteredRowModel().rows.length || 0"
-						@update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
-					/>
-				</div>
+					</div>
+				</ClientOnly>
 			</div>
 		</UCard>
 	</PageContainer>

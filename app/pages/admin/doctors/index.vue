@@ -35,19 +35,31 @@
 		pending,
 		error,
 		refresh,
-	} = await useFetch<Doctor[]>('/api/admin/doctors', {
+	} = await useLazyFetch<Doctor[]>('/api/admin/doctors', {
 		default: () => [],
+		server: false,
 	});
 
-	const { data: specializationsData } = await useFetch<Specialization[]>(
+	const { data: specializationsData } = await useLazyFetch<Specialization[]>(
 		'/api/admin/specializations',
 		{
 			default: () => [],
+			server: false,
 		}
 	);
 
 	const doctors = computed(() => doctorsData.value ?? []);
 	const specializations = computed(() => specializationsData.value ?? []);
+
+	const tableKey = ref(0);
+
+	watch(
+		() => doctorsData.value,
+		() => {
+			tableKey.value++;
+		},
+		{ deep: false }
+	);
 
 	const specializationOptions = computed(() => [
 		{ label: 'Brak specjalizacji', value: null },
@@ -202,29 +214,31 @@
 
 		isCreatePending.value = true;
 
-		const { error: createError } = await useFetch('/api/admin/doctors', {
-			method: 'POST',
-			body: {
-				email: trimmedEmail,
-				name: trimmedName,
-				specializationId: createForm.specializationId,
-				licenseNumber: trimmedLicense,
-			},
-		});
-
-		isCreatePending.value = false;
-
-		if (createError.value) {
+		try {
+			await $fetch('/api/admin/doctors', {
+				method: 'POST',
+				body: {
+					email: trimmedEmail,
+					name: trimmedName,
+					specializationId: createForm.specializationId,
+					licenseNumber: trimmedLicense,
+				},
+			});
+		} catch (error) {
 			toast.add({
 				title: 'Dodawanie nie powiodło się',
-				description:
-					createError.value.message ??
-					'Wystąpił nieoczekiwany błąd podczas dodawania lekarza.',
+				description: getErrorMessage(
+					error,
+					'Wystąpił nieoczekiwany błąd podczas dodawania lekarza.'
+				),
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
+			isCreatePending.value = false;
 			return;
 		}
+
+		isCreatePending.value = false;
 
 		toast.add({
 			title: 'Dodano lekarza',
@@ -272,27 +286,26 @@
 
 		isEditPending.value = true;
 
-		const { error: editError } = await useFetch(
-			`/api/admin/doctors/${selectedDoctor.value.userId}`,
-			{
+		try {
+			await $fetch(`/api/admin/doctors/${selectedDoctor.value.userId}`, {
 				method: 'PATCH',
 				body: payload,
-			}
-		);
-
-		isEditPending.value = false;
-
-		if (editError.value) {
+			});
+		} catch (error) {
 			toast.add({
 				title: 'Aktualizacja nie powiodła się',
-				description:
-					editError.value.message ??
-					'Wystąpił błąd podczas aktualizacji danych lekarza.',
+				description: getErrorMessage(
+					error,
+					'Wystąpił błąd podczas aktualizacji danych lekarza.'
+				),
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
+			isEditPending.value = false;
 			return;
 		}
+
+		isEditPending.value = false;
 
 		toast.add({
 			title: 'Zaktualizowano lekarza',
@@ -312,26 +325,25 @@
 
 		isDeletePending.value = true;
 
-		const { error: deleteError } = await useFetch(
-			`/api/admin/doctors/${selectedDoctor.value.userId}`,
-			{
+		try {
+			await $fetch(`/api/admin/doctors/${selectedDoctor.value.userId}`, {
 				method: 'DELETE',
-			}
-		);
-
-		isDeletePending.value = false;
-
-		if (deleteError.value) {
+			});
+		} catch (error) {
 			toast.add({
 				title: 'Usuwanie nie powiodło się',
-				description:
-					deleteError.value.message ??
-					'Wystąpił błąd podczas usuwania lekarza.',
+				description: getErrorMessage(
+					error,
+					'Wystąpił błąd podczas usuwania lekarza.'
+				),
 				color: 'error',
 				icon: 'i-lucide-x-circle',
 			});
+			isDeletePending.value = false;
 			return;
 		}
+
+		isDeletePending.value = false;
 
 		toast.add({
 			title: 'Usunięto lekarza',
@@ -392,77 +404,78 @@
 							Przeglądaj konta lekarzy oraz zarządzaj ich specjalizacjami.
 						</p>
 					</div>
-					<UBadge
-						variant="soft"
-						color="primary"
-						:label="`${doctors.length} pozycji`"
-					/>
+					<ClientOnly>
+						<UBadge
+							variant="soft"
+							color="primary"
+							:label="`${doctors.length} pozycji`"
+						/>
+					</ClientOnly>
 				</div>
 			</template>
 
 			<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-				<UTable
-					ref="table"
-					v-model:global-filter="globalFilter"
-					v-model:column-filters="columnFilters"
-					v-model:sorting="sorting"
-					v-model:pagination="pagination"
-					:data="doctors"
-					sticky="header"
-					:columns="columns"
-					:loading="pending"
-					class="min-h-0 min-w-full flex-1 overflow-y-auto"
-					:empty-state="{
-						icon: 'i-lucide-user-x',
-						label: 'Brak lekarzy',
-						description: 'Dodaj pierwszego lekarza, aby rozpocząć.',
-					}"
-					:pagination-options="{
-						getPaginationRowModel: getPaginationRowModel(),
-					}"
-				>
-					<template #specializationName-cell="{ row }">
-						<span
-							:class="row.original.specializationName ? '' : 'text-gray-500'"
-						>
-							{{ row.original.specializationName ?? 'Brak' }}
-						</span>
-					</template>
+				<ClientOnly>
+					<UTable
+						:key="tableKey"
+						ref="table"
+						v-model:global-filter="globalFilter"
+						v-model:column-filters="columnFilters"
+						v-model:sorting="sorting"
+						v-model:pagination="pagination"
+						:data="doctors"
+						sticky="header"
+						:columns="columns"
+						:loading="pending"
+						class="min-h-0 min-w-full flex-1 overflow-y-auto"
+						empty="Nie ma lekarzy."
+						:pagination-options="{
+							getPaginationRowModel: getPaginationRowModel(),
+						}"
+					>
+						<template #specializationName-cell="{ row }">
+							<span
+								:class="row.original.specializationName ? '' : 'text-gray-500'"
+							>
+								{{ row.original.specializationName ?? 'Brak' }}
+							</span>
+						</template>
 
-					<template #actions-cell="{ row }">
-						<div class="flex justify-end gap-2">
-							<UButton
-								size="xs"
-								variant="ghost"
-								icon="i-lucide-pencil"
-								class="cursor-pointer"
-								@click="openEditModal(row.original)"
-							>
-								Edytuj
-							</UButton>
-							<UButton
-								size="xs"
-								color="error"
-								variant="ghost"
-								icon="i-lucide-trash"
-								class="cursor-pointer"
-								@click="openDeleteModal(row.original)"
-							>
-								Usuń
-							</UButton>
-						</div>
-					</template>
-				</UTable>
-				<div class="flex justify-center pt-4">
-					<UPagination
-						:default-page="
-							(table?.tableApi?.getState().pagination.pageIndex || 0) + 1
-						"
-						:items-per-page="table?.tableApi?.getState().pagination.pageSize"
-						:total="table?.tableApi?.getFilteredRowModel().rows.length || 0"
-						@update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
-					/>
-				</div>
+						<template #actions-cell="{ row }">
+							<div class="flex justify-end gap-2">
+								<UButton
+									size="xs"
+									variant="ghost"
+									icon="i-lucide-pencil"
+									class="cursor-pointer"
+									@click="openEditModal(row.original)"
+								>
+									Edytuj
+								</UButton>
+								<UButton
+									size="xs"
+									color="error"
+									variant="ghost"
+									icon="i-lucide-trash"
+									class="cursor-pointer"
+									@click="openDeleteModal(row.original)"
+								>
+									Usuń
+								</UButton>
+							</div>
+						</template>
+					</UTable>
+					<div class="flex justify-center pt-4">
+						<UPagination
+							:default-page="
+								(table?.tableApi?.getState().pagination.pageIndex || 0) + 1
+							"
+							:items-per-page="table?.tableApi?.getState().pagination.pageSize"
+							:total="table?.tableApi?.getFilteredRowModel().rows.length || 0"
+							@update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
+						/>
+					</div>
+				</ClientOnly>
 			</div>
 		</UCard>
 
