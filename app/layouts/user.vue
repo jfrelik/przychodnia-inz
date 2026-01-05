@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-	import { useToast } from '#imports';
 	import type { NavigationMenuItem } from '@nuxt/ui';
 	import { pl } from '@nuxt/ui/locale';
 	import { authClient } from '~~/lib/auth-client';
@@ -65,7 +64,7 @@
 				to: '/user/testResults',
 			},
 			{
-				label: 'Porady Lekarskie',
+				label: 'Zalecenia Lekarskie',
 				icon: 'carbon:user-feedback',
 				class: 'cursor-pointer',
 				active: route.path === '/user/recommendations',
@@ -83,15 +82,26 @@
 				:ui="{ footer: 'border-t border-default' }"
 			>
 				<template #header="{ collapsed }">
-					<div v-if="!collapsed" class="flex items-center gap-3">
-						<img class="h-5 w-auto shrink-0" src="/hospital.png" />
-						Przychodnia
+					<div class="flex w-full items-center gap-3">
+						<div v-if="!collapsed" class="flex items-center gap-3">
+							<img class="h-5 w-auto shrink-0" src="/hospital.png" />
+							Przychodnia
+						</div>
+						<UIcon
+							v-else
+							name="i-simple-icons-nuxtdotjs"
+							class="text-primary mx-auto size-5"
+						/>
+						<UTooltip
+							:text="collapsed ? 'Rozwiń menu' : 'Zwiń menu'"
+							:content="{ side: 'right', sideOffset: 8 }"
+						>
+							<UDashboardSidebarCollapse
+								:class="!collapsed && 'ml-auto'"
+								class="cursor-pointer"
+							/>
+						</UTooltip>
 					</div>
-					<UIcon
-						v-else
-						name="i-simple-icons-nuxtdotjs"
-						class="text-primary mx-auto size-5"
-					/>
 				</template>
 
 				<template #default="{ collapsed }">
@@ -105,6 +115,8 @@
 						:collapsed="collapsed"
 						:items="items[0]"
 						orientation="vertical"
+						tooltip
+						popover
 					/>
 				</template>
 
@@ -119,16 +131,7 @@
 							icon="i-lucide-log-out"
 							@click="handleSignout"
 						/>
-						<UButton
-							:label="collapsed ? undefined : 'Pomoc i Dokumentacja'"
-							color="neutral"
-							variant="ghost"
-							class="mt-2 w-full"
-							:block="collapsed"
-							icon="i-lucide-info"
-							:to="'https://github.com/jfrelik/przychodnia-inz'"
-							target="_blank"
-						/>
+
 						<UButton
 							:label="
 								collapsed
@@ -148,6 +151,11 @@
 			<UContainer
 				class="mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-y-auto px-6 py-8"
 			>
+				<div class="mb-4 flex items-center gap-2 lg:hidden">
+					<UTooltip text="Menu" :content="{ side: 'bottom', sideOffset: 8 }">
+						<UDashboardSidebarToggle class="cursor-pointer border" />
+					</UTooltip>
+				</div>
 				<slot />
 			</UContainer>
 		</UDashboardGroup>
