@@ -71,6 +71,27 @@
 			"when": 1767116585236,
 			"tag": "0009_smiling_chameleon",
 			"breakpoints": true
+		},
+		{
+			"idx": 10,
+			"version": "7",
+			"when": 1767537263585,
+			"tag": "0010_great_reaper",
+			"breakpoints": true
+		},
+		{
+			"idx": 11,
+			"version": "7",
+			"when": 1767556634982,
+			"tag": "0011_certain_gertrude_yorkes",
+			"breakpoints": true
+		},
+		{
+			"idx": 12,
+			"version": "7",
+			"when": 1767561237305,
+			"tag": "0012_clever_boomerang",
+			"breakpoints": true
 		}
 	]
 }

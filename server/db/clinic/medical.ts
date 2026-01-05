@@ -7,7 +7,7 @@ export const medicalRecords = pgTable('medical_records', {
 		.notNull()
 		.unique()
 		.references(() => patients.userId, { onDelete: 'cascade' }),
-	createdAt: timestamp('created_at', { withTimezone: false })
+	createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
 		.notNull()
 		.defaultNow(),
 });
