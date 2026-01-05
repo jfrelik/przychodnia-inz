@@ -21,6 +21,7 @@
 		id: number;
 		name: string;
 		description?: string | null;
+		icon?: string | null;
 	};
 
 	type SlotResult = {
@@ -861,7 +862,5 @@
 				</UCard>
 			</template>
 		</UStepper>
-
-		<PageFooter />
 	</PageContainer>
 </template>
