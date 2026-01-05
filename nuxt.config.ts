@@ -70,4 +70,15 @@ export default defineNuxtConfig({
 			pass: '',
 		},
 	},
+
+	// Nitro
+	nitro: {
+		experimental: {
+			tasks: true,
+		},
+		scheduledTasks: {
+			// Run `visit:reminder` task at everyday at 6:00 AM
+			'0 6 * * *': ['visit:reminder'],
+		},
+	},
 });
