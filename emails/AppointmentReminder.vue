@@ -67,7 +67,7 @@
 										color: #0f172a;
 									"
 								>
-									Cześć, {{ patientName }}!
+									Dzień dobry, {{ patientName }}!
 								</EHeading>
 								<EText
 									style="
