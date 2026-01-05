@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 	import { useToast } from '#imports';
 	import type { NavigationMenuItem } from '@nuxt/ui';
+	import { pl } from '@nuxt/ui/locale';
 	import { authClient } from '~~/lib/auth-client';
 
 	const route = useRoute();
@@ -58,7 +59,7 @@
 </script>
 
 <template>
-	<UApp>
+	<UApp :locale="pl">
 		<UDashboardGroup class="flex h-screen min-h-0">
 			<UDashboardSidebar
 				collapsible
