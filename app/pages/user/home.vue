@@ -17,19 +17,13 @@
 		doctorName: string | null;
 		doctorEmail: string | null;
 		roomId: number | null;
-		roomNumber: string | null;
+		roomNumber: number | null;
 	};
 
 	type PrescriptionStatus = 'active' | 'fulfilled';
-	type Medication = {
-		name?: string;
-		dosage?: string;
-		instructions?: string;
-		[key: string]: unknown;
-	};
 	type Prescription = {
 		prescriptionId: number | null;
-		medications: Medication[] | string | null;
+		medications: string[];
 		issuedAt: string | Date | null;
 		status: PrescriptionStatus | null;
 		appointmentId: number | null;
@@ -55,31 +49,22 @@
 		| 'neutral';
 
 	type DateInput = string | Date | null;
+	type DashboardData = {
+		upcomingVisits: Visit[];
+		recentResults: RecentResult[];
+		activePrescriptions: Prescription[];
+	};
 
 	const router = useRouter();
+	const toast = useToast();
 
 	const {
-		data: visitsData,
-		pending: upcomingLoading,
-		error: upcomingError,
-	} = await useFetch<Visit[]>('/api/patient/visits', {
-		key: 'patient-home-upcoming-visits',
-	});
-
-	const {
-		data: recentResultsData,
-		pending: recentLoading,
-		error: recentError,
-	} = await useFetch<RecentResult[]>('/api/patient/results', {
-		key: 'patient-home-recent-results',
-	});
-
-	const {
-		data: prescriptionsData,
-		pending: activeLoading,
-		error: activeError,
-	} = await useFetch<Prescription[]>('/api/patient/prescriptions', {
-		key: 'patient-home-prescriptions',
+		data: dashboardData,
+		pending: dashboardPending,
+		error: dashboardError,
+		refresh: refreshDashboard,
+	} = await useLazyFetch<DashboardData>('/api/patient/dashboard', {
+		server: false,
 	});
 
 	const visitStatusMeta: Record<
@@ -99,55 +84,36 @@
 		fulfilled: { label: 'Zrealizowana', color: 'success' },
 	};
 
-	const upcomingVisits = computed(() => {
-		const rows = visitsData.value ?? [];
-		const now = Date.now();
-		return rows
-			.filter(
-				(v) => v.status === 'scheduled' && new Date(v.datetime).getTime() >= now
-			)
-			.sort(
-				(a, b) =>
-					new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
-			);
-	});
-	const upcomingCards = computed(() => upcomingVisits.value.slice(0, 2));
+	const upcomingVisits = computed(
+		() => dashboardData.value?.upcomingVisits ?? []
+	);
+	const upcomingCards = computed(() => upcomingVisits.value);
 	const showUpcomingEmptyState = computed(
 		() =>
-			!upcomingLoading.value &&
-			!upcomingError.value &&
+			!dashboardPending.value &&
+			!dashboardError.value &&
 			upcomingVisits.value.length === 0
 	);
-	const upcomingErrorMessage = computed(
-		() =>
-			upcomingError.value?.message ??
-			'Nie udalo sie pobrac nadchodzacych wizyt.'
+	const recentResults = computed(
+		() => dashboardData.value?.recentResults ?? []
 	);
-
-	const recentResults = computed(() => recentResultsData.value ?? []);
-	const recentResultCards = computed(() => recentResults.value.slice(0, 2));
+	const recentResultCards = computed(() => recentResults.value);
 	const showRecentEmptyState = computed(
 		() =>
-			!recentLoading.value &&
-			!recentError.value &&
+			!dashboardPending.value &&
+			!dashboardError.value &&
 			recentResults.value.length === 0
 	);
-	const recentErrorMessage = computed(
-		() => recentError.value?.message ?? 'Nie udalo sie pobrac wynikow badan.'
+	const activePrescriptions = computed(
+		() => dashboardData.value?.activePrescriptions ?? []
 	);
-
-	const activePrescriptions = computed(() => prescriptionsData.value ?? []);
-	const activeCards = computed(() => activePrescriptions.value.slice(0, 4));
+	const activeCards = computed(() => activePrescriptions.value);
 	const showActiveEmptyState = computed(
 		() =>
-			!activeLoading.value &&
-			!activeError.value &&
+			!dashboardPending.value &&
+			!dashboardError.value &&
 			activePrescriptions.value.length === 0
 	);
-	const activeErrorMessage = computed(
-		() => activeError.value?.message ?? 'Nie udalo sie pobrac aktywnych recept.'
-	);
-
 	const normalizeDate = (value: DateInput) => {
 		if (!value) return null;
 		const date = value instanceof Date ? value : new Date(value);
@@ -197,35 +163,22 @@
 	): PrescriptionStatusColor =>
 		(status && prescriptionStatusMeta[status]?.color) ?? 'neutral';
 
-	const getMedicationLines = (medications: Prescription['medications']) => {
-		if (!medications) return [];
-		if (Array.isArray(medications)) {
-			return medications
-				.map((entry) => {
-					if (typeof entry === 'string') return entry;
-					if (entry && typeof entry === 'object') {
-						const { name, dosage, instructions, ...rest } = entry as Medication;
-						const parts = [name, dosage, instructions]
-							.filter((value) => value != null && value !== '')
-							.map(String);
-						if (parts.length > 0) return parts.join(' - ');
-						const fallback = Object.values(rest)
-							.filter((value) => value != null && value !== '')
-							.map(String)
-							.join(' - ');
-						return fallback || 'Brak danych o leku';
-					}
-					return String(entry);
-				})
-				.filter((line) => line.trim().length > 0);
-		}
-		if (typeof medications === 'string') return [medications];
-		return [JSON.stringify(medications)];
-	};
+	const getMedicationLines = (medications: Prescription['medications']) =>
+		(medications ?? []).filter((line) => line.trim().length > 0);
 
 	const viewVisit = () => router.push('/user/visits');
 	const viewResults = () => router.push('/user/testResults');
 	const viewPrescription = () => router.push('/user/prescriptions');
+
+	const handleRefresh = async () => {
+		await refreshDashboard();
+		toast.add({
+			title: 'Odświeżono panel',
+			description: 'Dane dashboardu zostały zaktualizowane.',
+			color: 'success',
+			icon: 'carbon:checkmark',
+		});
+	};
 </script>
 
 <template>
@@ -234,283 +187,270 @@
 			title="Panel pacjenta"
 			description="Witamy w panelu pacjenta. Wpisz opis."
 		/>
-		<!-- Top part -->
-		<div class="grid grid-cols-2 gap-4">
-			<UCard>
-				<div class="flex items-center justify-between pb-6">
-					<h1 class="text-2xl font-bold">Nadchodzące wizyty</h1>
-					<UButton
-						variant="soft"
-						color="neutral"
-						class="w-fit cursor-pointer"
-						@click="viewVisit()"
-					>
-						Pokaż wszystkie
-					</UButton>
-				</div>
-
-				<div class="flex flex-col gap-4">
-					<div v-if="upcomingLoading" class="flex flex-col gap-4">
-						<UCard v-for="skeleton in 2" :key="`upcoming-skeleton-${skeleton}`">
-							<div class="flex animate-pulse items-center gap-4">
-								<div class="h-12 w-12 rounded-full bg-blue-100" />
-								<div class="flex flex-1 flex-col gap-2">
-									<div class="h-4 w-1/3 rounded bg-gray-200" />
-									<div class="h-3 w-1/4 rounded bg-gray-200" />
-									<div class="flex gap-4">
-										<div class="h-3 w-16 rounded bg-gray-200" />
-										<div class="h-3 w-16 rounded bg-gray-200" />
-										<div class="h-5 w-20 rounded bg-gray-200" />
-									</div>
-								</div>
-							</div>
-						</UCard>
-					</div>
-
-					<UAlert
-						v-else-if="upcomingError"
-						title="Nie udało się pobrać wizyt"
-						color="error"
-						variant="soft"
-						:description="upcomingErrorMessage"
-					/>
-
+		<ClientOnly>
+			<!-- Top part -->
+			<div class="mt-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
+				<UCard>
 					<div
-						v-else-if="showUpcomingEmptyState"
-						class="flex flex-col items-center justify-center gap-2 py-8 text-center"
+						class="flex flex-col gap-3 pb-6 sm:flex-row sm:items-center sm:justify-between"
 					>
-						<Icon name="carbon:calendar" class-name="h-10 w-10 text-gray-400" />
-						<p class="text-sm text-gray-500">Brak zaplanowanych wizyt.</p>
+						<h1 class="text-2xl font-bold">Nadchodzące wizyty</h1>
+						<UButton
+							variant="soft"
+							color="neutral"
+							class="w-full cursor-pointer sm:w-fit"
+							@click="viewVisit()"
+						>
+							Pokaż wszystkie
+						</UButton>
 					</div>
 
-					<UCard
-						v-for="visit in upcomingCards"
-						v-else
-						:key="visit.appointmentId"
-					>
-						<div class="flex items-center justify-between gap-4">
-							<div class="flex items-center gap-4">
-								<div
-									class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-3xl"
-								>
-									<Icon
-										name="carbon:calendar"
-										class-name="w-6 h-6 text-blue-600"
-									/>
-								</div>
+					<div v-auto-animate class="flex flex-col gap-4">
+						<USkeleton v-if="dashboardPending" class="h-32 w-full" />
 
-								<div class="flex flex-col">
-									<h1 class="text-xl font-bold">
-										{{ getDoctorLabel(visit) }}
-									</h1>
-									<p class="text-sm text-gray-500">
-										{{ getLocationLabel(visit) }}
-									</p>
+						<UAlert
+							v-else-if="dashboardError"
+							title="Nie udało się pobrać wizyt"
+							color="error"
+							variant="soft"
+							:description="
+								getErrorMessage(
+									dashboardError,
+									'Nie udało się pobrać nadchodzących wizyt.'
+								)
+							"
+						/>
+
+						<div
+							v-else-if="showUpcomingEmptyState"
+							class="flex flex-col items-center justify-center gap-2 py-8 text-center"
+						>
+							<Icon
+								name="carbon:calendar"
+								class-name="h-10 w-10 text-gray-400"
+							/>
+							<p class="text-sm text-gray-500">Brak zaplanowanych wizyt.</p>
+						</div>
+
+						<UCard
+							v-for="visit in upcomingCards"
+							v-else
+							:key="visit.appointmentId"
+						>
+							<div class="flex items-center justify-between gap-4">
+								<div class="flex items-center gap-4">
 									<div
-										class="flex flex-row flex-wrap gap-3 text-sm text-gray-600"
+										class="hidden h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-3xl sm:flex"
 									>
-										<p>{{ formatDate(visit.datetime) }}</p>
-										<p>{{ formatTime(visit.datetime) }}</p>
-										<UBadge
-											variant="subtle"
-											:color="getStatusColor(visit.status)"
+										<Icon
+											name="carbon:calendar"
+											class-name="w-6 h-6 text-blue-600"
+										/>
+									</div>
+
+									<div class="flex flex-col">
+										<h1 class="text-xl font-bold">
+											{{ getDoctorLabel(visit) }}
+										</h1>
+										<p class="text-sm text-gray-500">
+											{{ getLocationLabel(visit) }}
+										</p>
+										<div
+											class="flex flex-row flex-wrap gap-3 text-sm text-gray-600"
 										>
-											{{ getStatusLabel(visit.status) }}
-										</UBadge>
+											<p>{{ formatDate(visit.datetime) }}</p>
+											<p>{{ formatTime(visit.datetime) }}</p>
+											<UBadge
+												variant="subtle"
+												:color="getStatusColor(visit.status)"
+											>
+												{{ getStatusLabel(visit.status) }}
+											</UBadge>
+										</div>
 									</div>
 								</div>
 							</div>
-						</div>
-						<p v-if="visit.notes" class="mt-3 text-sm text-gray-600">
-							{{ visit.notes }}
-						</p>
-					</UCard>
-				</div>
-			</UCard>
-
-			<UCard>
-				<div class="flex items-center justify-between pb-6">
-					<h1 class="text-2xl font-bold">Ostatnie wyniki badań</h1>
-					<UButton
-						variant="soft"
-						color="neutral"
-						class="w-fit cursor-pointer"
-						@click="viewResults()"
-					>
-						Pokaż wszystkie
-					</UButton>
-				</div>
-				<div class="flex flex-col gap-4">
-					<div v-if="recentLoading" class="flex flex-col gap-4">
-						<UCard v-for="skeleton in 2" :key="`recent-skeleton-${skeleton}`">
-							<div class="flex animate-pulse items-center gap-4">
-								<div class="h-12 w-12 rounded-full bg-yellow-100" />
-								<div class="flex flex-1 flex-col gap-2">
-									<div class="h-4 w-1/3 rounded bg-gray-200" />
-									<div class="h-3 w-1/4 rounded bg-gray-200" />
-									<div class="h-3 w-2/3 rounded bg-gray-200" />
-								</div>
-							</div>
+							<p v-if="visit.notes" class="mt-3 text-sm text-gray-600">
+								{{ visit.notes }}
+							</p>
 						</UCard>
 					</div>
+				</UCard>
 
-					<UAlert
-						v-else-if="recentError"
-						title="Nie udało się pobrać wyników"
-						color="error"
-						variant="soft"
-						:description="recentErrorMessage"
-					/>
-
+				<UCard>
 					<div
-						v-else-if="showRecentEmptyState"
-						class="flex flex-col items-center justify-center gap-2 py-8 text-center"
+						class="flex flex-col gap-3 pb-6 sm:flex-row sm:items-center sm:justify-between"
 					>
-						<Icon name="carbon:result" class-name="h-10 w-10 text-gray-400" />
-						<p class="text-sm text-gray-500">Brak dostępnych wyników badań.</p>
+						<h1 class="text-2xl font-bold">Ostatnie wyniki badań</h1>
+						<UButton
+							variant="soft"
+							color="neutral"
+							class="w-full cursor-pointer sm:w-fit"
+							@click="viewResults()"
+						>
+							Pokaż wszystkie
+						</UButton>
 					</div>
+					<div v-auto-animate class="flex flex-col gap-4">
+						<USkeleton v-if="dashboardPending" class="h-32 w-full" />
 
-					<UCard
-						v-for="result in recentResultCards"
-						v-else
-						:key="result.testId"
-					>
-						<div class="flex items-center justify-between gap-4">
-							<div class="flex items-center gap-4">
-								<div
-									class="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 text-3xl"
-								>
-									<Icon
-										name="carbon:result"
-										class-name="w-6 h-6 text-yellow-600"
-									/>
-								</div>
-								<div class="flex flex-col">
-									<h1 class="text-xl font-bold">
-										{{ result.testType }}
-									</h1>
-									<p class="text-sm text-gray-500">
-										Data badania: {{ formatDate(result.testDate) }}
-									</p>
-									<p class="text-sm text-gray-600">
-										{{ result.result }}
-									</p>
-								</div>
-							</div>
-						</div>
-					</UCard>
-				</div>
-			</UCard>
-		</div>
+						<UAlert
+							v-else-if="dashboardError"
+							title="Nie udało się pobrać wyników"
+							color="error"
+							variant="soft"
+							:description="
+								getErrorMessage(
+									dashboardError,
+									'Nie udało się pobrać wyników badań.'
+								)
+							"
+						/>
 
-		<div>
-			<UCard>
-				<div class="flex items-center justify-between pb-6">
-					<h1 class="text-2xl font-bold">Aktywne recepty</h1>
-					<UButton
-						variant="soft"
-						color="neutral"
-						class="w-fit cursor-pointer"
-						@click="viewPrescription()"
-					>
-						Pokaż wszystkie
-					</UButton>
-				</div>
-				<div class="flex flex-col gap-4">
-					<div v-if="activeLoading" class="flex flex-col gap-4">
-						<UCard v-for="skeleton in 2" :key="`active-skeleton-${skeleton}`">
-							<div class="flex animate-pulse items-start gap-4">
-								<div class="h-12 w-12 rounded-full bg-green-100" />
-								<div class="flex flex-1 flex-col gap-2">
-									<div class="h-4 w-1/3 rounded bg-gray-200" />
-									<div class="h-3 w-1/4 rounded bg-gray-200" />
-									<div class="flex flex-col gap-2">
-										<div class="h-3 w-1/2 rounded bg-gray-200" />
-										<div class="h-3 w-3/4 rounded bg-gray-200" />
-									</div>
-								</div>
-							</div>
-						</UCard>
-					</div>
-
-					<UAlert
-						v-else-if="activeError"
-						title="Nie udalo sie pobrac recept"
-						color="error"
-						variant="soft"
-						:description="activeErrorMessage"
-					/>
-
-					<div
-						v-else-if="showActiveEmptyState"
-						class="flex flex-col items-center justify-center gap-2 py-8 text-center"
-					>
-						<Icon name="carbon:pills" class-name="h-10 w-10 text-gray-400" />
-						<p class="text-sm text-gray-500">Brak aktywnych recept.</p>
-					</div>
-
-					<UCard
-						v-for="prescription in activeCards"
-						v-else
-						:key="
-							prescription.prescriptionId ??
-							prescription.appointmentId ??
-							`active-${prescription.doctorId}`
-						"
-					>
-						<div class="flex flex-col gap-4 md:flex-row md:items-center">
-							<div class="flex flex-1 items-center gap-4">
-								<div
-									class="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-3xl"
-								>
-									<Icon
-										name="carbon:pills"
-										class-name="w-6 h-6 text-green-600"
-									/>
-								</div>
-								<div class="flex flex-col">
-									<h1 class="text-xl font-bold">
-										{{ getPrescriptionDoctorLabel(prescription) }}
-									</h1>
-									<p class="text-sm text-gray-500">
-										Wystawiona: {{ formatDate(prescription.issuedAt) }}
-										{{ formatTime(prescription.issuedAt) }}
-									</p>
-								</div>
-							</div>
-							<div class="flex flex-col items-start gap-2 md:items-end">
-								<UBadge
-									variant="subtle"
-									:color="getPrescriptionStatusColor(prescription.status)"
-								>
-									{{ getPrescriptionStatusLabel(prescription.status) }}
-								</UBadge>
-							</div>
-						</div>
-						<div class="mt-3">
-							<p class="text-sm font-semibold text-gray-700">Zalecane leki</p>
-							<ul
-								v-if="getMedicationLines(prescription.medications).length"
-								class="mt-1 list-disc space-y-1 pl-4"
-							>
-								<li
-									v-for="(line, index) in getMedicationLines(
-										prescription.medications
-									)"
-									:key="index"
-									class="text-sm text-gray-600"
-								>
-									{{ line }}
-								</li>
-							</ul>
-							<p v-else class="mt-1 text-sm text-gray-500">
-								Brak szczegolow dotyczacych lekow.
+						<div
+							v-else-if="showRecentEmptyState"
+							class="flex flex-col items-center justify-center gap-2 py-8 text-center"
+						>
+							<Icon name="carbon:result" class-name="h-10 w-10 text-gray-400" />
+							<p class="text-sm text-gray-500">
+								Brak dostępnych wyników badań.
 							</p>
 						</div>
-					</UCard>
-				</div>
-			</UCard>
-		</div>
+
+						<UCard
+							v-for="result in recentResultCards"
+							v-else
+							:key="result.testId"
+						>
+							<div class="flex items-center justify-between gap-4">
+								<div class="flex items-center gap-4">
+									<div
+										class="hidden h-12 w-12 items-center justify-center rounded-full bg-yellow-100 text-3xl sm:flex"
+									>
+										<Icon
+											name="carbon:result"
+											class-name="w-6 h-6 text-yellow-600"
+										/>
+									</div>
+									<div class="flex flex-col">
+										<h1 class="text-xl font-bold">
+											{{ result.testType }}
+										</h1>
+										<p class="text-sm text-gray-500">
+											Data badania: {{ formatDate(result.testDate) }}
+										</p>
+										<p class="text-sm text-gray-600">
+											{{ result.result }}
+										</p>
+									</div>
+								</div>
+							</div>
+						</UCard>
+					</div>
+				</UCard>
+			</div>
+
+			<div class="mt-4">
+				<UCard>
+					<div
+						class="flex flex-col gap-3 pb-6 sm:flex-row sm:items-center sm:justify-between"
+					>
+						<h1 class="text-2xl font-bold">Aktywne recepty</h1>
+						<UButton
+							variant="soft"
+							color="neutral"
+							class="w-full cursor-pointer sm:w-fit"
+							@click="viewPrescription()"
+						>
+							Pokaż wszystkie
+						</UButton>
+					</div>
+					<div v-auto-animate class="flex flex-col gap-4">
+						<USkeleton v-if="dashboardPending" class="h-32 w-full" />
+						<UAlert
+							v-else-if="dashboardError"
+							title="Nie udalo sie pobrac recept"
+							color="error"
+							variant="soft"
+							:description="
+								getErrorMessage(
+									dashboardError,
+									'Nie udało się pobrać aktywnych recept.'
+								)
+							"
+						/>
+
+						<div
+							v-else-if="showActiveEmptyState"
+							class="flex flex-col items-center justify-center gap-2 py-8 text-center"
+						>
+							<Icon name="carbon:pills" class-name="h-10 w-10 text-gray-400" />
+							<p class="text-sm text-gray-500">Brak aktywnych recept.</p>
+						</div>
+
+						<UCard
+							v-for="prescription in activeCards"
+							v-else
+							:key="
+								prescription.prescriptionId ??
+								prescription.appointmentId ??
+								`active-${prescription.doctorId}`
+							"
+						>
+							<div class="flex flex-col gap-4 md:flex-row md:items-center">
+								<div class="flex flex-1 items-center gap-4">
+									<div
+										class="hidden h-12 w-12 items-center justify-center rounded-full bg-green-100 text-3xl sm:flex"
+									>
+										<Icon
+											name="carbon:pills"
+											class-name="w-6 h-6 text-green-600"
+										/>
+									</div>
+									<div class="flex flex-col">
+										<h1 class="text-xl font-bold">
+											{{ getPrescriptionDoctorLabel(prescription) }}
+										</h1>
+										<p class="text-sm text-gray-500">
+											Wystawiona: {{ formatDate(prescription.issuedAt) }}
+											{{ formatTime(prescription.issuedAt) }}
+										</p>
+									</div>
+								</div>
+								<div class="flex flex-col items-start gap-2 md:items-end">
+									<UBadge
+										variant="subtle"
+										:color="getPrescriptionStatusColor(prescription.status)"
+									>
+										{{ getPrescriptionStatusLabel(prescription.status) }}
+									</UBadge>
+								</div>
+							</div>
+							<div class="mt-3">
+								<p class="text-sm font-semibold text-gray-700">Zalecane leki</p>
+								<ul
+									v-if="getMedicationLines(prescription.medications).length"
+									class="mt-1 list-disc space-y-1 pl-4"
+								>
+									<li
+										v-for="(line, index) in getMedicationLines(
+											prescription.medications
+										)"
+										:key="index"
+										class="text-sm text-gray-600"
+									>
+										{{ line }}
+									</li>
+								</ul>
+								<p v-else class="mt-1 text-sm text-gray-500">
+									Brak szczegolow dotyczacych lekow.
+								</p>
+							</div>
+						</UCard>
+					</div>
+				</UCard>
+			</div>
+		</ClientOnly>
 	</PageContainer>
 </template>
 
