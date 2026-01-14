@@ -43,7 +43,6 @@ export default defineNuxtConfig({
 		public: {
 			appVersion: pkg.version,
 		},
-		defaultAdminEmail: 'admin@example.com',
 		nitro: {
 			openAPI: {
 				meta: {
@@ -56,7 +55,7 @@ export default defineNuxtConfig({
 
 	// Cloudflare Turnstile configuration
 	turnstile: {
-		siteKey: '0x4AAAAAAB7eRFhXHU1Ycfzv',
+		siteKey: '',
 		addValidateEndpoint: true,
 	},
 
