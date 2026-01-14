@@ -94,6 +94,9 @@ importers:
       nuxt-nodemailer:
         specifier: ^1.1.4
         version: 1.1.4(magicast@0.5.1)(nodemailer@7.0.12)
+      nuxt-security:
+        specifier: 2.5.0
+        version: 2.5.0(magicast@0.5.1)(rollup@4.54.0)
       pg:
         specifier: ^8.16.3
         version: 8.16.3
@@ -5647,6 +5650,13 @@ packages:
       }
     hasBin: true
 
+  basic-auth@2.0.1:
+    resolution:
+      {
+        integrity: sha512-NF+epuEdnUYVlGuhaxbbq+dvJttwLnGY+YixlXlME5KpQ5W3CnXA5cVTneY3SPbPDRkcjMbifrwmFYcClgOZeg==,
+      }
+    engines: { node: '>= 0.8' }
+
   better-auth-localization@2.2.2:
     resolution:
       {
@@ -9444,6 +9454,12 @@ packages:
         integrity: sha512-Pt3YGZBnkNH4L2RyYudtzYqDkrNr/8TNO6dNk39ys7WsnViNZMrF9PF8xXqwBZHTEXR6z8pk0IuxbfwhC5fVfA==,
       }
 
+  nuxt-csurf@1.6.5:
+    resolution:
+      {
+        integrity: sha512-/DMNTON8LIVhntamKbBmAuM879B0QnuSJa7ZAkmkZe+21m+1QGcjVUxtSkizaM48NUvkuAGYOG0ncn+kqEgrzw==,
+      }
+
   nuxt-email-renderer@2.1.2:
     resolution:
       {
@@ -9465,6 +9481,13 @@ packages:
       }
     peerDependencies:
       nodemailer: ^7.0.6
+
+  nuxt-security@2.5.0:
+    resolution:
+      {
+        integrity: sha512-mfoSXcY1V6DHJwXGVLY99G7W2XnkdGnJ5FgmGe8I2ZkWOb1DVr3rbwl8OgIb1C64CDWTBhwer8eXxgCLCGGLUg==,
+      }
+    engines: { node: '>=20.0.0' }
 
   nuxt@4.2.2:
     resolution:
@@ -11610,6 +11633,12 @@ packages:
         integrity: sha512-Ql87qFHB3s/De2ClA9e0gsnS6zXG27SkTiSJwjCc9MebbfapQfuPzumMIUMi38ezPZVNFcHI9sUIepeQfw8J8Q==,
       }
 
+  uncsrf@1.2.0:
+    resolution:
+      {
+        integrity: sha512-EyeG1tIx1zisLuqokSXZ5LhndzaUd2WBMS+18IlBUYobJsKSUQMpLIEm6QUfY/Azmhnnz0v2QbkrT6/u2K/Y1g==,
+      }
+
   unctx@2.5.0:
     resolution:
       {
@@ -11731,6 +11760,12 @@ packages:
       '@vueuse/core':
         optional: true
 
+  unplugin-remove@1.0.3:
+    resolution:
+      {
+        integrity: sha512-BZMt9v8Y/Z27cY7YQv+DpcW928znjP1cqplBXOirbANiFQtM2YCdiyNAJhHCvjppT0lScNn1aDrQnXqnRp32pQ==,
+      }
+
   unplugin-utils@0.2.5:
     resolution:
       {
@@ -11772,6 +11807,13 @@ packages:
     peerDependenciesMeta:
       vue-router:
         optional: true
+
+  unplugin@1.16.1:
+    resolution:
+      {
+        integrity: sha512-4/u/j4FrCKdi17jaxuJA0jClGxB1AvU2hw/IuayPc4ay1XGaJs/rbb4v5WKwAjNifjmXK9PIFyuPiaK8azyR9w==,
+      }
+    engines: { node: '>=14.0.0' }
 
   unplugin@2.3.11:
     resolution:
@@ -16471,6 +16513,10 @@ snapshots:
 
   baseline-browser-mapping@2.9.11: {}
 
+  basic-auth@2.0.1:
+    dependencies:
+      safe-buffer: 5.1.2
+
   better-auth-localization@2.2.2(better-auth@1.4.7(better-sqlite3@12.4.1)(drizzle-kit@0.31.8)(drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(better-sqlite3@12.4.1)(kysely@0.28.8)(pg@8.16.3))(pg@8.16.3)(vue@3.5.26(typescript@5.9.3))):
     dependencies:
       better-auth: 1.4.7(better-sqlite3@12.4.1)(drizzle-kit@0.31.8)(drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(better-sqlite3@12.4.1)(kysely@0.28.8)(pg@8.16.3))(pg@8.16.3)(vue@3.5.26(typescript@5.9.3))
@@ -16854,8 +16900,7 @@ snapshots:
 
   cssesc@3.0.0: {}
 
-  cssfilter@0.0.10:
-    optional: true
+  cssfilter@0.0.10: {}
 
   cssnano-preset-default@7.0.10(postcss@8.5.6):
     dependencies:
@@ -18803,6 +18848,14 @@ snapshots:
       - supports-color
       - vue
 
+  nuxt-csurf@1.6.5(magicast@0.5.1):
+    dependencies:
+      '@nuxt/kit': 3.20.2(magicast@0.5.1)
+      defu: 6.1.4
+      uncsrf: 1.2.0
+    transitivePeerDependencies:
+      - magicast
+
   nuxt-email-renderer@2.1.2(magicast@0.5.1)(vite@7.3.0(@types/node@25.0.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))(vue@3.5.26(typescript@5.9.3)):
     dependencies:
       '@nuxt/devtools-kit': 2.6.5(magicast@0.5.1)(vite@7.3.0(@types/node@25.0.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
@@ -18826,6 +18879,20 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
       - magicast
+
+  nuxt-security@2.5.0(magicast@0.5.1)(rollup@4.54.0):
+    dependencies:
+      '@nuxt/kit': 4.2.2(magicast@0.5.1)
+      basic-auth: 2.0.1
+      defu: 6.1.4
+      nuxt-csurf: 1.6.5(magicast@0.5.1)
+      pathe: 2.0.3
+      unplugin-remove: 1.0.3(rollup@4.54.0)
+      xss: 1.0.15
+    transitivePeerDependencies:
+      - magicast
+      - rollup
+      - supports-color
 
   nuxt@4.2.2(@parcel/watcher@2.5.1)(@types/node@25.0.3)(@vue/compiler-sfc@3.5.26)(better-sqlite3@12.4.1)(cac@6.7.14)(db0@0.3.4(better-sqlite3@12.4.1)(drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(better-sqlite3@12.4.1)(kysely@0.28.8)(pg@8.16.3)))(drizzle-orm@0.45.1(@opentelemetry/api@1.9.0)(@types/pg@8.16.0)(better-sqlite3@12.4.1)(kysely@0.28.8)(pg@8.16.3))(eslint@9.39.2(jiti@2.6.1))(ioredis@5.8.2)(lightningcss@1.30.2)(magicast@0.5.1)(optionator@0.9.4)(rollup@4.54.0)(terser@5.44.1)(typescript@5.9.3)(vite@7.3.0(@types/node@25.0.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))(vue-tsc@3.2.1(typescript@5.9.3))(yaml@2.8.2):
     dependencies:
@@ -20239,6 +20306,8 @@ snapshots:
 
   uncrypto@0.1.3: {}
 
+  uncsrf@1.2.0: {}
+
   unctx@2.5.0:
     dependencies:
       acorn: 8.15.0
@@ -20349,6 +20418,19 @@ snapshots:
       '@nuxt/kit': 4.2.2(magicast@0.5.1)
       '@vueuse/core': 14.1.0(vue@3.5.26(typescript@5.9.3))
 
+  unplugin-remove@1.0.3(rollup@4.54.0):
+    dependencies:
+      '@babel/core': 7.28.5
+      '@babel/generator': 7.28.5
+      '@babel/parser': 7.28.5
+      '@babel/traverse': 7.28.5
+      '@rollup/pluginutils': 5.3.0(rollup@4.54.0)
+      magic-string: 0.30.21
+      unplugin: 1.16.1
+    transitivePeerDependencies:
+      - rollup
+      - supports-color
+
   unplugin-utils@0.2.5:
     dependencies:
       pathe: 2.0.3
@@ -20400,6 +20482,11 @@ snapshots:
       vue-router: 4.6.3(vue@3.5.26(typescript@5.9.3))
     transitivePeerDependencies:
       - vue
+
+  unplugin@1.16.1:
+    dependencies:
+      acorn: 8.15.0
+      webpack-virtual-modules: 0.6.2
 
   unplugin@2.3.11:
     dependencies:
@@ -20731,7 +20818,6 @@ snapshots:
     dependencies:
       commander: 2.20.3
       cssfilter: 0.0.10
-    optional: true
 
   xtend@4.0.2: {}
 

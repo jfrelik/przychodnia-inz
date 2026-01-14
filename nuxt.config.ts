@@ -29,6 +29,7 @@ export default defineNuxtConfig({
 		'nuxt-charts',
 		'@formkit/auto-animate/nuxt',
 		'@vueuse/nuxt',
+		'nuxt-security',
 	],
 
 	routeRules: {
@@ -57,6 +58,14 @@ export default defineNuxtConfig({
 	turnstile: {
 		siteKey: '0x4AAAAAAB7eRFhXHU1Ycfzv',
 		addValidateEndpoint: true,
+	},
+
+	//Security
+	security: {
+		rateLimiter: {
+			tokensPerInterval: 100,
+			interval: 'minute',
+		},
 	},
 
 	// Nuxt Nodemailer configuration
