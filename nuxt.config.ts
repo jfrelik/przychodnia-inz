@@ -43,14 +43,6 @@ export default defineNuxtConfig({
 		public: {
 			appVersion: pkg.version,
 		},
-		nitro: {
-			openAPI: {
-				meta: {
-					title: 'Przychodnia API',
-					description: 'Auto-generated OpenAPI from Nitro route meta',
-				},
-			},
-		},
 	},
 
 	// Cloudflare Turnstile configuration
