@@ -1,7 +1,6 @@
 import { count, eq } from 'drizzle-orm';
 import { createError, defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
-import { auth } from '~~/lib/auth';
 import { doctors, specializations } from '~~/server/db/clinic';
 
 const payloadSchema = z
@@ -34,29 +33,16 @@ const payloadSchema = z
 	.strict();
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				specializations: ['update'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		specializations: ['update'],
 	});
-
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const specializationId = Number(event.context.params?.id);
 
 	if (!specializationId || Number.isNaN(specializationId)) {
 		throw createError({
 			statusCode: 400,
-			statusMessage: 'Identyfikator specjalizacji jest wymagany.',
+			message: 'Identyfikator specjalizacji jest wymagany.',
 		});
 	}
 
@@ -74,7 +60,7 @@ export default defineEventHandler(async (event) => {
 	if (!current) {
 		throw createError({
 			statusCode: 404,
-			statusMessage: 'Specjalizacja nie została znaleziona.',
+			message: 'Specjalizacja nie została znaleziona.',
 		});
 	}
 

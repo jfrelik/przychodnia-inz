@@ -30,24 +30,12 @@ const payloadSchema = z
 	.strict();
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				doctors: ['create'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		doctors: ['create'],
 	});
 
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
-
 	const body = await readBody(event);
+
 	const payload = payloadSchema.safeParse(body);
 
 	if (payload.error) {
@@ -77,7 +65,7 @@ export default defineEventHandler(async (event) => {
 				email: payload.data.email,
 				password: tempPassword,
 				name: payload.data.name,
-				role: 'doctor',
+				role: 'doctor' as any,
 			},
 		});
 
@@ -98,7 +86,7 @@ export default defineEventHandler(async (event) => {
 		) {
 			throw createError({
 				statusCode: 409,
-				statusMessage: 'Użytkownik o tym adresie email już istnieje.',
+				message: 'Użytkownik o tym adresie email już istnieje.',
 			});
 		}
 
@@ -133,7 +121,7 @@ export default defineEventHandler(async (event) => {
 		if (!specialization) {
 			throw createError({
 				statusCode: 404,
-				statusMessage: 'Specjalizacja nie została znaleziona.',
+				message: 'Specjalizacja nie została znaleziona.',
 			});
 		}
 	}

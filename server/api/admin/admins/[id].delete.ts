@@ -1,39 +1,25 @@
 import { and, count, eq } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
-import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				users: ['delete'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		users: ['delete'],
 	});
-
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const userId = event.context.params?.id;
 
 	if (!userId) {
 		throw createError({
 			statusCode: 400,
-			statusMessage: 'Identyfikator administratora jest wymagany.',
+			message: 'Identyfikator administratora jest wymagany.',
 		});
 	}
 
 	if (userId === session.user.id) {
 		throw createError({
 			statusCode: 403,
-			statusMessage: 'Nie możesz usunąć własnego konta administratora.',
+			message: 'Nie możesz usunąć własnego konta administratora.',
 		});
 	}
 
@@ -58,7 +44,7 @@ export default defineEventHandler(async (event) => {
 	if (totalAdmins <= 1) {
 		throw createError({
 			statusCode: 403,
-			statusMessage:
+			message:
 				'Nie można usunąć ostatniego administratora. Musi istnieć co najmniej jeden administrator.',
 		});
 	}
@@ -86,7 +72,7 @@ export default defineEventHandler(async (event) => {
 	if (!current) {
 		throw createError({
 			statusCode: 404,
-			statusMessage: 'Administrator nie został znaleziony.',
+			message: 'Administrator nie został znaleziony.',
 		});
 	}
 

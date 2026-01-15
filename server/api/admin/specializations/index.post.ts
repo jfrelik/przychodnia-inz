@@ -5,7 +5,6 @@ import {
 	setResponseStatus,
 } from 'h3';
 import { z } from 'zod';
-import { auth } from '~~/lib/auth';
 import { specializations } from '~~/server/db/clinic';
 
 const payloadSchema = z
@@ -31,24 +30,12 @@ const payloadSchema = z
 	.strict();
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				specializations: ['create'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		specializations: ['create'],
 	});
 
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
-
 	const body = await readBody(event);
+
 	const payload = payloadSchema.safeParse(body);
 
 	if (payload.error) {

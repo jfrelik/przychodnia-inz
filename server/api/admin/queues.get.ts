@@ -1,5 +1,4 @@
-import { createError, defineEventHandler } from 'h3';
-import { auth } from '~~/lib/auth';
+import { defineEventHandler } from 'h3';
 import type { SendEmailJob, SendEmailResult } from '~~/server/types/bullmq';
 
 type QueueSummary = {
@@ -37,22 +36,9 @@ const queues = [
 ] as const;
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				queues: ['list'],
-			},
-		},
+	await requireSessionWithPermissions(event, {
+		queues: ['list'],
 	});
-
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const summaries: QueueSummary[] = [];
 
@@ -75,7 +61,7 @@ export default defineEventHandler(async (event) => {
 			jobs.map(async (job) => ({
 				id: job.id ?? null,
 				name: job.name,
-				state: await job.getState(),
+				state: String(await job.getState()),
 				attemptsMade: job.attemptsMade,
 				timestamp: job.timestamp ?? null,
 				processedOn: job.processedOn ?? null,
@@ -84,7 +70,7 @@ export default defineEventHandler(async (event) => {
 				data: job.data,
 				returnValue: (job.returnvalue as SendEmailResult | undefined) ?? null,
 				stacktrace: job.stacktrace ?? [],
-				opts: job.opts ?? {},
+				opts: (job.opts ?? {}) as Record<string, unknown>,
 			}))
 		);
 

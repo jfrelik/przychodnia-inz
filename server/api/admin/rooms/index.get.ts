@@ -1,6 +1,5 @@
 import { asc, count, eq, isNotNull } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
-import { auth } from '~~/lib/auth';
 import {
 	appointments,
 	room,
@@ -9,22 +8,9 @@ import {
 } from '~~/server/db/clinic';
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				rooms: ['list'],
-			},
-		},
+	await requireSessionWithPermissions(event, {
+		rooms: ['list'],
 	});
-
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	try {
 		const roomsList = await useDb()

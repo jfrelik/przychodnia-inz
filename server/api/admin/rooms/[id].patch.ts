@@ -1,7 +1,6 @@
 import { count, eq, inArray } from 'drizzle-orm';
 import { createError, defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
-import { auth } from '~~/lib/auth';
 import {
 	appointments,
 	room,
@@ -79,29 +78,16 @@ const fetchRoomWithMeta = async (roomId: number) => {
 };
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				rooms: ['update'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		rooms: ['update'],
 	});
-
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const roomId = Number(event.context.params?.id);
 
 	if (!roomId || Number.isNaN(roomId)) {
 		throw createError({
 			statusCode: 400,
-			statusMessage: 'Identyfikator gabinetu jest wymagany.',
+			message: 'Identyfikator gabinetu jest wymagany.',
 		});
 	}
 
@@ -129,7 +115,7 @@ export default defineEventHandler(async (event) => {
 	if (!currentRaw) {
 		throw createError({
 			statusCode: 404,
-			statusMessage: 'Gabinet nie został znaleziony.',
+			message: 'Gabinet nie został znaleziony.',
 		});
 	}
 
@@ -203,7 +189,7 @@ export default defineEventHandler(async (event) => {
 			if (found.length !== nextSpecializations.length) {
 				throw createError({
 					statusCode: 400,
-					statusMessage: 'Jedna lub więcej specjalizacji nie istnieje.',
+					message: 'Jedna lub więcej specjalizacji nie istnieje.',
 				});
 			}
 
@@ -253,14 +239,14 @@ export default defineEventHandler(async (event) => {
 		if (dbError?.code === '23505') {
 			throw createError({
 				statusCode: 409,
-				statusMessage: 'Gabinet o tym numerze już istnieje.',
+				message: 'Gabinet o tym numerze już istnieje.',
 			});
 		}
 
 		if (dbError?.code === '23503') {
 			throw createError({
 				statusCode: 400,
-				statusMessage: 'Nieprawidłowy identyfikator specjalizacji.',
+				message: 'Nieprawidłowy identyfikator specjalizacji.',
 			});
 		}
 
@@ -288,7 +274,7 @@ export default defineEventHandler(async (event) => {
 		if (!updated) {
 			throw createError({
 				statusCode: 500,
-				statusMessage: 'Nie udało się wczytać gabinetu po aktualizacji.',
+				message: 'Nie udało się wczytać gabinetu po aktualizacji.',
 			});
 		}
 

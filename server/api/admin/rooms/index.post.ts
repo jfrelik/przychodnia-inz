@@ -6,7 +6,6 @@ import {
 	setResponseStatus,
 } from 'h3';
 import { z } from 'zod';
-import { auth } from '~~/lib/auth';
 import {
 	appointments,
 	room,
@@ -79,24 +78,12 @@ const fetchRoomWithMeta = async (roomId: number) => {
 };
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				rooms: ['create'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		rooms: ['create'],
 	});
 
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
-
 	const body = await readBody(event);
+
 	const payload = payloadSchema.safeParse(body);
 
 	if (payload.error) {
@@ -127,7 +114,7 @@ export default defineEventHandler(async (event) => {
 		if (found.length !== specializationIds.length) {
 			throw createError({
 				statusCode: 400,
-				statusMessage: 'Jedna lub więcej specjalizacji nie istnieje.',
+				message: 'Jedna lub więcej specjalizacji nie istnieje.',
 			});
 		}
 
@@ -163,7 +150,7 @@ export default defineEventHandler(async (event) => {
 		if (!savedRoom) {
 			throw createError({
 				statusCode: 500,
-				statusMessage: 'Nie udało się wczytać gabinetu po utworzeniu.',
+				message: 'Nie udało się wczytać gabinetu po utworzeniu.',
 			});
 		}
 
@@ -194,7 +181,7 @@ export default defineEventHandler(async (event) => {
 		if (dbError?.code === '23505') {
 			throw createError({
 				statusCode: 409,
-				statusMessage: 'Gabinet o tym numerze już istnieje.',
+				message: 'Gabinet o tym numerze już istnieje.',
 			});
 		}
 

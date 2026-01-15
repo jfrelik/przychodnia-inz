@@ -24,22 +24,9 @@ const payloadSchema = z
 	.strict();
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				users: ['create'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		users: ['create'],
 	});
-
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const body = await readBody(event);
 	const payload = payloadSchema.safeParse(body);
@@ -71,7 +58,7 @@ export default defineEventHandler(async (event) => {
 				email: payload.data.email,
 				password: tempPassword,
 				name: payload.data.name,
-				role: 'receptionist',
+				role: 'receptionist' as any,
 			},
 		});
 
@@ -92,7 +79,7 @@ export default defineEventHandler(async (event) => {
 		) {
 			throw createError({
 				statusCode: 409,
-				statusMessage: 'Użytkownik o tym adresie email już istnieje.',
+				message: 'Użytkownik o tym adresie email już istnieje.',
 			});
 		}
 

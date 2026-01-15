@@ -1,7 +1,6 @@
 import { desc, eq } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
 import { z } from 'zod';
-import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
 import { logs } from '~~/server/db/clinic';
 
@@ -26,22 +25,9 @@ const logEntrySchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				logs: ['list'],
-			},
-		},
+	await requireSessionWithPermissions(event, {
+		logs: ['list'],
 	});
-
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	try {
 		const rowsResult = await useDb()

@@ -1,32 +1,18 @@
 import { count, eq } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
-import { auth } from '~~/lib/auth';
 import { doctors, specializations } from '~~/server/db/clinic';
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				specializations: ['delete'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		specializations: ['delete'],
 	});
-
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const specializationId = Number(event.context.params?.id);
 
 	if (!specializationId || Number.isNaN(specializationId)) {
 		throw createError({
 			statusCode: 400,
-			statusMessage: 'Identyfikator specjalizacji jest wymagany.',
+			message: 'Identyfikator specjalizacji jest wymagany.',
 		});
 	}
 
@@ -42,7 +28,7 @@ export default defineEventHandler(async (event) => {
 	if (!current) {
 		throw createError({
 			statusCode: 404,
-			statusMessage: 'Specjalizacja nie została znaleziona.',
+			message: 'Specjalizacja nie została znaleziona.',
 		});
 	}
 
@@ -54,7 +40,7 @@ export default defineEventHandler(async (event) => {
 	if (Number(assigned?.total ?? 0) > 0) {
 		throw createError({
 			statusCode: 400,
-			statusMessage:
+			message:
 				'Nie można usunąć specjalizacji, do której przypisani są lekarze.',
 		});
 	}
