@@ -43,10 +43,22 @@
 				to: '/receptionist/home',
 			},
 			{
-				label: 'Pacjenci i lekarze',
+				label: 'Pacjenci',
+				icon: 'carbon:user',
+				active: route.path.startsWith('/receptionist/patients'),
+				to: '/receptionist/patients',
+			},
+			{
+				label: 'Lekarze',
 				icon: 'carbon:user-multiple',
-				active: route.path.startsWith('/receptionist/directory'),
-				to: '/receptionist/directory',
+				active: route.path.startsWith('/receptionist/doctors'),
+				to: '/receptionist/doctors',
+			},
+			{
+				label: 'Dzisiejsze wizyty',
+				icon: 'i-lucide-badge-check',
+				active: route.path.startsWith('/receptionist/visits/today'),
+				to: '/receptionist/visits/today',
 			},
 			{
 				label: 'Przypisywanie pokoi',
