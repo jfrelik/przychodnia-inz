@@ -12,8 +12,6 @@ export const {
 	signUp,
 	useSession,
 	requestPasswordReset,
-	forgetPassword,
 	resetPassword,
-	// impersonateUser,
-	// stopImpersonation,
+	verifyEmail,
 } = authClient;

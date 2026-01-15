@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth';
 import { localization } from 'better-auth-localization';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { admin } from 'better-auth/plugins';
+import 'dotenv/config';
 import { account, session, user, verification } from '../server/db/schema';
 import type { SendEmailJob, SendEmailResult } from '../server/types/bullmq';
 import { ac, roles } from './permissions';
@@ -43,11 +44,13 @@ export const auth = betterAuth({
 	},
 	emailVerification: {
 		sendVerificationEmail: async ({ user, url, token }, request) => {
+			const betterAuthUrl = process.env.BETTER_AUTH_URL;
+
 			const html = await renderEmailComponent(
 				'EmailConfirm',
 				{
 					userName: user.name,
-					confirmationUrl: url,
+					confirmationUrl: `${betterAuthUrl}/verify-email?token=${token}`,
 				},
 				{
 					pretty: true,

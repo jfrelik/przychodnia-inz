@@ -90,7 +90,7 @@ export default defineEventHandler(async (event) => {
 				email: payload.email,
 				password: payload.password,
 				name: fullName,
-				callbackURL: '/login',
+				callbackURL: '/verify-email',
 			},
 		});
 
