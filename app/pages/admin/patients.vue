@@ -11,7 +11,6 @@
 		userId: string;
 		firstName: string;
 		lastName: string;
-		pesel: string;
 		phone: string;
 		address: string;
 		email: string;
@@ -78,12 +77,6 @@
 		{
 			accessorKey: 'email',
 			header: 'Email',
-			enableSorting: true,
-			enableGlobalFilter: true,
-		},
-		{
-			accessorKey: 'pesel',
-			header: 'PESEL',
 			enableSorting: true,
 			enableGlobalFilter: true,
 		},
@@ -192,19 +185,6 @@
 								]"
 							>
 								{{ row.original.email }}
-							</span>
-						</template>
-
-						<template #pesel-cell="{ row }">
-							<span
-								:class="[
-									'transition',
-									isRowRevealed(row.original.userId)
-										? 'text-gray-900'
-										: 'text-gray-400 blur-sm select-none',
-								]"
-							>
-								{{ row.original.pesel }}
 							</span>
 						</template>
 

@@ -15,7 +15,6 @@
 		patientId: string;
 		patientFirstName: string;
 		patientLastName: string;
-		patientPesel: string;
 		doctorId: string;
 		doctorName: string;
 		roomId: number | null;
@@ -71,12 +70,6 @@
 		{
 			accessorKey: 'patientName',
 			header: 'Pacjent',
-			enableSorting: true,
-			enableGlobalFilter: true,
-		},
-		{
-			accessorKey: 'patientPesel',
-			header: 'PESEL',
 			enableSorting: true,
 			enableGlobalFilter: true,
 		},
@@ -201,14 +194,6 @@
 						<template #patientName-cell="{ row }">
 							{{ row.original.patientFirstName }}
 							{{ row.original.patientLastName }}
-						</template>
-
-						<template #patientPesel-cell="{ row }">
-							<span
-								class="cursor-default rounded px-1 text-sm font-medium text-neutral-700 blur-sm transition duration-200 hover:blur-none"
-							>
-								{{ row.original.patientPesel || '—' }}
-							</span>
 						</template>
 
 						<template #status-cell="{ row }">
