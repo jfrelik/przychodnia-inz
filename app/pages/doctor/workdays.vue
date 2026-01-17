@@ -9,7 +9,6 @@
 	import '@schedule-x/theme-default/dist/index.css';
 	import { ScheduleXCalendar } from '@schedule-x/vue';
 	import 'temporal-polyfill/global';
-	import { computed, onMounted, shallowRef, watch } from 'vue';
 
 	definePageMeta({ layout: 'docs' });
 	useHead({ title: 'Dni pracy' });
