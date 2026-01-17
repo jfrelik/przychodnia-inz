@@ -206,5 +206,25 @@ export default defineNitroPlugin(async () => {
 
 	await markEmailsVerified([adminEmail, doctorEmail, receptionistEmail]);
 
+	await useDb()
+		.insert(specializations)
+		.values([
+			{
+				name: 'Pediatria',
+				description: 'Opieka medyczna dla dzieci i młodzieży',
+				icon: 'lucide:baby',
+			},
+			{
+				name: 'Kardiologia',
+				description: 'Diagnostyka i leczenie chorób serca i układu krążenia',
+				icon: 'lucide:heart-pulse',
+			},
+			{
+				name: 'Dermatologia',
+				description: 'Leczenie chorób skóry, włosów i paznokci',
+				icon: 'lucide:scan-face',
+			},
+		]);
+
 	consola.success('DEMO data inserted.');
 });
