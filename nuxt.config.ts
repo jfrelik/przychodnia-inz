@@ -21,7 +21,6 @@ export default defineNuxtConfig({
 		'@nuxt/fonts',
 		'@nuxt/icon',
 		'@nuxt/image',
-		'@nuxt/test-utils',
 		'@nuxt/ui',
 		'nuxt-nodemailer',
 		'nuxt-email-renderer',

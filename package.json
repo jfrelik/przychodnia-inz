@@ -31,7 +31,6 @@
 		"@nuxt/icon": "2.2.0",
 		"@nuxt/image": "2.0.0",
 		"@nuxt/scripts": "^0.13.2",
-		"@nuxt/test-utils": "3.23.0",
 		"@nuxt/ui": "4.3.0",
 		"@nuxtjs/turnstile": "1.1.1",
 		"@preact/signals": "^2.5.1",
