@@ -17,7 +17,7 @@
 							title: 'Wylogowano',
 							description: 'Proces wylogowywania powiódł się',
 							color: 'success',
-							icon: 'carbon:checkmark',
+							icon: 'lucide:check',
 						});
 						navigateTo('/');
 					},
@@ -29,7 +29,7 @@
 				title: 'Błąd wylogowania',
 				description: 'Błąd: ' + message,
 				color: 'error',
-				icon: 'carbon:error',
+				icon: 'lucide:alert-circle',
 			});
 		}
 	};
@@ -38,35 +38,28 @@
 		[
 			{
 				label: 'Strona Główna',
-				icon: 'carbon:home',
+				icon: 'lucide:home',
 				class: 'cursor-pointer',
 				active: route.path === '/doctor/home',
 				to: '/doctor/home',
 			},
 			{
 				label: 'Wizyty',
-				icon: 'carbon:calendar',
+				icon: 'lucide:calendar',
 				class: 'cursor-pointer',
-				active: route.path === '/doctor/visits/all',
-				to: '/doctor/visits/all',
-			},
-			{
-				label: 'Pacjenci',
-				icon: 'carbon:stethoscope',
-				class: 'cursor-pointer',
-				active: route.path === '/doctor/patients',
-				to: '/doctor/patients',
+				active: route.path.startsWith('/doctor/visits'),
+				to: '/doctor/visits',
 			},
 			{
 				label: 'Dyspozycja',
-				icon: 'carbon:calendar-heat-map',
+				icon: 'lucide:calendar-cog',
 				class: 'cursor-pointer',
 				active: route.path === '/doctor/disposition',
 				to: '/doctor/disposition',
 			},
 			{
 				label: 'Dni pracy',
-				icon: 'carbon:calendar',
+				icon: 'lucide:calendar-days',
 				class: 'cursor-pointer',
 				active: route.path === '/doctor/workdays',
 				to: '/doctor/workdays',
@@ -97,9 +90,9 @@
 				<template #default="{ collapsed }">
 					<UButton
 						label="Obsłuż wizytę..."
-						icon="carbon:calendar-add"
+						icon="lucide:stethoscope"
 						class="cursor-pointer justify-center"
-						to="/doctor/visits/today"
+						to="/doctor/visits"
 					/>
 					<UNavigationMenu
 						:collapsed="collapsed"
