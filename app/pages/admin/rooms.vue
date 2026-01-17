@@ -130,7 +130,7 @@
 				title: 'Nieprawidłowy numer',
 				description: 'Podaj numer gabinetu.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -156,7 +156,7 @@
 					'Wystąpił błąd podczas dodawania gabinetu.'
 				),
 				color: 'error',
-				icon: 'i-lucide-x-circle',
+				icon: 'lucide:x-circle',
 			});
 			isCreatePending.value = false;
 			return;
@@ -168,7 +168,7 @@
 			title: 'Dodano gabinet',
 			description: 'Nowy gabinet został zapisany.',
 			color: 'success',
-			icon: 'i-lucide-check',
+			icon: 'lucide:check',
 		});
 
 		closeCreateModal();
@@ -200,7 +200,7 @@
 				title: 'Nieprawidłowy numer',
 				description: 'Podaj numer gabinetu.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -243,7 +243,7 @@
 					'Wystąpił błąd podczas aktualizacji gabinetu.'
 				),
 				color: 'error',
-				icon: 'i-lucide-x-circle',
+				icon: 'lucide:x-circle',
 			});
 			isEditPending.value = false;
 			return;
@@ -255,7 +255,7 @@
 			title: 'Zaktualizowano gabinet',
 			description: 'Gabinet został zaktualizowany.',
 			color: 'success',
-			icon: 'i-lucide-check',
+			icon: 'lucide:check',
 		});
 
 		closeEditModal();
@@ -292,7 +292,7 @@
 					'Wystąpił błąd podczas usuwania gabinetu.'
 				),
 				color: 'error',
-				icon: 'i-lucide-x-circle',
+				icon: 'lucide:x-circle',
 			});
 			isDeletePending.value = false;
 			return;
@@ -304,7 +304,7 @@
 			title: 'Usunięto gabinet',
 			description: 'Gabinet został usunięty z systemu.',
 			color: 'success',
-			icon: 'i-lucide-check',
+			icon: 'lucide:check',
 		});
 
 		closeDeleteModal();
@@ -319,14 +319,14 @@
 				title="Zarządzanie gabinetami"
 				description="Zarządzaj gabinetami przyjęć, aby organizować wizyty pacjentów."
 			/>
-			<UButton color="primary" icon="i-lucide-plus" @click="openCreateModal">
+			<UButton color="primary" icon="lucide:plus" @click="openCreateModal">
 				Dodaj gabinet
 			</UButton>
 		</div>
 
 		<UInput
 			v-model="globalFilter"
-			icon="i-lucide-search"
+			icon="lucide:search"
 			placeholder="Szukaj gabinetów..."
 			clearable
 			class="max-w-sm"
@@ -335,7 +335,7 @@
 		<UAlert
 			v-if="error"
 			color="error"
-			icon="i-lucide-alert-triangle"
+			icon="lucide:alert-triangle"
 			description="Nie udało się pobrać listy gabinetów. Spróbuj ponownie."
 		>
 			<template #actions>
@@ -410,7 +410,7 @@
 								<UButton
 									size="xs"
 									variant="ghost"
-									icon="i-lucide-pencil"
+									icon="lucide:pencil"
 									class="cursor-pointer"
 									@click="openEditModal(row.original)"
 								>
@@ -420,7 +420,7 @@
 									size="xs"
 									color="error"
 									variant="ghost"
-									icon="i-lucide-trash"
+									icon="lucide:trash"
 									class="cursor-pointer"
 									@click="openDeleteModal(row.original)"
 								>
@@ -461,7 +461,7 @@
 								type="number"
 								placeholder="np. 101"
 								:disabled="isCreatePending"
-								icon="i-lucide-door-open"
+								icon="lucide:door-open"
 							/>
 						</UFormField>
 
@@ -486,7 +486,7 @@
 								type="submit"
 								form="create-room-form"
 								:loading="isCreatePending"
-								icon="i-lucide-plus"
+								icon="lucide:plus"
 							>
 								Dodaj gabinet
 							</UButton>
@@ -509,7 +509,7 @@
 								v-model.number="editForm.number"
 								type="number"
 								:disabled="isEditPending"
-								icon="i-lucide-door-open"
+								icon="lucide:door-open"
 								placeholder="Podaj nowy numer"
 							/>
 						</UFormField>
@@ -559,7 +559,7 @@
 							<UButton
 								color="error"
 								:loading="isDeletePending"
-								icon="i-lucide-trash"
+								icon="lucide:trash"
 								@click="handleDelete"
 							>
 								Usuń

@@ -127,7 +127,7 @@
 				title: 'Nieprawidłowa nazwa',
 				description: 'Podaj nazwę specjalizacji.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -136,7 +136,7 @@
 				title: 'Nieprawidłowy opis',
 				description: 'Opis specjalizacji musi mieć co najmniej 5 znaków.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -146,7 +146,7 @@
 				description:
 					'Nazwa ikonki musi zaczynać się od "lucide:" i zawierać tylko małe litery.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -167,7 +167,7 @@
 				title: 'Dodano specjalizację',
 				description: 'Nowa specjalizacja została zapisana.',
 				color: 'success',
-				icon: 'i-lucide-check',
+				icon: 'lucide:check',
 			});
 
 			closeCreateModal();
@@ -180,7 +180,7 @@
 					'Wystąpił błąd podczas dodawania specjalizacji.'
 				),
 				color: 'error',
-				icon: 'i-lucide-x-circle',
+				icon: 'lucide:x-circle',
 			});
 		} finally {
 			isCreatePending.value = false;
@@ -218,7 +218,7 @@
 				title: 'Nieprawidłowa nazwa',
 				description: 'Podaj nazwę specjalizacji.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -227,7 +227,7 @@
 				title: 'Nieprawidłowy opis',
 				description: 'Opis specjalizacji musi mieć co najmniej 5 znaków.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -237,7 +237,7 @@
 				description:
 					'Nazwa ikonki musi zaczynać się od "lucide:" i zawierać tylko małe litery.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -273,7 +273,7 @@
 					'Wystąpił błąd podczas aktualizacji specjalizacji.'
 				),
 				color: 'error',
-				icon: 'i-lucide-x-circle',
+				icon: 'lucide:x-circle',
 			});
 			isRenamePending.value = false;
 			return;
@@ -283,7 +283,7 @@
 			title: 'Zaktualizowano specjalizację',
 			description: 'Nazwa specjalizacji została zmieniona.',
 			color: 'success',
-			icon: 'i-lucide-check',
+			icon: 'lucide:check',
 		});
 
 		closeRenameModal();
@@ -323,7 +323,7 @@
 					'Wystąpił błąd podczas usuwania specjalizacji.'
 				),
 				color: 'error',
-				icon: 'i-lucide-x-circle',
+				icon: 'lucide:x-circle',
 			});
 			isDeletePending.value = false;
 			return;
@@ -333,7 +333,7 @@
 			title: 'Usunięto specjalizację',
 			description: 'Specjalizacja została usunięta z systemu.',
 			color: 'success',
-			icon: 'i-lucide-check',
+			icon: 'lucide:check',
 		});
 
 		closeDeleteModal();
@@ -348,14 +348,14 @@
 				title="Specjalizacje medyczne"
 				description="Zarządzaj listą specjalizacji, aby ułatwić przypisywanie lekarzy do właściwych dziedzin."
 			/>
-			<UButton color="primary" icon="i-lucide-plus" @click="openCreateModal">
+			<UButton color="primary" icon="lucide:plus" @click="openCreateModal">
 				Dodaj specjalizację
 			</UButton>
 		</div>
 
 		<UInput
 			v-model="globalFilter"
-			icon="i-lucide-search"
+			icon="lucide:search"
 			placeholder="Szukaj specjalizacji..."
 			clearable
 			class="max-w-sm"
@@ -364,7 +364,7 @@
 		<UAlert
 			v-if="error"
 			color="error"
-			icon="i-lucide-alert-triangle"
+			icon="lucide:alert-triangle"
 			description="Nie udało się pobrać specjalizacji. Spróbuj ponownie."
 		>
 			<template #actions>
@@ -435,7 +435,7 @@
 								<UButton
 									size="xs"
 									variant="ghost"
-									icon="i-lucide-pencil"
+									icon="lucide:pencil"
 									class="cursor-pointer"
 									@click="openRenameModal(row.original)"
 								>
@@ -445,7 +445,7 @@
 									size="xs"
 									color="error"
 									variant="ghost"
-									icon="i-lucide-trash"
+									icon="lucide:trash"
 									class="cursor-pointer"
 									@click="openDeleteModal(row.original)"
 								>
@@ -480,7 +480,7 @@
 							<UInput
 								v-model="renameForm.name"
 								:disabled="isRenamePending"
-								icon="i-lucide-stethoscope"
+								icon="lucide:stethoscope"
 								placeholder="Podaj nową nazwę"
 							/>
 						</UFormField>
@@ -558,7 +558,7 @@
 							<UButton
 								color="error"
 								:loading="isDeletePending"
-								icon="i-lucide-trash"
+								icon="lucide:trash"
 								@click="handleDelete"
 							>
 								Usuń
@@ -586,7 +586,7 @@
 								v-model="createForm.name"
 								placeholder="np. Kardiolog"
 								:disabled="isCreatePending"
-								icon="i-lucide-stethoscope"
+								icon="lucide:stethoscope"
 							/>
 						</UFormField>
 						<UFormField label="Ikona" name="icon">
@@ -637,7 +637,7 @@
 								type="submit"
 								form="create-specialization-form"
 								:loading="isCreatePending"
-								icon="i-lucide-plus"
+								icon="lucide:plus"
 							>
 								Dodaj specjalizację
 							</UButton>

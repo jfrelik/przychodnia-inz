@@ -144,7 +144,7 @@
 				title: 'Nieprawidłowy adres email',
 				description: 'Podaj poprawny adres email administratora.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -157,7 +157,7 @@
 				description:
 					'Imię i nazwisko administratora musi mieć co najmniej 2 znaki.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -183,7 +183,7 @@
 					'Wystąpił nieoczekiwany błąd podczas dodawania administratora.'
 				),
 				color: 'error',
-				icon: 'i-lucide-x-circle',
+				icon: 'lucide:x-circle',
 			});
 			isCreatePending.value = false;
 			return;
@@ -196,7 +196,7 @@
 			description:
 				'Konto administratora utworzono i wysłano link do ustawienia hasła.',
 			color: 'success',
-			icon: 'i-lucide-check',
+			icon: 'lucide:check',
 		});
 
 		closeCreateModal();
@@ -215,7 +215,7 @@
 				title: 'Nieprawidłowe imię i nazwisko',
 				description: 'Imię i nazwisko administratora nie może być puste.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -246,7 +246,7 @@
 					'Wystąpił błąd podczas aktualizacji administratora.'
 				),
 				color: 'error',
-				icon: 'i-lucide-x-circle',
+				icon: 'lucide:x-circle',
 			});
 			isEditPending.value = false;
 			return;
@@ -258,7 +258,7 @@
 			title: 'Zaktualizowano administratora',
 			description: 'Dane administratora zostały zapisane.',
 			color: 'success',
-			icon: 'i-lucide-check',
+			icon: 'lucide:check',
 		});
 
 		closeEditModal();
@@ -277,7 +277,7 @@
 				title: 'Nie możesz usunąć własnego konta',
 				description: 'Nie możesz usunąć własnego konta administratora.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -296,7 +296,7 @@
 					'Wystąpił błąd podczas usuwania administratora.'
 				),
 				color: 'error',
-				icon: 'i-lucide-x-circle',
+				icon: 'lucide:x-circle',
 			});
 			isDeletePending.value = false;
 			return;
@@ -308,7 +308,7 @@
 			title: 'Usunięto administratora',
 			description: 'Administrator został usunięty.',
 			color: 'success',
-			icon: 'i-lucide-check',
+			icon: 'lucide:check',
 		});
 
 		closeDeleteModal();
@@ -323,18 +323,14 @@
 				title="Panel administratorów"
 				description="Zarządzaj kontami administratorów systemu."
 			/>
-			<UButton
-				color="primary"
-				icon="i-lucide-user-plus"
-				@click="openCreateModal"
-			>
+			<UButton color="primary" icon="lucide:user-plus" @click="openCreateModal">
 				Dodaj administratora
 			</UButton>
 		</div>
 
 		<UInput
 			v-model="globalFilter"
-			icon="i-lucide-search"
+			icon="lucide:search"
 			placeholder="Szukaj administratorów..."
 			clearable
 			class="max-w-sm"
@@ -343,7 +339,7 @@
 		<UAlert
 			v-if="error"
 			color="error"
-			icon="i-lucide-alert-triangle"
+			icon="lucide:alert-triangle"
 			description="Nie udało się pobrać listy administratorów."
 		>
 			<template #actions>
@@ -401,7 +397,7 @@
 								<UButton
 									size="xs"
 									variant="ghost"
-									icon="i-lucide-pencil"
+									icon="lucide:pencil"
 									class="cursor-pointer"
 									@click="openEditModal(row.original)"
 								>
@@ -411,7 +407,7 @@
 									size="xs"
 									color="error"
 									variant="ghost"
-									icon="i-lucide-trash"
+									icon="lucide:trash"
 									class="cursor-pointer"
 									@click="openDeleteModal(row.original)"
 								>
@@ -451,7 +447,7 @@
 								v-model="createForm.email"
 								type="email"
 								:disabled="isCreatePending"
-								icon="i-lucide-mail"
+								icon="lucide:mail"
 								placeholder="np. admin@example.com"
 							/>
 						</UFormField>
@@ -459,7 +455,7 @@
 							<UInput
 								v-model="createForm.name"
 								:disabled="isCreatePending"
-								icon="i-lucide-user"
+								icon="lucide:user"
 								placeholder="np. Jan Kowalski"
 							/>
 						</UFormField>
@@ -499,14 +495,14 @@
 							<UInput
 								:model-value="selectedAdmin?.email ?? ''"
 								disabled
-								icon="i-lucide-mail"
+								icon="lucide:mail"
 							/>
 						</UFormField>
 						<UFormField label="Imię i nazwisko" name="name" required>
 							<UInput
 								v-model="editForm.name"
 								:disabled="isEditPending"
-								icon="i-lucide-user"
+								icon="lucide:user"
 							/>
 						</UFormField>
 					</UForm>
@@ -549,7 +545,7 @@
 						<UAlert
 							v-if="selectedAdmin?.id === session?.data?.user?.id"
 							color="warning"
-							icon="i-lucide-alert-triangle"
+							icon="lucide:alert-triangle"
 							description="Nie możesz usunąć własnego konta administratora."
 						/>
 					</div>
@@ -561,7 +557,7 @@
 							</UButton>
 							<UButton
 								color="error"
-								icon="i-lucide-trash"
+								icon="lucide:trash"
 								:disabled="selectedAdmin?.id === session?.data?.user?.id"
 								:loading="isDeletePending"
 								@click="handleDelete"

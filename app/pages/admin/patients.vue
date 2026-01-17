@@ -113,7 +113,7 @@
 
 		<UInput
 			v-model="globalFilter"
-			icon="i-lucide-search"
+			icon="lucide:search"
 			placeholder="Szukaj pacjentów..."
 			clearable
 			class="max-w-sm"
@@ -122,7 +122,7 @@
 		<UAlert
 			v-if="error"
 			color="error"
-			icon="i-lucide-alert-triangle"
+			icon="lucide:alert-triangle"
 			description="Nie udało się pobrać listy pacjentów."
 		>
 			<template #actions>

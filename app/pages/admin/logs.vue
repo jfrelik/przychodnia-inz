@@ -65,7 +65,7 @@
 				h(UButton, {
 					color: 'neutral',
 					variant: 'ghost',
-					icon: 'i-lucide-chevron-down',
+					icon: 'lucide:chevron-down',
 					square: true,
 					'aria-label': 'Expand',
 					ui: {
@@ -176,7 +176,7 @@
 			<UAlert
 				v-if="error"
 				color="error"
-				icon="i-lucide-alert-triangle"
+				icon="lucide:alert-triangle"
 				title="Nie udało się pobrać logów"
 				description="Spróbuj ponownie odświeżyć stronę."
 			>
@@ -201,7 +201,7 @@
 						</div>
 						<UButton
 							variant="soft"
-							icon="i-lucide-refresh-cw"
+							icon="lucide:refresh-cw"
 							class="cursor-pointer"
 							@click="refresh()"
 						>
@@ -213,7 +213,7 @@
 				<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
 					<UInput
 						v-model="globalFilter"
-						icon="i-lucide-search"
+						icon="lucide:search"
 						placeholder="Szukaj w logach..."
 						clearable
 						class="max-w-md"

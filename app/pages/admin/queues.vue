@@ -59,7 +59,7 @@
 	});
 
 	const queues = computed(() => queuesResponse.value ?? []);
-	const selectedQueueName = ref<string | null>(null);
+	const selectedQueueName = ref<string | undefined>(undefined);
 	const tableKey = ref(0);
 
 	watch(
@@ -74,7 +74,7 @@
 		queues,
 		(list) => {
 			if (!selectedQueueName.value && list.length > 0) {
-				selectedQueueName.value = list[0].name;
+				selectedQueueName.value = list[0]!.name;
 			}
 		},
 		{ immediate: true }
@@ -107,7 +107,16 @@
 		isJobModalOpen.value = false;
 	};
 
-	const stateColors: Record<string, string> = {
+	type BadgeColor =
+		| 'error'
+		| 'primary'
+		| 'secondary'
+		| 'success'
+		| 'info'
+		| 'warning'
+		| 'neutral';
+
+	const stateColors: Record<string, BadgeColor> = {
 		active: 'primary',
 		completed: 'success',
 		failed: 'error',
@@ -167,7 +176,7 @@
 						color: 'neutral',
 						variant: 'ghost',
 						size: 'xs',
-						icon: 'i-lucide-eye',
+						icon: 'lucide:eye',
 						class: 'cursor-pointer',
 						'aria-label': 'Szczegóły zadania',
 						onClick: () => openJobModal(row.original),
@@ -190,7 +199,7 @@
 			<UAlert
 				v-if="error"
 				color="error"
-				icon="i-lucide-alert-triangle"
+				icon="lucide:alert-triangle"
 				description="Nie udało się pobrać danych kolejek."
 			>
 				<template #actions>
@@ -218,10 +227,11 @@
 								:items="queueOptions"
 								placeholder="Wybierz kolejkę"
 								class="min-w-56"
+								:value-key="'value'"
 							/>
 							<UButton
 								variant="soft"
-								icon="i-lucide-refresh-cw"
+								icon="lucide:refresh-cw"
 								class="cursor-pointer"
 								@click="refresh()"
 							>

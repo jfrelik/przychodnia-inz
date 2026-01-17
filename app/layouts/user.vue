@@ -16,7 +16,7 @@
 							title: 'Wylogowano',
 							description: 'Proces wylogowywania powiódł się',
 							color: 'success',
-							icon: 'carbon:checkmark',
+							icon: 'lucide:check',
 						});
 						navigateTo('/');
 					},
@@ -28,7 +28,7 @@
 				title: 'Błąd wylogowania',
 				description: 'Błąd: ' + message,
 				color: 'error',
-				icon: 'carbon:error',
+				icon: 'lucide:circle-x',
 			});
 		}
 	};
@@ -37,35 +37,35 @@
 		[
 			{
 				label: 'Strona Główna',
-				icon: 'carbon:home',
+				icon: 'lucide:home',
 				class: 'cursor-pointer',
 				active: route.path === '/user/home',
 				to: '/user/home',
 			},
 			{
 				label: 'Wizyty',
-				icon: 'carbon:calendar',
+				icon: 'lucide:calendar',
 				class: 'cursor-pointer',
 				active: route.path === '/user/visits',
 				to: '/user/visits',
 			},
 			{
 				label: 'Recepty',
-				icon: 'carbon:pills',
+				icon: 'lucide:pill',
 				class: 'cursor-pointer',
 				active: route.path === '/user/prescriptions',
 				to: '/user/prescriptions',
 			},
 			{
 				label: 'Wyniki Badań',
-				icon: 'carbon:document',
+				icon: 'lucide:file',
 				class: 'cursor-pointer',
 				active: route.path === '/user/testResults',
 				to: '/user/testResults',
 			},
 			{
 				label: 'Zalecenia Lekarskie',
-				icon: 'carbon:user-feedback',
+				icon: 'lucide:message-square',
 				class: 'cursor-pointer',
 				active: route.path === '/user/recommendations',
 				to: '/user/recommendations',
@@ -107,7 +107,7 @@
 				<template #default="{ collapsed }">
 					<UButton
 						label="Umów wizytę"
-						icon="carbon:calendar-add"
+						icon="lucide:calendar-plus"
 						class="cursor-pointer justify-center"
 						to="/user/newAppointment"
 					/>
@@ -128,7 +128,7 @@
 							variant="ghost"
 							class="w-full cursor-pointer"
 							:block="collapsed"
-							icon="i-lucide-log-out"
+							icon="lucide:log-out"
 							@click="handleSignout"
 						/>
 
@@ -142,7 +142,7 @@
 							variant="ghost"
 							class="mt-2 w-full"
 							:block="collapsed"
-							icon="i-lucide-code"
+							icon="lucide:code"
 							disabled
 						/>
 					</div>

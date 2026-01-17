@@ -135,7 +135,7 @@
 				title: 'Nieprawidłowy adres email',
 				description: 'Podaj poprawny adres email recepcjonisty.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -148,7 +148,7 @@
 				description:
 					'Imię i nazwisko recepcjonisty musi mieć co najmniej 2 znaki.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -174,7 +174,7 @@
 					'Wystąpił nieoczekiwany błąd podczas dodawania recepcjonisty.'
 				),
 				color: 'error',
-				icon: 'i-lucide-x-circle',
+				icon: 'lucide:x-circle',
 			});
 			isCreatePending.value = false;
 			return;
@@ -187,7 +187,7 @@
 			description:
 				'Konto recepcjonisty utworzono i wysłano link do resetu hasła na podany email.',
 			color: 'success',
-			icon: 'i-lucide-check',
+			icon: 'lucide:check',
 		});
 
 		closeCreateModal();
@@ -205,7 +205,7 @@
 			title: 'Brak pól do edycji',
 			description: 'Aktualnie brak danych recepcjonisty do zmiany.',
 			color: 'neutral',
-			icon: 'i-lucide-info',
+			icon: 'lucide:info',
 		});
 
 		isEditPending.value = false;
@@ -234,7 +234,7 @@
 					'Wystąpił błąd podczas usuwania recepcjonisty.'
 				),
 				color: 'error',
-				icon: 'i-lucide-x-circle',
+				icon: 'lucide:x-circle',
 			});
 			isDeletePending.value = false;
 			return;
@@ -246,7 +246,7 @@
 			title: 'Usunięto recepcjonistę',
 			description: 'Recepcjonista został usunięty z systemu.',
 			color: 'success',
-			icon: 'i-lucide-check',
+			icon: 'lucide:check',
 		});
 
 		closeDeleteModal();
@@ -261,18 +261,14 @@
 				title="Panel recepcjonistów"
 				description="Zarządzaj kontami recepcjonistów w systemie."
 			/>
-			<UButton
-				color="primary"
-				icon="i-lucide-user-plus"
-				@click="openCreateModal"
-			>
+			<UButton color="primary" icon="lucide:user-plus" @click="openCreateModal">
 				Dodaj recepcjonistę
 			</UButton>
 		</div>
 
 		<UInput
 			v-model="globalFilter"
-			icon="i-lucide-search"
+			icon="lucide:search"
 			placeholder="Szukaj recepcjonistów..."
 			clearable
 			class="max-w-sm"
@@ -281,7 +277,7 @@
 		<UAlert
 			v-if="error"
 			color="error"
-			icon="i-lucide-alert-triangle"
+			icon="lucide:alert-triangle"
 			description="Nie udało się pobrać listy recepcjonistów. Spróbuj ponownie."
 		>
 			<template #actions>
@@ -335,7 +331,7 @@
 								<UButton
 									size="xs"
 									variant="ghost"
-									icon="i-lucide-pencil"
+									icon="lucide:pencil"
 									class="cursor-pointer"
 									@click="openEditModal(row.original)"
 								>
@@ -345,7 +341,7 @@
 									size="xs"
 									color="error"
 									variant="ghost"
-									icon="i-lucide-trash"
+									icon="lucide:trash"
 									class="cursor-pointer"
 									@click="openDeleteModal(row.original)"
 								>
@@ -385,7 +381,7 @@
 								v-model="createForm.email"
 								type="email"
 								:disabled="isCreatePending"
-								icon="i-lucide-mail"
+								icon="lucide:mail"
 								placeholder="np. recepcjonista@example.com"
 							/>
 						</UFormField>
@@ -393,7 +389,7 @@
 							<UInput
 								v-model="createForm.name"
 								:disabled="isCreatePending"
-								icon="i-lucide-user"
+								icon="lucide:user"
 								placeholder="np. Anna Nowak"
 							/>
 						</UFormField>
@@ -433,19 +429,19 @@
 							<UInput
 								:model-value="selectedReceptionist?.userName ?? ''"
 								disabled
-								icon="i-lucide-user"
+								icon="lucide:user"
 							/>
 						</UFormField>
 						<UFormField label="Email" name="userEmail">
 							<UInput
 								:model-value="selectedReceptionist?.userEmail ?? ''"
 								disabled
-								icon="i-lucide-mail"
+								icon="lucide:mail"
 							/>
 						</UFormField>
 						<UAlert
 							variant="subtle"
-							icon="i-lucide-info"
+							icon="lucide:info"
 							title="Brak pól do edycji"
 							description="Aktualnie konto recepcjonisty nie posiada edytowalnych danych."
 						/>
@@ -492,7 +488,7 @@
 							</UButton>
 							<UButton
 								color="error"
-								icon="i-lucide-trash"
+								icon="lucide:trash"
 								:loading="isDeletePending"
 								@click="handleDelete"
 							>

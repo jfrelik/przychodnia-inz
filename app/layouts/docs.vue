@@ -109,7 +109,7 @@
 							variant="ghost"
 							class="w-full cursor-pointer"
 							:block="collapsed"
-							icon="i-lucide-log-out"
+							icon="lucide:log-out"
 							@click="handleSignout"
 						/>
 						<UButton
@@ -118,7 +118,7 @@
 							variant="ghost"
 							class="mt-2 w-full"
 							:block="collapsed"
-							icon="i-lucide-info"
+							icon="lucide:info"
 							:to="'https://github.com/jfrelik/przychodnia-inz'"
 							target="_blank"
 						/>
@@ -132,7 +132,7 @@
 							variant="ghost"
 							class="mt-2 w-full"
 							:block="collapsed"
-							icon="i-lucide-code"
+							icon="lucide:code"
 							disabled
 						/>
 					</div>
