@@ -1,6 +1,6 @@
 import { authClient } from '~~/lib/auth-client';
 
-export default defineNuxtRouteMiddleware(async (to, from) => {
+export default defineNuxtRouteMiddleware(async (to) => {
 	const { data: session } = await authClient.useSession(useFetch);
 	const role = session.value?.user?.role;
 	const publicPages = [
