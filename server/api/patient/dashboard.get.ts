@@ -1,6 +1,5 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
-import { auth } from '~~/lib/auth';
 import { user as authUser } from '~~/server/db/auth';
 import {
 	appointments,
@@ -12,25 +11,12 @@ import {
 } from '~~/server/db/clinic';
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				appointments: ['list'],
-				prescriptions: ['list'],
-				testResults: ['list'],
-				medicalRecords: ['read'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		appointments: ['list'],
+		prescriptions: ['list'],
+		testResults: ['list'],
+		medicalRecords: ['read'],
 	});
-
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const now = new Date();
 
@@ -79,7 +65,7 @@ export default defineEventHandler(async (event) => {
 		testId: number;
 		testType: string;
 		result: string;
-		testDate: Date;
+		testDate: string;
 	}> = [];
 	try {
 		const [record] = await useDb()

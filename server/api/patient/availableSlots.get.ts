@@ -1,7 +1,6 @@
 import { and, asc, eq, gte, inArray, lte } from 'drizzle-orm';
 import { createError, defineEventHandler, getQuery } from 'h3';
 import { z } from 'zod';
-import { auth } from '~~/lib/auth';
 import { user as authUser } from '~~/server/db/auth';
 import {
 	appointments,
@@ -43,7 +42,7 @@ const querySchema = z
 	);
 
 const parseUtcDate = (date: string) => {
-	const [y, m, d] = date.split('-').map(Number);
+	const [y, m, d] = date.split('-').map(Number) as [number, number, number];
 	return new Date(Date.UTC(y, m - 1, d));
 };
 
@@ -96,17 +95,23 @@ const mergeFrames = (frames: Frame[]): Frame[] => {
 };
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: { userId: session.user.id, permissions: { appointments: ['list'] } },
+	await requireSessionWithPermissions(event, {
+		appointments: ['list'],
 	});
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-	const query = querySchema.parse(getQuery(event));
+	const queryResult = querySchema.safeParse(getQuery(event));
+	if (queryResult.error) {
+		const flat = z.flattenError(queryResult.error);
+		const firstFieldError = Object.values(flat.fieldErrors)
+			.flat()
+			.find((m): m is string => !!m);
+		throw createError({
+			statusCode: 400,
+			message: firstFieldError ?? 'Nieprawidłowe dane wejściowe.',
+		});
+	}
+
+	const query = queryResult.data;
 	const { startDate, specializationId, doctorId } = query;
 	const endDate = query.endDate ?? startDate;
 	const slotDuration = getDurationMinutes('consultation');
@@ -114,22 +119,40 @@ export default defineEventHandler(async (event) => {
 	const filterStartMinutes = query.startTime ? toMinutes(query.startTime) : 0;
 	const filterEndMinutes = query.endTime ? toMinutes(query.endTime) : 24 * 60;
 
-	const doctorRows = await useDb()
-		.select({
-			doctorId: doctors.userId,
-			specializationId: doctors.specializationId,
-			specializationName: specializations.name,
-			doctorName: authUser.name,
-			doctorEmail: authUser.email,
-		})
-		.from(doctors)
-		.leftJoin(specializations, eq(doctors.specializationId, specializations.id))
-		.leftJoin(authUser, eq(doctors.userId, authUser.id))
-		.where(
-			doctorId
-				? eq(doctors.userId, doctorId)
-				: eq(doctors.specializationId, specializationId!)
-		);
+	let doctorRows: Array<{
+		doctorId: string;
+		specializationId: number | null;
+		specializationName: string | null;
+		doctorName: string | null;
+		doctorEmail: string | null;
+	}>;
+	try {
+		doctorRows = await useDb()
+			.select({
+				doctorId: doctors.userId,
+				specializationId: doctors.specializationId,
+				specializationName: specializations.name,
+				doctorName: authUser.name,
+				doctorEmail: authUser.email,
+			})
+			.from(doctors)
+			.leftJoin(
+				specializations,
+				eq(doctors.specializationId, specializations.id)
+			)
+			.leftJoin(authUser, eq(doctors.userId, authUser.id))
+			.where(
+				and(
+					eq(authUser.banned, false),
+					doctorId
+						? eq(doctors.userId, doctorId)
+						: eq(doctors.specializationId, specializationId!)
+				)
+			);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 
 	if (doctorRows.length === 0)
 		return {
@@ -143,21 +166,31 @@ export default defineEventHandler(async (event) => {
 
 	for (const doc of doctorRows) {
 		// Availability over the range
-		const availabilities = await useDb()
-			.select({
-				day: availability.day,
-				start: availability.timeStart,
-				end: availability.timeEnd,
-			})
-			.from(availability)
-			.where(
-				and(
-					eq(availability.doctorUserId, doc.doctorId),
-					gte(availability.day, startDate),
-					lte(availability.day, endDate)
+		let availabilities: Array<{
+			day: string | Date;
+			start: string;
+			end: string;
+		}>;
+		try {
+			availabilities = await useDb()
+				.select({
+					day: availability.day,
+					start: availability.timeStart,
+					end: availability.timeEnd,
+				})
+				.from(availability)
+				.where(
+					and(
+						eq(availability.doctorUserId, doc.doctorId),
+						gte(availability.day, startDate),
+						lte(availability.day, endDate)
+					)
 				)
-			)
-			.orderBy(asc(availability.day), asc(availability.timeStart));
+				.orderBy(asc(availability.day), asc(availability.timeStart));
+		} catch (error) {
+			const { message } = getDbErrorMessage(error);
+			throw createError({ statusCode: 500, message });
+		}
 
 		const availabilityByDate = new Map<string, Frame[]>();
 		for (const row of availabilities) {
@@ -171,20 +204,26 @@ export default defineEventHandler(async (event) => {
 		}
 
 		// Existing appointments over the range
-		const existing = await useDb()
-			.select({
-				datetime: appointments.datetime,
-				type: appointments.type,
-			})
-			.from(appointments)
-			.where(
-				and(
-					eq(appointments.doctorId, doc.doctorId),
-					gte(appointments.datetime, new Date(`${startDate}T00:00:00`)),
-					lte(appointments.datetime, new Date(`${endDate}T23:59:59`)),
-					inArray(appointments.status, ['scheduled', 'checked_in'])
-				)
-			);
+		let existing: Array<{ datetime: Date; type: string }>;
+		try {
+			existing = await useDb()
+				.select({
+					datetime: appointments.datetime,
+					type: appointments.type,
+				})
+				.from(appointments)
+				.where(
+					and(
+						eq(appointments.doctorId, doc.doctorId),
+						gte(appointments.datetime, new Date(`${startDate}T00:00:00`)),
+						lte(appointments.datetime, new Date(`${endDate}T23:59:59`)),
+						inArray(appointments.status, ['scheduled', 'checked_in'])
+					)
+				);
+		} catch (error) {
+			const { message } = getDbErrorMessage(error);
+			throw createError({ statusCode: 500, message });
+		}
 
 		const existingByDate = new Map<
 			string,

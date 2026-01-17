@@ -1,8 +1,9 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, gte, inArray, lt } from 'drizzle-orm';
 import { createError, defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
-import { auth } from '~~/lib/auth';
+import { user as authUser } from '~~/server/db/auth';
 import {
+	appointments,
 	availability,
 	doctors,
 	room,
@@ -23,126 +24,186 @@ const toMinutes = (time: string | null | undefined) => {
 };
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				availability: ['update', 'read'],
-				rooms: ['read'],
-			},
-		},
+	await requireSessionWithPermissions(event, {
+		availability: ['update'],
 	});
-
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const payload = payloadSchema.parse(await readBody(event));
 
-	const [slot] = await useDb()
-		.select({
-			scheduleId: availability.scheduleId,
-			day: availability.day,
-			start: availability.timeStart,
-			end: availability.timeEnd,
-			doctorId: doctors.userId,
-			specializationId: doctors.specializationId,
-		})
-		.from(availability)
-		.leftJoin(doctors, eq(availability.doctorUserId, doctors.userId))
-		.where(eq(availability.scheduleId, payload.scheduleId))
-		.limit(1);
+	let slot:
+		| {
+				scheduleId: string;
+				day: string | Date;
+				start: string;
+				end: string;
+				doctorId: string | null;
+				specializationId: number | null;
+		  }
+		| undefined;
+
+	try {
+		[slot] = await useDb()
+			.select({
+				scheduleId: availability.scheduleId,
+				day: availability.day,
+				start: availability.timeStart,
+				end: availability.timeEnd,
+				doctorId: doctors.userId,
+				specializationId: doctors.specializationId,
+			})
+			.from(availability)
+			.leftJoin(doctors, eq(availability.doctorUserId, doctors.userId))
+			.leftJoin(authUser, eq(doctors.userId, authUser.id))
+			.where(
+				and(
+					eq(availability.scheduleId, payload.scheduleId),
+					eq(authUser.banned, false)
+				)
+			)
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 
 	if (!slot)
-		throw createError({ statusCode: 404, statusMessage: 'Slot not found' });
+		throw createError({
+			statusCode: 404,
+			message: 'Dyspozycja nie została znaleziona',
+		});
 
 	if (!slot.specializationId) {
 		throw createError({
 			statusCode: 400,
-			statusMessage: 'Lekarz nie ma przypisanej specjalizacji',
+			message: 'Lekarz nie ma przypisanej specjalizacji',
 		});
 	}
 
-	if (payload.roomId === null) {
-		await useDb()
-			.update(availability)
-			.set({ roomRoomId: null })
-			.where(eq(availability.scheduleId, payload.scheduleId));
-
-		return { status: 'ok', roomId: null };
-	}
-
-	const roomRows = await useDb()
-		.select({
-			roomId: room.roomId,
-			specializationId: roomSpecializations.specializationId,
-		})
-		.from(room)
-		.leftJoin(roomSpecializations, eq(room.roomId, roomSpecializations.roomId))
-		.where(eq(room.roomId, payload.roomId));
-
-	if (roomRows.length === 0)
-		throw createError({ statusCode: 404, statusMessage: 'Room not found' });
-
-	const roomSpecIds = Array.from(
-		new Set(
-			roomRows
-				.map((row) => row.specializationId)
-				.filter((id): id is number => id !== null && id !== undefined)
-		)
-	);
-
-	if (!roomSpecIds.includes(slot.specializationId)) {
+	if (!slot.doctorId) {
 		throw createError({
 			statusCode: 400,
-			statusMessage:
-				'Pokój nie jest przypisany do specjalizacji lekarza i nie mo‘•e byŽÅ wybrany',
+			message: 'Brak powiązanego lekarza dla dyspozycji',
 		});
 	}
+
+	const doctorId = slot.doctorId;
 
 	const dayStr =
 		typeof slot.day === 'string'
 			? slot.day
 			: (slot.day as unknown as Date).toISOString().slice(0, 10);
 
-	const assigned = await useDb()
-		.select({
-			scheduleId: availability.scheduleId,
-			start: availability.timeStart,
-			end: availability.timeEnd,
-		})
-		.from(availability)
-		.where(
-			and(
-				eq(availability.roomRoomId, payload.roomId),
-				eq(availability.day, dayStr)
+	const buildDateTime = (time: string) => new Date(`${dayStr}T${time}`);
+	const slotStartDate = buildDateTime(slot.start);
+	const slotEndDate = buildDateTime(slot.end);
+
+	try {
+		if (payload.roomId === null) {
+			await useDb()
+				.update(availability)
+				.set({ roomRoomId: null })
+				.where(eq(availability.scheduleId, payload.scheduleId));
+
+			await useDb()
+				.update(appointments)
+				.set({ roomRoomId: null })
+				.where(
+					and(
+						eq(appointments.doctorId, doctorId),
+						gte(appointments.datetime, slotStartDate),
+						lt(appointments.datetime, slotEndDate),
+						inArray(appointments.status, ['scheduled', 'checked_in'])
+					)
+				);
+
+			return { status: 'ok', roomId: null };
+		}
+
+		const roomRows = await useDb()
+			.select({
+				roomId: room.roomId,
+				specializationId: roomSpecializations.specializationId,
+			})
+			.from(room)
+			.leftJoin(
+				roomSpecializations,
+				eq(room.roomId, roomSpecializations.roomId)
+			)
+			.where(eq(room.roomId, payload.roomId));
+
+		if (roomRows.length === 0)
+			throw createError({
+				statusCode: 404,
+				message: 'Pokój nie został znaleziony',
+			});
+
+		const roomSpecIds = Array.from(
+			new Set(
+				roomRows
+					.map((row) => row.specializationId)
+					.filter((id): id is number => id !== null && id !== undefined)
 			)
 		);
 
-	const slotStart = toMinutes(slot.start);
-	const slotEnd = toMinutes(slot.end);
-	const conflict = assigned.some((row) => {
-		if (row.scheduleId === slot.scheduleId) return false;
-		const otherStart = toMinutes(row.start);
-		const otherEnd = toMinutes(row.end);
-		return slotStart < otherEnd && otherStart < slotEnd;
-	});
+		if (!roomSpecIds.includes(slot.specializationId)) {
+			throw createError({
+				statusCode: 400,
+				message:
+					'Pokój nie jest przypisany do specjalizacji lekarza i nie może być wybrany',
+			});
+		}
 
-	if (conflict) {
-		throw createError({
-			statusCode: 409,
-			statusMessage:
-				'Pokój jest ju‘• przypisany do innego lekarza w tym czasie',
+		const assigned = await useDb()
+			.select({
+				scheduleId: availability.scheduleId,
+				start: availability.timeStart,
+				end: availability.timeEnd,
+			})
+			.from(availability)
+			.where(
+				and(
+					eq(availability.roomRoomId, payload.roomId),
+					eq(availability.day, dayStr)
+				)
+			);
+
+		const slotStart = toMinutes(slot.start);
+		const slotEnd = toMinutes(slot.end);
+		const conflict = assigned.some((row) => {
+			if (row.scheduleId === slot.scheduleId) return false;
+			const otherStart = toMinutes(row.start);
+			const otherEnd = toMinutes(row.end);
+			return slotStart < otherEnd && otherStart < slotEnd;
 		});
+
+		if (conflict) {
+			throw createError({
+				statusCode: 409,
+				message: 'Pokój jest już przypisany do innego lekarza w tym czasie',
+			});
+		}
+
+		await useDb()
+			.update(availability)
+			.set({ roomRoomId: payload.roomId })
+			.where(eq(availability.scheduleId, payload.scheduleId));
+
+		await useDb()
+			.update(appointments)
+			.set({ roomRoomId: payload.roomId })
+			.where(
+				and(
+					eq(appointments.doctorId, doctorId),
+					gte(appointments.datetime, slotStartDate),
+					lt(appointments.datetime, slotEndDate),
+					inArray(appointments.status, ['scheduled', 'checked_in'])
+				)
+			);
+
+		return { status: 'ok', roomId: payload.roomId };
+	} catch (error: any) {
+		if (error?.statusCode) throw error;
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
 	}
-
-	await useDb()
-		.update(availability)
-		.set({ roomRoomId: payload.roomId })
-		.where(eq(availability.scheduleId, payload.scheduleId));
-
-	return { status: 'ok', roomId: payload.roomId };
 });

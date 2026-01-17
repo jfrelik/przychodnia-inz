@@ -1,66 +1,47 @@
 import { desc, eq } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
-import { auth } from '~~/lib/auth';
-import { user as authUser } from '~~/server/db/auth';
-import { medicalRecords, patients, testResults } from '~~/server/db/clinic';
+import { medicalRecords, testResults } from '~~/server/db/clinic';
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				testResults: ['list'],
-				medicalRecords: ['read'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		testResults: ['list'],
+		medicalRecords: ['read'],
 	});
 
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
-
-	const email = session.user.email;
-
-	const [userRow] = await useDb()
-		.select()
-		.from(authUser)
-		.where(eq(authUser.email, email))
-		.limit(1);
-	if (!userRow)
-		throw createError({ statusCode: 404, statusMessage: 'User not found' });
-
-	const [patientRow] = await useDb()
-		.select()
-		.from(patients)
-		.where(eq(patients.userId, userRow.id))
-		.limit(1);
-	if (!patientRow)
-		throw createError({
-			statusCode: 404,
-			statusMessage: 'Patient profile not found',
-		});
-
-	const [record] = await useDb()
-		.select()
-		.from(medicalRecords)
-		.where(eq(medicalRecords.patientId, patientRow.userId))
-		.limit(1);
+	let record: typeof medicalRecords.$inferSelect | undefined;
+	try {
+		[record] = await useDb()
+			.select()
+			.from(medicalRecords)
+			.where(eq(medicalRecords.patientId, session.user.id))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 	if (!record) return [];
 
-	const rows = await useDb()
-		.select({
-			testId: testResults.testId,
-			testType: testResults.testType,
-			result: testResults.result,
-			testDate: testResults.testDate,
-		})
-		.from(testResults)
-		.where(eq(testResults.recordId, record.recordId))
-		.orderBy(desc(testResults.testDate));
+	let rows: Array<{
+		testId: number;
+		testType: string;
+		result: string;
+		testDate: string;
+	}>;
+	try {
+		rows = await useDb()
+			.select({
+				testId: testResults.testId,
+				testType: testResults.testType,
+				result: testResults.result,
+				testDate: testResults.testDate,
+			})
+			.from(testResults)
+			.where(eq(testResults.recordId, record.recordId))
+			.orderBy(desc(testResults.testDate));
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 
 	return rows;
 });

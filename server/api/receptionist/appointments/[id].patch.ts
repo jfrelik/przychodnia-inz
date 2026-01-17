@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { createError, defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
 import { user as authUser } from '~~/server/db/auth';
@@ -22,7 +22,7 @@ const payloadSchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
-	const session = await requireSessionWithPermissions(event, {
+	await requireSessionWithPermissions(event, {
 		appointments: ['update'],
 	});
 
@@ -52,6 +52,7 @@ export default defineEventHandler(async (event) => {
 		| {
 				appointmentId: number;
 				status: string;
+				patientId: string;
 				doctorId: string;
 				datetime: Date;
 				type: string;
@@ -63,18 +64,14 @@ export default defineEventHandler(async (event) => {
 			.select({
 				appointmentId: appointments.appointmentId,
 				status: appointments.status,
+				patientId: appointments.patientId,
 				doctorId: appointments.doctorId,
 				datetime: appointments.datetime,
 				type: appointments.type,
 				isOnline: appointments.isOnline,
 			})
 			.from(appointments)
-			.where(
-				and(
-					eq(appointments.appointmentId, appointmentId),
-					eq(appointments.patientId, session.user.id)
-				)
-			)
+			.where(eq(appointments.appointmentId, appointmentId))
 			.limit(1);
 	} catch (error) {
 		const { message } = getDbErrorMessage(error);
@@ -84,15 +81,29 @@ export default defineEventHandler(async (event) => {
 	if (!appointmentRow)
 		throw createError({
 			statusCode: 404,
-			message: 'Appointment not found',
+			message: 'Wizyta nie została znaleziona',
 		});
 
-	if (appointmentRow.status !== 'scheduled')
+	if (!['scheduled', 'checked_in'].includes(appointmentRow.status))
 		throw createError({
 			statusCode: 400,
-			message: 'Only scheduled appointments can be canceled',
+			message: 'Można anulować tylko zaplanowane lub potwierdzone wizyty',
 		});
 
+	// Get patient info
+	let patientUser: typeof authUser.$inferSelect | undefined;
+	try {
+		[patientUser] = await useDb()
+			.select()
+			.from(authUser)
+			.where(eq(authUser.id, appointmentRow.patientId))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
+
+	// Get doctor info
 	let doctorUser: typeof authUser.$inferSelect | undefined;
 	try {
 		[doctorUser] = await useDb()
@@ -104,23 +115,13 @@ export default defineEventHandler(async (event) => {
 		const { message } = getDbErrorMessage(error);
 		throw createError({ statusCode: 500, message });
 	}
-	if (!doctorUser)
-		throw createError({
-			statusCode: 404,
-			message: 'Doctor account not found',
-		});
 
 	let updated: { appointmentId: number; status: string } | undefined;
 	try {
 		[updated] = await useDb()
 			.update(appointments)
 			.set({ status: payload.data.status })
-			.where(
-				and(
-					eq(appointments.appointmentId, appointmentId),
-					eq(appointments.patientId, session.user.id)
-				)
-			)
+			.where(eq(appointments.appointmentId, appointmentId))
 			.returning({
 				appointmentId: appointments.appointmentId,
 				status: appointments.status,
@@ -130,29 +131,32 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 500, message });
 	}
 
-	const html = await renderEmailComponent(
-		'AppointmentCanceled',
-		{
-			patientName: session.user.name,
-			doctorName: doctorUser.name,
-			appointmentDateTime: formatAppointmentDateTime(
-				new Date(appointmentRow.datetime)
-			),
-			visitMode: formatVisitMode(appointmentRow.isOnline),
-			appointmentType: formatAppointmentType(
-				appointmentRow.type as 'consultation' | 'procedure'
-			),
-		},
-		{
-			pretty: true,
-		}
-	);
+	// Send email to patient if we have their info
+	if (patientUser && doctorUser) {
+		const html = await renderEmailComponent(
+			'AppointmentCanceled',
+			{
+				patientName: patientUser.name,
+				doctorName: doctorUser.name,
+				appointmentDateTime: formatAppointmentDateTime(
+					new Date(appointmentRow.datetime)
+				),
+				visitMode: formatVisitMode(appointmentRow.isOnline),
+				appointmentType: formatAppointmentType(
+					appointmentRow.type as 'consultation' | 'procedure'
+				),
+			},
+			{
+				pretty: true,
+			}
+		);
 
-	await queue.add('appointment canceled', {
-		to: session.user.email,
-		subject: 'Potwierdzenie odwołania wizyty',
-		html,
-	});
+		await queue.add('appointment canceled', {
+			to: patientUser.email,
+			subject: 'Wizyta została anulowana',
+			html,
+		});
+	}
 
 	return updated;
 });

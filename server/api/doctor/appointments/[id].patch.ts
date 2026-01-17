@@ -1,10 +1,10 @@
 import { and, eq } from 'drizzle-orm';
 import { createError, defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
-import { auth } from '~~/lib/auth';
 import {
 	appointments,
 	medicalRecords,
+	medications,
 	prescriptions,
 	recommendations,
 	testResults,
@@ -58,135 +58,174 @@ const normalizeExamCodes = (values?: string[] | null) => {
 };
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				appointments: ['update'],
-				prescriptions: ['create'],
-				recommendations: ['create'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		appointments: ['update'],
+		prescriptions: ['create'],
+		recommendations: ['create'],
 	});
-
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const appointmentId = Number(event.context.params?.id);
 	if (!Number.isFinite(appointmentId))
 		throw createError({
 			statusCode: 400,
-			statusMessage: 'Invalid appointment id',
+			message: 'Nieprawidłowy identyfikator wizyty',
 		});
 
-	const payload = payloadSchema.parse(await readBody(event));
+	const body = await readBody(event);
+	const parsedPayload = payloadSchema.safeParse(body);
 
-	const [appointmentRow] = await useDb()
-		.select({
-			appointmentId: appointments.appointmentId,
-			doctorId: appointments.doctorId,
-			status: appointments.status,
-			patientId: appointments.patientId,
-		})
-		.from(appointments)
-		.where(eq(appointments.appointmentId, appointmentId))
-		.limit(1);
+	if (parsedPayload.error) {
+		const flat = z.flattenError(parsedPayload.error);
+		const firstFieldError = Object.values(flat.fieldErrors)
+			.flat()
+			.find((m): m is string => !!m);
+
+		throw createError({
+			statusCode: 400,
+			message: firstFieldError ?? 'Nieprawidłowe dane wejściowe.',
+		});
+	}
+
+	const payload = parsedPayload.data;
+
+	let appointmentRow:
+		| {
+				appointmentId: number;
+				doctorId: string;
+				status: string;
+				patientId: string;
+		  }
+		| undefined;
+	try {
+		[appointmentRow] = await useDb()
+			.select({
+				appointmentId: appointments.appointmentId,
+				doctorId: appointments.doctorId,
+				status: appointments.status,
+				patientId: appointments.patientId,
+			})
+			.from(appointments)
+			.where(eq(appointments.appointmentId, appointmentId))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 
 	if (!appointmentRow)
 		throw createError({
 			statusCode: 404,
-			statusMessage: 'Appointment not found',
+			message: 'Nie znaleziono wizyty',
 		});
 
 	if (appointmentRow.doctorId !== session.user.id)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
+		throw createError({ statusCode: 403, message: 'Brak dostępu' });
 
-	if (!['scheduled', 'checked_in'].includes(appointmentRow.status))
+	if (appointmentRow.status !== 'checked_in')
 		throw createError({
 			statusCode: 400,
-			statusMessage: 'Appointment is already closed',
+			message: 'Wizyta nie została zameldowana przez recepcję',
 		});
 
-	const medications = normalizeMedications(payload.prescribedMedications);
+	const medicationLines = normalizeMedications(payload.prescribedMedications);
 	const examResultCodes = normalizeExamCodes(payload.examResultCodes);
 
-	const result = await useDb().transaction(async (tx) => {
-		let recommendationId: number | null = null;
-		if (payload.recommendations && payload.recommendations.trim().length > 0) {
-			const [rec] = await tx
-				.insert(recommendations)
-				.values({ content: payload.recommendations.trim() })
-				.returning({ recommendationId: recommendations.recommendationId });
-			recommendationId = rec.recommendationId;
-		}
-
-		let prescriptionId: number | null = null;
-		if (medications) {
-			const [prescription] = await tx
-				.insert(prescriptions)
-				.values({
-					medications,
-					status: 'active',
-				})
-				.returning({ prescriptionId: prescriptions.prescriptionId });
-			prescriptionId = prescription.prescriptionId;
-		}
-
-		const [updated] = await tx
-			.update(appointments)
-			.set({
-				status: 'completed',
-				notes: buildNotes(payload),
-				recommendationId: recommendationId ?? undefined,
-				prescriptionId: prescriptionId ?? undefined,
-			})
-			.where(
-				and(
-					eq(appointments.appointmentId, appointmentId),
-					eq(appointments.doctorId, session.user.id)
-				)
-			)
-			.returning({
-				appointmentId: appointments.appointmentId,
-				status: appointments.status,
-				recommendationId: appointments.recommendationId,
-				prescriptionId: appointments.prescriptionId,
-			});
-
-		if (examResultCodes.length) {
-			const [existingRecord] = await tx
-				.select({ recordId: medicalRecords.recordId })
-				.from(medicalRecords)
-				.where(eq(medicalRecords.patientId, appointmentRow.patientId))
-				.limit(1);
-
-			let recordId = existingRecord?.recordId;
-			if (!recordId) {
-				const [record] = await tx
-					.insert(medicalRecords)
-					.values({ patientId: appointmentRow.patientId })
-					.returning({ recordId: medicalRecords.recordId });
-				recordId = record.recordId;
+	let result;
+	try {
+		result = await useDb().transaction(async (tx) => {
+			let recommendationId: number | null = null;
+			if (
+				payload.recommendations &&
+				payload.recommendations.trim().length > 0
+			) {
+				const [rec] = await tx
+					.insert(recommendations)
+					.values({ content: payload.recommendations.trim() })
+					.returning({ recommendationId: recommendations.recommendationId });
+				if (rec) {
+					recommendationId = rec.recommendationId;
+				}
 			}
 
-			const now = new Date();
-			await tx.insert(testResults).values(
-				examResultCodes.map((code) => ({
-					recordId,
-					testType: 'Kod badania',
-					result: code,
-					testDate: now,
-				}))
-			);
-		}
+			let prescriptionId: number | null = null;
+			if (medicationLines) {
+				const [prescription] = await tx
+					.insert(prescriptions)
+					.values({
+						status: 'active',
+					})
+					.returning({ prescriptionId: prescriptions.prescriptionId });
+				if (prescription) {
+					prescriptionId = prescription.prescriptionId;
 
-		return updated;
-	});
+					await tx.insert(medications).values(
+						medicationLines.map((description) => ({
+							prescriptionId: prescriptionId!,
+							description,
+						}))
+					);
+				}
+			}
+
+			const [updated] = await tx
+				.update(appointments)
+				.set({
+					status: 'completed',
+					notes: buildNotes(payload),
+					recommendationId: recommendationId ?? undefined,
+					prescriptionId: prescriptionId ?? undefined,
+				})
+				.where(
+					and(
+						eq(appointments.appointmentId, appointmentId),
+						eq(appointments.doctorId, session.user.id)
+					)
+				)
+				.returning({
+					appointmentId: appointments.appointmentId,
+					status: appointments.status,
+					recommendationId: appointments.recommendationId,
+					prescriptionId: appointments.prescriptionId,
+				});
+
+			if (examResultCodes.length) {
+				const [existingRecord] = await tx
+					.select({ recordId: medicalRecords.recordId })
+					.from(medicalRecords)
+					.where(eq(medicalRecords.patientId, appointmentRow.patientId))
+					.limit(1);
+
+				let recordId = existingRecord?.recordId;
+				if (!recordId) {
+					const [record] = await tx
+						.insert(medicalRecords)
+						.values({ patientId: appointmentRow.patientId })
+						.returning({ recordId: medicalRecords.recordId });
+					if (record) {
+						recordId = record.recordId;
+					}
+				}
+
+				if (recordId) {
+					const now = new Date();
+					const testDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+					await tx.insert(testResults).values(
+						examResultCodes.map((code) => ({
+							recordId: recordId!,
+							testType: 'Kod badania',
+							result: code,
+							testDate: testDateStr,
+						}))
+					);
+				}
+			}
+
+			return updated;
+		});
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 
 	return result;
 });

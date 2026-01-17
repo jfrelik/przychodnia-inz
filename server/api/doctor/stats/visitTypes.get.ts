@@ -1,48 +1,48 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
-import { auth } from '~~/lib/auth';
 import { appointments, doctors } from '~~/server/db/clinic';
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: { appointments: ['list'] },
-		},
+	const session = await requireSessionWithPermissions(event, {
+		appointments: ['list'],
 	});
 
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
-
-	const [doctorRow] = await useDb()
-		.select({ userId: doctors.userId })
-		.from(doctors)
-		.where(eq(doctors.userId, session.user.id))
-		.limit(1);
+	let doctorRow: { userId: string } | undefined;
+	try {
+		[doctorRow] = await useDb()
+			.select({ userId: doctors.userId })
+			.from(doctors)
+			.where(eq(doctors.userId, session.user.id))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 
 	if (!doctorRow)
 		throw createError({
 			statusCode: 404,
-			statusMessage: 'Doctor profile not found',
+			message: 'Nie znaleziono profilu lekarza',
 		});
 
-	const [counts] = await useDb()
-		.select({
-			onsite: sql<number>`count(*) FILTER (WHERE ${appointments.isOnline} = false)`,
-			remote: sql<number>`count(*) FILTER (WHERE ${appointments.isOnline} = true)`,
-		})
-		.from(appointments)
-		.where(
-			and(
-				eq(appointments.doctorId, doctorRow.userId),
-				eq(appointments.status, 'completed')
-			)
-		);
+	let counts: { onsite: number; remote: number } | undefined;
+	try {
+		[counts] = await useDb()
+			.select({
+				onsite: sql<number>`count(*) FILTER (WHERE ${appointments.isOnline} = false)`,
+				remote: sql<number>`count(*) FILTER (WHERE ${appointments.isOnline} = true)`,
+			})
+			.from(appointments)
+			.where(
+				and(
+					eq(appointments.doctorId, doctorRow.userId),
+					eq(appointments.status, 'completed')
+				)
+			);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 
 	return {
 		onsite: Number(counts?.onsite ?? 0),

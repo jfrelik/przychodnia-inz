@@ -1,7 +1,6 @@
 import { and, asc, eq, gte, inArray, lte } from 'drizzle-orm';
 import { createError, defineEventHandler, getQuery } from 'h3';
 import { z } from 'zod';
-import { auth } from '~~/lib/auth';
 import { user as authUser } from '~~/server/db/auth';
 import {
 	appointments,
@@ -44,7 +43,7 @@ const querySchema = z
 	);
 
 const parseUtcDate = (date: string) => {
-	const [y, m, d] = date.split('-').map(Number);
+	const [y, m, d] = date.split('-').map(Number) as [number, number, number];
 	return new Date(Date.UTC(y, m - 1, d));
 };
 
@@ -97,15 +96,9 @@ const mergeFrames = (frames: Frame[]): Frame[] => {
 };
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: { userId: session.user.id, permissions: { appointments: ['list'] } },
+	await requireSessionWithPermissions(event, {
+		appointments: ['list'],
 	});
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const query = querySchema.parse(getQuery(event));
 	const { startDate, specializationId, doctorId, type } = query;
@@ -115,135 +108,144 @@ export default defineEventHandler(async (event) => {
 	const filterStartMinutes = query.startTime ? toMinutes(query.startTime) : 0;
 	const filterEndMinutes = query.endTime ? toMinutes(query.endTime) : 24 * 60;
 
-	const doctorRows = await useDb()
-		.select({
-			doctorId: doctors.userId,
-			specializationId: doctors.specializationId,
-			specializationName: specializations.name,
-			doctorName: authUser.name,
-			doctorEmail: authUser.email,
-		})
-		.from(doctors)
-		.leftJoin(specializations, eq(doctors.specializationId, specializations.id))
-		.leftJoin(authUser, eq(doctors.userId, authUser.id))
-		.where(
-			doctorId
-				? eq(doctors.userId, doctorId)
-				: eq(doctors.specializationId, specializationId!)
-		);
-
-	if (doctorRows.length === 0)
-		return {
-			startDate,
-			endDate,
-			slots: [] as Array<unknown>,
-			doctors: [] as Array<unknown>,
-		};
-
-	const results = [];
-
-	for (const doc of doctorRows) {
-		// Availability over the range
-		const availabilities = await useDb()
+	try {
+		const doctorRows = await useDb()
 			.select({
-				day: availability.day,
-				start: availability.timeStart,
-				end: availability.timeEnd,
+				doctorId: doctors.userId,
+				specializationId: doctors.specializationId,
+				specializationName: specializations.name,
+				doctorName: authUser.name,
+				doctorEmail: authUser.email,
 			})
-			.from(availability)
-			.where(
-				and(
-					eq(availability.doctorUserId, doc.doctorId),
-					gte(availability.day, startDate),
-					lte(availability.day, endDate)
-				)
+			.from(doctors)
+			.leftJoin(
+				specializations,
+				eq(doctors.specializationId, specializations.id)
 			)
-			.orderBy(asc(availability.day), asc(availability.timeStart));
-
-		const availabilityByDate = new Map<string, Frame[]>();
-		for (const row of availabilities) {
-			const dayStr =
-				typeof row.day === 'string'
-					? row.day
-					: (row.day as unknown as Date).toISOString().slice(0, 10);
-			const arr = availabilityByDate.get(dayStr) ?? [];
-			arr.push({ start: row.start, end: row.end });
-			availabilityByDate.set(dayStr, arr);
-		}
-
-		// Existing appointments over the range
-		const existing = await useDb()
-			.select({
-				datetime: appointments.datetime,
-				type: appointments.type,
-			})
-			.from(appointments)
+			.leftJoin(authUser, eq(doctors.userId, authUser.id))
 			.where(
 				and(
-					eq(appointments.doctorId, doc.doctorId),
-					gte(appointments.datetime, new Date(`${startDate}T00:00:00`)),
-					lte(appointments.datetime, new Date(`${endDate}T23:59:59`)),
-					inArray(appointments.status, ['scheduled', 'checked_in'])
+					eq(authUser.banned, false),
+					doctorId
+						? eq(doctors.userId, doctorId)
+						: eq(doctors.specializationId, specializationId!)
 				)
 			);
 
-		const existingByDate = new Map<
-			string,
-			{ start: number; end: number; type: 'consultation' | 'procedure' }[]
-		>();
-		for (const row of existing) {
-			const start = new Date(row.datetime);
-			const dateStr = start.toISOString().slice(0, 10);
-			const startMinutes = start.getHours() * 60 + start.getMinutes();
-			const duration = getDurationMinutes(
-				row.type as 'consultation' | 'procedure'
-			);
-			const arr = existingByDate.get(dateStr) ?? [];
-			arr.push({
-				start: startMinutes,
-				end: startMinutes + duration,
-				type: row.type as any,
-			});
-			existingByDate.set(dateStr, arr);
-		}
+		if (doctorRows.length === 0)
+			return {
+				startDate,
+				endDate,
+				slots: [] as Array<unknown>,
+				doctors: [] as Array<unknown>,
+			};
 
-		const allSlots: { start: string; end: string }[] = [];
+		const results = [];
 
-		for (const date of dateRange) {
-			const frames = mergeFrames(availabilityByDate.get(date) ?? []);
-			if (!frames.length) continue;
+		for (const doc of doctorRows) {
+			const availabilities = await useDb()
+				.select({
+					day: availability.day,
+					start: availability.timeStart,
+					end: availability.timeEnd,
+				})
+				.from(availability)
+				.where(
+					and(
+						eq(availability.doctorUserId, doc.doctorId),
+						gte(availability.day, startDate),
+						lte(availability.day, endDate)
+					)
+				)
+				.orderBy(asc(availability.day), asc(availability.timeStart));
 
-			const existingWindows = existingByDate.get(date) ?? [];
+			const availabilityByDate = new Map<string, Frame[]>();
+			for (const row of availabilities) {
+				const dayStr =
+					typeof row.day === 'string'
+						? row.day
+						: (row.day as unknown as Date).toISOString().slice(0, 10);
+				const arr = availabilityByDate.get(dayStr) ?? [];
+				arr.push({ start: row.start, end: row.end });
+				availabilityByDate.set(dayStr, arr);
+			}
 
-			for (const frame of frames) {
-				let start = Math.max(toMinutes(frame.start), filterStartMinutes);
-				const frameEnd = Math.min(toMinutes(frame.end), filterEndMinutes);
+			const existing = await useDb()
+				.select({
+					datetime: appointments.datetime,
+					type: appointments.type,
+				})
+				.from(appointments)
+				.where(
+					and(
+						eq(appointments.doctorId, doc.doctorId),
+						gte(appointments.datetime, new Date(`${startDate}T00:00:00`)),
+						lte(appointments.datetime, new Date(`${endDate}T23:59:59`)),
+						inArray(appointments.status, ['scheduled', 'checked_in'])
+					)
+				);
 
-				while (start + slotDuration <= frameEnd) {
-					const candidateEnd = start + slotDuration;
-					const overlap = existingWindows.some(
-						(w) => start < w.end && w.start < candidateEnd
-					);
-					if (!overlap) {
-						allSlots.push({
-							start: toTime(date, start),
-							end: toTime(date, candidateEnd),
-						});
+			const existingByDate = new Map<
+				string,
+				{ start: number; end: number; type: 'consultation' | 'procedure' }[]
+			>();
+			for (const row of existing) {
+				const start = new Date(row.datetime);
+				const dateStr = start.toISOString().slice(0, 10);
+				const startMinutes = start.getHours() * 60 + start.getMinutes();
+				const duration = getDurationMinutes(
+					row.type as 'consultation' | 'procedure'
+				);
+				const arr = existingByDate.get(dateStr) ?? [];
+				arr.push({
+					start: startMinutes,
+					end: startMinutes + duration,
+					type: row.type as any,
+				});
+				existingByDate.set(dateStr, arr);
+			}
+
+			const allSlots: { start: string; end: string }[] = [];
+
+			for (const date of dateRange) {
+				const frames = mergeFrames(availabilityByDate.get(date) ?? []);
+				if (!frames.length) continue;
+
+				const existingWindows = existingByDate.get(date) ?? [];
+
+				for (const frame of frames) {
+					let start = Math.max(toMinutes(frame.start), filterStartMinutes);
+					const frameEnd = Math.min(toMinutes(frame.end), filterEndMinutes);
+
+					while (start + slotDuration <= frameEnd) {
+						const candidateEnd = start + slotDuration;
+						const overlap = existingWindows.some(
+							(w) => start < w.end && w.start < candidateEnd
+						);
+						if (!overlap) {
+							allSlots.push({
+								start: toTime(date, start),
+								end: toTime(date, candidateEnd),
+							});
+						}
+						start += slotDuration;
 					}
-					start += slotDuration;
 				}
 			}
+
+			results.push({
+				doctorId: doc.doctorId,
+				specializationId: doc.specializationId,
+				specializationName: doc.specializationName,
+				doctorName: doc.doctorName,
+				doctorEmail: doc.doctorEmail,
+				slots: allSlots,
+			});
 		}
 
-		results.push({
-			doctorId: doc.doctorId,
-			specializationId: doc.specializationId,
-			specializationName: doc.specializationName,
-			doctorName: doc.doctorName,
-			doctorEmail: doc.doctorEmail,
-			slots: allSlots,
-		});
+		return { startDate, endDate, slots: results, type };
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
 	}
-
-	return { startDate, endDate, slots: results, type };
 });
