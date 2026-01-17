@@ -61,24 +61,9 @@ export default defineEventHandler(async (event) => {
 		});
 		throw createError({
 			statusCode: 400,
-			statusMessage: 'Błąd walidacji danych rejestracji.',
+			message: 'Błąd walidacji danych rejestracji.',
 		});
 	}
-
-	// Check if PESEL already exists to avoid creating orphaned auth user
-	// !TODO: Consider if we really want this check - RODO
-	// const existingPatient = await useDb()
-	// 	.select({ pesel: patients.pesel })
-	// 	.from(patients)
-	// 	.where(eq(patients.pesel, payload.pesel))
-	// 	.limit(1);
-
-	// if (existingPatient.length > 0) {
-	// 	throw createError({
-	// 		statusCode: 409,
-	// 		statusMessage: 'Pacjent o tym numerze PESEL już istnieje.',
-	// 	});
-	// }
 
 	let newUserId: string;
 
@@ -90,7 +75,7 @@ export default defineEventHandler(async (event) => {
 				email: payload.email,
 				password: payload.password,
 				name: fullName,
-				callbackURL: '/login',
+				callbackURL: '/verify-email',
 			},
 		});
 
@@ -114,15 +99,18 @@ export default defineEventHandler(async (event) => {
 		) {
 			throw createError({
 				statusCode: 409,
-				statusMessage: 'Użytkownik o tym adresie email już istnieje.',
+				message: 'Użytkownik o tym adresie email już istnieje.',
 			});
 		}
 
 		throw createError({
 			statusCode: 500,
-			statusMessage: 'Błąd tworzenia konta użytkownika.',
+			message: 'Błąd tworzenia konta użytkownika.',
 		});
 	}
+
+	const peselHmacValue = peselHmac(payload.pesel);
+	const peselEncValue = encryptPesel(payload.pesel);
 
 	// Calculate date of birth from PESEL
 	const yearPart = parseInt(payload.pesel.substring(0, 2), 10);
@@ -160,7 +148,8 @@ export default defineEventHandler(async (event) => {
 				firstName: payload.name,
 				lastName: payload.surname,
 				dateOfBirth: dateOfBirth,
-				pesel: payload.pesel,
+				peselHmac: peselHmacValue,
+				peselEnc: peselEncValue,
 				phone: payload.phone,
 				address: payload.address,
 			});
@@ -175,7 +164,7 @@ export default defineEventHandler(async (event) => {
 
 		throw createError({
 			statusCode: 500,
-			statusMessage: 'Błąd tworzenia profilu pacjenta.',
+			message: 'Błąd tworzenia profilu pacjenta.',
 		});
 	}
 
@@ -183,7 +172,6 @@ export default defineEventHandler(async (event) => {
 		userId: string;
 		firstName: string | null;
 		lastName: string | null;
-		pesel: string;
 		phone: string | null;
 		address: string;
 		email: string | null;
@@ -196,7 +184,6 @@ export default defineEventHandler(async (event) => {
 				userId: patients.userId,
 				firstName: patients.firstName,
 				lastName: patients.lastName,
-				pesel: patients.pesel,
 				phone: patients.phone,
 				address: patients.address,
 				email: user.email,
@@ -216,7 +203,7 @@ export default defineEventHandler(async (event) => {
 		consola.error({ operation: 'PatientRegistrationFetch', error });
 		throw createError({
 			statusCode: 500,
-			statusMessage: 'Błąd podczas pobierania danych pacjenta.',
+			message: 'Błąd podczas pobierania danych pacjenta.',
 		});
 	}
 

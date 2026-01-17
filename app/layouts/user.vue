@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-	import { useToast } from '#imports';
 	import type { NavigationMenuItem } from '@nuxt/ui';
+	import { pl } from '@nuxt/ui/locale';
 	import { authClient } from '~~/lib/auth-client';
 
 	const route = useRoute();
@@ -16,7 +16,7 @@
 							title: 'Wylogowano',
 							description: 'Proces wylogowywania powiódł się',
 							color: 'success',
-							icon: 'carbon:checkmark',
+							icon: 'lucide:check',
 						});
 						navigateTo('/');
 					},
@@ -28,7 +28,7 @@
 				title: 'Błąd wylogowania',
 				description: 'Błąd: ' + message,
 				color: 'error',
-				icon: 'carbon:error',
+				icon: 'lucide:circle-x',
 			});
 		}
 	};
@@ -37,73 +37,77 @@
 		[
 			{
 				label: 'Strona Główna',
-				icon: 'carbon:home',
+				icon: 'lucide:home',
 				class: 'cursor-pointer',
 				active: route.path === '/user/home',
 				to: '/user/home',
 			},
 			{
 				label: 'Wizyty',
-				icon: 'carbon:calendar',
+				icon: 'lucide:calendar',
 				class: 'cursor-pointer',
 				active: route.path === '/user/visits',
 				to: '/user/visits',
 			},
 			{
 				label: 'Recepty',
-				icon: 'carbon:pills',
+				icon: 'lucide:pill',
 				class: 'cursor-pointer',
 				active: route.path === '/user/prescriptions',
 				to: '/user/prescriptions',
 			},
 			{
 				label: 'Wyniki Badań',
-				icon: 'carbon:document',
+				icon: 'lucide:file',
 				class: 'cursor-pointer',
 				active: route.path === '/user/testResults',
 				to: '/user/testResults',
 			},
 			{
-				label: 'Porady Lekarskie',
-				icon: 'carbon:user-feedback',
+				label: 'Zalecenia Lekarskie',
+				icon: 'lucide:message-square',
 				class: 'cursor-pointer',
 				active: route.path === '/user/recommendations',
 				to: '/user/recommendations',
-			},
-			{
-				label: 'Umów Wizytę',
-				icon: 'carbon:calendar-add',
-				class: 'cursor-pointer',
-				active: route.path === '/user/newAppointment',
-				to: '/user/newAppointment',
 			},
 		],
 	]);
 </script>
 
 <template>
-	<UApp>
+	<UApp :locale="pl">
 		<UDashboardGroup class="flex h-screen min-h-0">
 			<UDashboardSidebar
 				collapsible
 				:ui="{ footer: 'border-t border-default' }"
 			>
 				<template #header="{ collapsed }">
-					<div v-if="!collapsed" class="flex items-center gap-3">
-						<img class="h-5 w-auto shrink-0" src="/hospital.png" />
-						Przychodnia
+					<div class="flex w-full items-center gap-3">
+						<div v-if="!collapsed" class="flex items-center gap-3">
+							<img class="h-5 w-auto shrink-0" src="/hospital.png" />
+							Przychodnia
+						</div>
+						<UIcon
+							v-else
+							name="i-simple-icons-nuxtdotjs"
+							class="text-primary mx-auto size-5"
+						/>
+						<UTooltip
+							:text="collapsed ? 'Rozwiń menu' : 'Zwiń menu'"
+							:content="{ side: 'right', sideOffset: 8 }"
+						>
+							<UDashboardSidebarCollapse
+								:class="!collapsed && 'ml-auto'"
+								class="cursor-pointer"
+							/>
+						</UTooltip>
 					</div>
-					<UIcon
-						v-else
-						name="i-simple-icons-nuxtdotjs"
-						class="text-primary mx-auto size-5"
-					/>
 				</template>
 
 				<template #default="{ collapsed }">
 					<UButton
 						label="Umów wizytę"
-						icon="carbon:calendar-add"
+						icon="lucide:calendar-plus"
 						class="cursor-pointer justify-center"
 						to="/user/newAppointment"
 					/>
@@ -111,6 +115,8 @@
 						:collapsed="collapsed"
 						:items="items[0]"
 						orientation="vertical"
+						tooltip
+						popover
 					/>
 				</template>
 
@@ -122,19 +128,10 @@
 							variant="ghost"
 							class="w-full cursor-pointer"
 							:block="collapsed"
-							icon="i-lucide-log-out"
+							icon="lucide:log-out"
 							@click="handleSignout"
 						/>
-						<UButton
-							:label="collapsed ? undefined : 'Pomoc i Dokumentacja'"
-							color="neutral"
-							variant="ghost"
-							class="mt-2 w-full"
-							:block="collapsed"
-							icon="i-lucide-info"
-							:to="'https://github.com/jfrelik/przychodnia-inz'"
-							target="_blank"
-						/>
+
 						<UButton
 							:label="
 								collapsed
@@ -145,7 +142,7 @@
 							variant="ghost"
 							class="mt-2 w-full"
 							:block="collapsed"
-							icon="i-lucide-code"
+							icon="lucide:code"
 							disabled
 						/>
 					</div>
@@ -154,6 +151,11 @@
 			<UContainer
 				class="mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-y-auto px-6 py-8"
 			>
+				<div class="mb-4 flex items-center gap-2 lg:hidden">
+					<UTooltip text="Menu" :content="{ side: 'bottom', sideOffset: 8 }">
+						<UDashboardSidebarToggle class="cursor-pointer border" />
+					</UTooltip>
+				</div>
 				<slot />
 			</UContainer>
 		</UDashboardGroup>

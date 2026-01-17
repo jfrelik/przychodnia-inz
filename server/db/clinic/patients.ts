@@ -8,10 +8,9 @@ export const patients = pgTable('patients', {
 	// Core identity
 	firstName: text('first_name'),
 	lastName: text('last_name'),
-	pesel: text('pesel').notNull().unique(),
+	peselHmac: text('pesel_hmac').notNull().unique(),
+	peselEnc: text('pesel_enc').notNull(),
 	dateOfBirth: date('date_of_birth'),
 	phone: text('phone'),
-	//TODO: Address fields
 	address: text('address').notNull(),
-	//TODO: Additional medical info fields
 });

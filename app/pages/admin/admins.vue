@@ -31,11 +31,22 @@
 		pending,
 		error,
 		refresh,
-	} = await useFetch<Admin[]>('/api/admin/admins', {
+	} = await useLazyFetch<Admin[]>('/api/admin/admins', {
 		default: () => [],
+		server: false,
 	});
 
 	const admins = computed(() => adminsData.value ?? []);
+
+	const tableKey = ref(0);
+
+	watch(
+		() => adminsData.value,
+		() => {
+			tableKey.value++;
+		},
+		{ deep: false }
+	);
 
 	const table = ref();
 	const globalFilter = ref('');
@@ -133,7 +144,7 @@
 				title: 'Nieprawidłowy adres email',
 				description: 'Podaj poprawny adres email administratora.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -146,7 +157,7 @@
 				description:
 					'Imię i nazwisko administratora musi mieć co najmniej 2 znaki.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -156,34 +167,36 @@
 
 		isCreatePending.value = true;
 
-		const { error: createError } = await useFetch('/api/admin/admins', {
-			method: 'POST',
-			body: {
-				email: trimmedEmail,
-				name: trimmedName,
-			},
-		});
-
-		isCreatePending.value = false;
-
-		if (createError.value) {
+		try {
+			await $fetch('/api/admin/admins', {
+				method: 'POST',
+				body: {
+					email: trimmedEmail,
+					name: trimmedName,
+				},
+			});
+		} catch (error) {
 			toast.add({
 				title: 'Dodawanie nie powiodło się',
-				description:
-					createError.value.message ??
-					'Wystąpił nieoczekiwany błąd podczas dodawania administratora.',
+				description: getErrorMessage(
+					error,
+					'Wystąpił nieoczekiwany błąd podczas dodawania administratora.'
+				),
 				color: 'error',
-				icon: 'i-lucide-x-circle',
+				icon: 'lucide:x-circle',
 			});
+			isCreatePending.value = false;
 			return;
 		}
+
+		isCreatePending.value = false;
 
 		toast.add({
 			title: 'Dodano administratora',
 			description:
 				'Konto administratora utworzono i wysłano link do ustawienia hasła.',
 			color: 'success',
-			icon: 'i-lucide-check',
+			icon: 'lucide:check',
 		});
 
 		closeCreateModal();
@@ -202,7 +215,7 @@
 				title: 'Nieprawidłowe imię i nazwisko',
 				description: 'Imię i nazwisko administratora nie może być puste.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
@@ -220,33 +233,32 @@
 
 		isEditPending.value = true;
 
-		const { error: editError } = await useFetch(
-			`/api/admin/admins/${selectedAdmin.value.id}`,
-			{
+		try {
+			await $fetch(`/api/admin/admins/${selectedAdmin.value.id}`, {
 				method: 'PATCH',
 				body: payload,
-			}
-		);
-
-		isEditPending.value = false;
-
-		if (editError.value) {
+			});
+		} catch (error) {
 			toast.add({
 				title: 'Aktualizacja nie powiodła się',
-				description:
-					editError.value.message ??
-					'Wystąpił błąd podczas aktualizacji administratora.',
+				description: getErrorMessage(
+					error,
+					'Wystąpił błąd podczas aktualizacji administratora.'
+				),
 				color: 'error',
-				icon: 'i-lucide-x-circle',
+				icon: 'lucide:x-circle',
 			});
+			isEditPending.value = false;
 			return;
 		}
+
+		isEditPending.value = false;
 
 		toast.add({
 			title: 'Zaktualizowano administratora',
 			description: 'Dane administratora zostały zapisane.',
 			color: 'success',
-			icon: 'i-lucide-check',
+			icon: 'lucide:check',
 		});
 
 		closeEditModal();
@@ -265,39 +277,38 @@
 				title: 'Nie możesz usunąć własnego konta',
 				description: 'Nie możesz usunąć własnego konta administratora.',
 				color: 'warning',
-				icon: 'i-lucide-alert-triangle',
+				icon: 'lucide:alert-triangle',
 			});
 			return;
 		}
 
 		isDeletePending.value = true;
 
-		const { error: deleteError } = await useFetch(
-			`/api/admin/admins/${selectedAdmin.value.id}`,
-			{
+		try {
+			await $fetch(`/api/admin/admins/${selectedAdmin.value.id}`, {
 				method: 'DELETE',
-			}
-		);
-
-		isDeletePending.value = false;
-
-		if (deleteError.value) {
+			});
+		} catch (error) {
 			toast.add({
 				title: 'Usuwanie nie powiodło się',
-				description:
-					deleteError.value.message ??
-					'Wystąpił błąd podczas usuwania administratora.',
+				description: getErrorMessage(
+					error,
+					'Wystąpił błąd podczas usuwania administratora.'
+				),
 				color: 'error',
-				icon: 'i-lucide-x-circle',
+				icon: 'lucide:x-circle',
 			});
+			isDeletePending.value = false;
 			return;
 		}
+
+		isDeletePending.value = false;
 
 		toast.add({
 			title: 'Usunięto administratora',
 			description: 'Administrator został usunięty.',
 			color: 'success',
-			icon: 'i-lucide-check',
+			icon: 'lucide:check',
 		});
 
 		closeDeleteModal();
@@ -312,18 +323,14 @@
 				title="Panel administratorów"
 				description="Zarządzaj kontami administratorów systemu."
 			/>
-			<UButton
-				color="primary"
-				icon="i-lucide-user-plus"
-				@click="openCreateModal"
-			>
+			<UButton color="primary" icon="lucide:user-plus" @click="openCreateModal">
 				Dodaj administratora
 			</UButton>
 		</div>
 
 		<UInput
 			v-model="globalFilter"
-			icon="i-lucide-search"
+			icon="lucide:search"
 			placeholder="Szukaj administratorów..."
 			clearable
 			class="max-w-sm"
@@ -332,7 +339,7 @@
 		<UAlert
 			v-if="error"
 			color="error"
-			icon="i-lucide-alert-triangle"
+			icon="lucide:alert-triangle"
 			description="Nie udało się pobrać listy administratorów."
 		>
 			<template #actions>
@@ -352,73 +359,74 @@
 							Przeglądaj konta administratorów oraz zarządzaj dostępem.
 						</p>
 					</div>
-					<UBadge
-						variant="soft"
-						color="primary"
-						:label="`${admins.length} pozycji`"
-					/>
+					<ClientOnly>
+						<UBadge
+							variant="soft"
+							color="primary"
+							:label="`${admins.length} pozycji`"
+						/>
+					</ClientOnly>
 				</div>
 			</template>
 
 			<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-				<UTable
-					ref="table"
-					v-model:global-filter="globalFilter"
-					v-model:column-filters="columnFilters"
-					v-model:sorting="sorting"
-					v-model:pagination="pagination"
-					:data="admins"
-					sticky="header"
-					:columns="columns"
-					:loading="pending"
-					class="min-h-0 min-w-full flex-1 overflow-y-auto"
-					:empty-state="{
-						icon: 'i-lucide-user-x',
-						label: 'Brak administratorów',
-						description: 'Dodaj pierwszego administratora, aby rozpocząć.',
-					}"
-					:pagination-options="{
-						getPaginationRowModel: getPaginationRowModel(),
-					}"
-				>
-					<template #createdAt-cell="{ row }">
-						{{ new Date(row.original.createdAt).toLocaleDateString('pl-PL') }}
-					</template>
+				<ClientOnly>
+					<UTable
+						:key="tableKey"
+						ref="table"
+						v-model:global-filter="globalFilter"
+						v-model:column-filters="columnFilters"
+						v-model:sorting="sorting"
+						v-model:pagination="pagination"
+						:data="admins"
+						sticky="header"
+						:columns="columns"
+						:loading="pending"
+						class="min-h-0 min-w-full flex-1 overflow-y-auto"
+						empty="Nie ma administratorów."
+						:pagination-options="{
+							getPaginationRowModel: getPaginationRowModel(),
+						}"
+					>
+						<template #createdAt-cell="{ row }">
+							{{ new Date(row.original.createdAt).toLocaleDateString('pl-PL') }}
+						</template>
 
-					<template #actions-cell="{ row }">
-						<div class="flex justify-end gap-2">
-							<UButton
-								size="xs"
-								variant="ghost"
-								icon="i-lucide-pencil"
-								class="cursor-pointer"
-								@click="openEditModal(row.original)"
-							>
-								Edytuj
-							</UButton>
-							<UButton
-								size="xs"
-								color="error"
-								variant="ghost"
-								icon="i-lucide-trash"
-								class="cursor-pointer"
-								@click="openDeleteModal(row.original)"
-							>
-								Usuń
-							</UButton>
-						</div>
-					</template>
-				</UTable>
-				<div class="flex justify-center pt-4">
-					<UPagination
-						:default-page="
-							(table?.tableApi?.getState().pagination.pageIndex || 0) + 1
-						"
-						:items-per-page="table?.tableApi?.getState().pagination.pageSize"
-						:total="table?.tableApi?.getFilteredRowModel().rows.length || 0"
-						@update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
-					/>
-				</div>
+						<template #actions-cell="{ row }">
+							<div class="flex justify-end gap-2">
+								<UButton
+									size="xs"
+									variant="ghost"
+									icon="lucide:pencil"
+									class="cursor-pointer"
+									@click="openEditModal(row.original)"
+								>
+									Edytuj
+								</UButton>
+								<UButton
+									size="xs"
+									color="error"
+									variant="ghost"
+									icon="lucide:trash"
+									class="cursor-pointer"
+									@click="openDeleteModal(row.original)"
+								>
+									Usuń
+								</UButton>
+							</div>
+						</template>
+					</UTable>
+					<div class="flex justify-center pt-4">
+						<UPagination
+							:default-page="
+								(table?.tableApi?.getState().pagination.pageIndex || 0) + 1
+							"
+							:items-per-page="table?.tableApi?.getState().pagination.pageSize"
+							:total="table?.tableApi?.getFilteredRowModel().rows.length || 0"
+							@update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
+						/>
+					</div>
+				</ClientOnly>
 			</div>
 		</UCard>
 
@@ -439,7 +447,7 @@
 								v-model="createForm.email"
 								type="email"
 								:disabled="isCreatePending"
-								icon="i-lucide-mail"
+								icon="lucide:mail"
 								placeholder="np. admin@example.com"
 							/>
 						</UFormField>
@@ -447,7 +455,7 @@
 							<UInput
 								v-model="createForm.name"
 								:disabled="isCreatePending"
-								icon="i-lucide-user"
+								icon="lucide:user"
 								placeholder="np. Jan Kowalski"
 							/>
 						</UFormField>
@@ -487,14 +495,14 @@
 							<UInput
 								:model-value="selectedAdmin?.email ?? ''"
 								disabled
-								icon="i-lucide-mail"
+								icon="lucide:mail"
 							/>
 						</UFormField>
 						<UFormField label="Imię i nazwisko" name="name" required>
 							<UInput
 								v-model="editForm.name"
 								:disabled="isEditPending"
-								icon="i-lucide-user"
+								icon="lucide:user"
 							/>
 						</UFormField>
 					</UForm>
@@ -537,7 +545,7 @@
 						<UAlert
 							v-if="selectedAdmin?.id === session?.data?.user?.id"
 							color="warning"
-							icon="i-lucide-alert-triangle"
+							icon="lucide:alert-triangle"
 							description="Nie możesz usunąć własnego konta administratora."
 						/>
 					</div>
@@ -549,7 +557,7 @@
 							</UButton>
 							<UButton
 								color="error"
-								icon="i-lucide-trash"
+								icon="lucide:trash"
 								:disabled="selectedAdmin?.id === session?.data?.user?.id"
 								:loading="isDeletePending"
 								@click="handleDelete"

@@ -1,6 +1,6 @@
-import { desc, eq } from 'drizzle-orm';
-import { createError, defineEventHandler } from 'h3';
-import { auth } from '~~/lib/auth';
+import { and, asc, desc, eq, gte, lte, ne } from 'drizzle-orm';
+import { createError, defineEventHandler, getQuery } from 'h3';
+import { z } from 'zod';
 import { user as authUser } from '~~/server/db/auth';
 import { appointments, doctors, patients, room } from '~~/server/db/clinic';
 
@@ -17,58 +17,108 @@ const buildPatientName = (
 	return null;
 };
 
+const querySchema = z
+	.object({
+		date: z
+			.string()
+			.regex(/^\d{4}-\d{2}-\d{2}$/, 'Data musi być w formacie YYYY-MM-DD')
+			.optional(),
+	})
+	.strict();
+
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				appointments: ['list'],
-				users: ['read'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		appointments: ['list'],
+		users: ['read'],
 	});
 
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
+	const parsedQuery = querySchema.safeParse(getQuery(event));
 
-	const [doctorRow] = await useDb()
-		.select({ userId: doctors.userId })
-		.from(doctors)
-		.where(eq(doctors.userId, session.user.id))
-		.limit(1);
+	if (parsedQuery.error) {
+		const flat = z.flattenError(parsedQuery.error);
+		const firstFieldError = Object.values(flat.fieldErrors)
+			.flat()
+			.find((m): m is string => !!m);
+
+		throw createError({
+			statusCode: 400,
+			message: firstFieldError ?? 'Nieprawidłowe dane wejściowe.',
+		});
+	}
+
+	const query = parsedQuery.data;
+
+	let doctorRow: { userId: string } | undefined;
+	try {
+		[doctorRow] = await useDb()
+			.select({ userId: doctors.userId })
+			.from(doctors)
+			.where(eq(doctors.userId, session.user.id))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 
 	if (!doctorRow) {
 		throw createError({
 			statusCode: 404,
-			statusMessage: 'Doctor profile not found.',
+			message: 'Nie znaleziono profilu lekarza.',
 		});
 	}
 
-	const rows = await useDb()
-		.select({
-			appointmentId: appointments.appointmentId,
-			datetime: appointments.datetime,
-			status: appointments.status,
-			notes: appointments.notes,
-			patientId: appointments.patientId,
-			patientFirstName: patients.firstName,
-			patientLastName: patients.lastName,
-			patientAuthName: authUser.name,
-			patientEmail: authUser.email,
-			roomId: room.roomId,
-			roomNumber: room.number,
-		})
-		.from(appointments)
-		.leftJoin(patients, eq(appointments.patientId, patients.userId))
-		.leftJoin(authUser, eq(appointments.patientId, authUser.id))
-		.leftJoin(room, eq(appointments.roomRoomId, room.roomId))
-		.where(eq(appointments.doctorId, doctorRow.userId))
-		.orderBy(desc(appointments.datetime));
+	const conditions = [
+		eq(appointments.doctorId, doctorRow.userId),
+		ne(appointments.status, 'canceled'),
+	];
+
+	if (query.date) {
+		const startOfDay = new Date(`${query.date}T00:00:00`);
+		const endOfDay = new Date(`${query.date}T23:59:59.999`);
+		conditions.push(gte(appointments.datetime, startOfDay));
+		conditions.push(lte(appointments.datetime, endOfDay));
+	}
+
+	let rows: Array<{
+		appointmentId: number;
+		datetime: Date;
+		status: string;
+		notes: string | null;
+		patientId: string;
+		patientFirstName: string | null;
+		patientLastName: string | null;
+		patientAuthName: string | null;
+		patientEmail: string | null;
+		roomId: number | null;
+		roomNumber: number | null;
+	}>;
+	try {
+		rows = await useDb()
+			.select({
+				appointmentId: appointments.appointmentId,
+				datetime: appointments.datetime,
+				status: appointments.status,
+				notes: appointments.notes,
+				patientId: appointments.patientId,
+				patientFirstName: patients.firstName,
+				patientLastName: patients.lastName,
+				patientAuthName: authUser.name,
+				patientEmail: authUser.email,
+				roomId: room.roomId,
+				roomNumber: room.number,
+			})
+			.from(appointments)
+			.leftJoin(patients, eq(appointments.patientId, patients.userId))
+			.leftJoin(authUser, eq(appointments.patientId, authUser.id))
+			.leftJoin(room, eq(appointments.roomRoomId, room.roomId))
+			.where(and(...conditions))
+			.orderBy(
+				query.date ? asc(appointments.datetime) : desc(appointments.datetime)
+			);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 
 	return rows.map((row) => ({
 		appointmentId: row.appointmentId,

@@ -1,7 +1,6 @@
 import { and, asc, eq, gte, lte } from 'drizzle-orm';
 import { createError, defineEventHandler, getQuery } from 'h3';
 import { z } from 'zod';
-import { auth } from '~~/lib/auth';
 import { availability } from '~~/server/db/clinic';
 
 const querySchema = z
@@ -18,46 +17,53 @@ const querySchema = z
 	.strict();
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				availability: ['list'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		availability: ['list'],
 	});
 
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
+	const parsedQuery = querySchema.safeParse(getQuery(event));
 
-	const query = querySchema.parse(getQuery(event));
+	if (parsedQuery.error) {
+		const flat = z.flattenError(parsedQuery.error);
+		const firstFieldError = Object.values(flat.fieldErrors)
+			.flat()
+			.find((m): m is string => !!m);
 
-	let condition = eq(availability.doctorUserId, session.user.id);
+		throw createError({
+			statusCode: 400,
+			message: firstFieldError ?? 'Nieprawidłowe dane wejściowe.',
+		});
+	}
+
+	const query = parsedQuery.data;
+
+	const conditions = [eq(availability.doctorUserId, session.user.id)];
 
 	if (query.startDate) {
-		condition = and(condition, gte(availability.day, query.startDate));
+		conditions.push(gte(availability.day, query.startDate));
 	}
 
 	if (query.endDate) {
-		condition = and(condition, lte(availability.day, query.endDate));
+		conditions.push(lte(availability.day, query.endDate));
 	}
 
-	const slots = await useDb()
-		.select({
-			scheduleId: availability.scheduleId,
-			day: availability.day,
-			timeStart: availability.timeStart,
-			timeEnd: availability.timeEnd,
-			doctorUserId: availability.doctorUserId,
-		})
-		.from(availability)
-		.where(condition)
-		.orderBy(asc(availability.day), asc(availability.timeStart));
+	let slots;
+	try {
+		slots = await useDb()
+			.select({
+				scheduleId: availability.scheduleId,
+				day: availability.day,
+				timeStart: availability.timeStart,
+				timeEnd: availability.timeEnd,
+				doctorUserId: availability.doctorUserId,
+			})
+			.from(availability)
+			.where(and(...conditions))
+			.orderBy(asc(availability.day), asc(availability.timeStart));
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 
 	return slots;
 });

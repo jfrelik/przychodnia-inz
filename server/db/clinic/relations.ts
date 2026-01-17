@@ -5,8 +5,10 @@ import { availability } from './availability';
 import { doctors } from './doctors';
 import { logs } from './logs';
 import { medicalRecords } from './medical';
+import { medications } from './medications';
 import { patients } from './patients';
-import { prescriptions, recommendations } from './prescriptions';
+import { prescriptions } from './prescriptions';
+import { recommendations } from './recommendations';
 import { room } from './rooms';
 import { roomSpecializations } from './roomSpecializations';
 import { specializations } from './specializations';
@@ -23,6 +25,10 @@ export const availabilityRelations = relations(availability, ({ one }) => ({
 	doctor: one(doctors, {
 		fields: [availability.doctorUserId],
 		references: [doctors.userId],
+	}),
+	room: one(room, {
+		fields: [availability.roomRoomId],
+		references: [room.roomId],
 	}),
 }));
 
@@ -74,6 +80,17 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
 	room: one(room, {
 		fields: [appointments.roomRoomId],
 		references: [room.roomId],
+	}),
+}));
+
+export const prescriptionsRelations = relations(prescriptions, ({ many }) => ({
+	medications: many(medications),
+}));
+
+export const medicationsRelations = relations(medications, ({ one }) => ({
+	prescription: one(prescriptions, {
+		fields: [medications.prescriptionId],
+		references: [prescriptions.prescriptionId],
 	}),
 }));
 

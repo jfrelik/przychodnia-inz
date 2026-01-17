@@ -1,4 +1,3 @@
-import consola from 'consola';
 import { eq } from 'drizzle-orm';
 import {
 	createError,
@@ -31,25 +30,26 @@ const payloadSchema = z
 	.strict();
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				doctors: ['create'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		doctors: ['create'],
 	});
 
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
-
 	const body = await readBody(event);
-	const payload = payloadSchema.parse(body);
+
+	const payload = payloadSchema.safeParse(body);
+
+	if (payload.error) {
+		const flat = z.flattenError(payload.error);
+
+		const firstFieldError = Object.values(flat.fieldErrors)
+			.flat()
+			.find((m): m is string => !!m);
+
+		throw createError({
+			statusCode: 400,
+			message: firstFieldError ?? 'Nieprawidłowe dane wejściowe.',
+		});
+	}
 
 	const tempPassword = crypto.randomBytes(32).toString('hex');
 
@@ -62,10 +62,10 @@ export default defineEventHandler(async (event) => {
 	try {
 		const signUpResult = await auth.api.createUser({
 			body: {
-				email: payload.email,
+				email: payload.data.email,
 				password: tempPassword,
-				name: payload.name,
-				role: 'doctor',
+				name: payload.data.name,
+				role: 'doctor' as any,
 			},
 		});
 
@@ -80,39 +80,48 @@ export default defineEventHandler(async (event) => {
 			body?: { code?: string };
 		};
 
-		consola.error({
-			operation: 'AdminCreateDoctor',
-			targetEmail: payload.email,
-			errorCode: apiError?.body?.code ?? apiError?.statusCode,
-			error: apiError,
-		});
-
 		if (
 			apiError?.statusCode === 422 &&
 			apiError.body?.code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL'
 		) {
 			throw createError({
 				statusCode: 409,
-				statusMessage: 'Użytkownik o tym adresie email już istnieje.',
+				message: 'Użytkownik o tym adresie email już istnieje.',
 			});
 		}
 
-		throw error;
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
 	}
 
 	const newUserId = createdUser.id;
 
-	if (payload.specializationId !== null) {
-		const [specialization] = await useDb()
-			.select({ id: specializations.id })
-			.from(specializations)
-			.where(eq(specializations.id, payload.specializationId))
-			.limit(1);
+	if (payload.data.specializationId !== null) {
+		let specialization: { id: number } | undefined;
+
+		try {
+			[specialization] = await useDb()
+				.select({ id: specializations.id })
+				.from(specializations)
+				.where(eq(specializations.id, payload.data.specializationId))
+				.limit(1);
+		} catch (error) {
+			const { message } = getDbErrorMessage(error);
+
+			throw createError({
+				statusCode: 500,
+				message,
+			});
+		}
 
 		if (!specialization) {
 			throw createError({
 				statusCode: 404,
-				statusMessage: 'Specjalizacja nie została znaleziona.',
+				message: 'Specjalizacja nie została znaleziona.',
 			});
 		}
 	}
@@ -121,8 +130,8 @@ export default defineEventHandler(async (event) => {
 		await useDb().transaction(async (tx) => {
 			await tx.insert(doctors).values({
 				userId: newUserId,
-				specializationId: payload.specializationId,
-				licenseNumber: payload.licenseNumber,
+				specializationId: payload.data.specializationId,
+				licenseNumber: payload.data.licenseNumber,
 			});
 
 			await tx
@@ -130,67 +139,59 @@ export default defineEventHandler(async (event) => {
 				.set({ emailVerified: true })
 				.where(eq(user.id, newUserId));
 		});
-	} catch (error: unknown) {
-		const dbError = error as { code?: string };
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
 
-		consola.error({
-			operation: 'AdminCreateDoctorRecord',
-			targetLicense: payload.licenseNumber,
-			targetEmail: payload.email,
-			errorCode: dbError?.code,
-			error,
+		throw createError({
+			statusCode: 500,
+			message,
 		});
-
-		if (dbError?.code === '23505') {
-			throw createError({
-				statusCode: 409,
-				statusMessage: 'Lekarz o takim numerze licencji już istnieje.',
-			});
-		}
-
-		throw error;
 	}
+
+	await auth.api.requestPasswordReset({
+		body: {
+			email: payload.data.email,
+			redirectTo: '/change-password',
+		},
+	});
 
 	try {
-		await auth.api.requestPasswordReset({
-			body: {
-				email: payload.email,
-				redirectTo: '/change-password',
-			},
-		});
+		const [doctorRow] = await useDb()
+			.select({
+				userId: doctors.userId,
+				userName: user.name,
+				userEmail: user.email,
+				specializationId: doctors.specializationId,
+				specializationName: specializations.name,
+				licenseNumber: doctors.licenseNumber,
+			})
+			.from(doctors)
+			.leftJoin(user, eq(doctors.userId, user.id))
+			.leftJoin(
+				specializations,
+				eq(doctors.specializationId, specializations.id)
+			)
+			.where(eq(doctors.userId, newUserId))
+			.limit(1);
+
+		await useAuditLog(
+			event,
+			session.user.id,
+			`Utworzono konto lekarza "${doctorRow?.userName ?? payload.data.name}", licencja: ${payload.data.licenseNumber}) i wysłano link do ustawienia hasła.`
+		);
+
+		setResponseStatus(event, 201);
+
+		return {
+			status: 'ok',
+			doctor: doctorRow,
+		};
 	} catch (error) {
-		consola.error({
-			operation: 'AdminSendDoctorReset',
-			targetEmail: payload.email,
-			error,
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
 		});
 	}
-
-	const [doctorRow] = await useDb()
-		.select({
-			userId: doctors.userId,
-			userName: user.name,
-			userEmail: user.email,
-			specializationId: doctors.specializationId,
-			specializationName: specializations.name,
-			licenseNumber: doctors.licenseNumber,
-		})
-		.from(doctors)
-		.leftJoin(user, eq(doctors.userId, user.id))
-		.leftJoin(specializations, eq(doctors.specializationId, specializations.id))
-		.where(eq(doctors.userId, newUserId))
-		.limit(1);
-
-	await useAuditLog(
-		event,
-		session.user.id,
-		`Utworzono konto lekarza "${doctorRow?.userName ?? payload.name}", licencja: ${payload.licenseNumber}) i wysłano link do ustawienia hasła.`
-	);
-
-	setResponseStatus(event, 201);
-
-	return {
-		status: 'ok',
-		doctor: doctorRow,
-	};
 });

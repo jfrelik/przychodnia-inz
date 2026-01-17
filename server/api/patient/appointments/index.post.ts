@@ -1,14 +1,21 @@
 import { and, eq, gte, inArray, lte } from 'drizzle-orm';
 import { createError, defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
-import { auth } from '~~/lib/auth';
 import { user as authUser } from '~~/server/db/auth';
-import {
-	appointments,
-	availability,
-	doctors,
-	patients,
-} from '~~/server/db/clinic';
+import { appointments, availability, doctors } from '~~/server/db/clinic';
+import type { SendEmailJob, SendEmailResult } from '~~/server/types/bullmq';
+
+const queue = useQueue<SendEmailJob, SendEmailResult>('send-email');
+
+const formatAppointmentDateTime = (date: Date) =>
+	date.toLocaleString('pl-PL', {
+		dateStyle: 'long',
+		timeStyle: 'short',
+	});
+const formatAppointmentType = (type: 'consultation' | 'procedure') =>
+	type === 'procedure' ? 'Zabieg' : 'Konsultacja';
+const formatVisitMode = (isOnline: boolean) =>
+	isOnline ? 'Online' : 'Stacjonarna';
 
 const payloadSchema = z.object({
 	doctorId: z.string(),
@@ -23,131 +30,208 @@ const payloadSchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: { appointments: ['create'] },
-		},
+	const session = await requireSessionWithPermissions(event, {
+		appointments: ['create'],
 	});
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
-	const payload = payloadSchema.parse(await readBody(event));
-	const { doctorId, datetime, isOnline, notes } = payload;
+	const body = await readBody(event);
+	const payload = payloadSchema.safeParse(body);
+	if (payload.error) {
+		const flat = z.flattenError(payload.error);
+		const firstFieldError = Object.values(flat.fieldErrors)
+			.flat()
+			.find((m): m is string => !!m);
+		throw createError({
+			statusCode: 400,
+			message: firstFieldError ?? 'Nieprawidłowe dane wejściowe.',
+		});
+	}
+
+	const { doctorId, datetime, isOnline, notes } = payload.data;
 	const type = 'consultation' as const;
 
-	const [userRow] = await useDb()
-		.select()
-		.from(authUser)
-		.where(eq(authUser.id, session.user.id))
-		.limit(1);
-	if (!userRow)
-		throw createError({ statusCode: 404, statusMessage: 'User not found' });
+	let doctorRow: typeof doctors.$inferSelect | undefined;
+	try {
+		[doctorRow] = await useDb()
+			.select()
+			.from(doctors)
+			.where(eq(doctors.userId, doctorId))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
+	if (!doctorRow)
+		throw createError({ statusCode: 404, message: 'Doctor not found' });
 
-	const [patientRow] = await useDb()
-		.select()
-		.from(patients)
-		.where(eq(patients.userId, userRow.id))
-		.limit(1);
-	if (!patientRow)
+	let doctorUser: typeof authUser.$inferSelect | undefined;
+	try {
+		[doctorUser] = await useDb()
+			.select()
+			.from(authUser)
+			.where(eq(authUser.id, doctorId))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
+	if (!doctorUser)
 		throw createError({
 			statusCode: 404,
-			statusMessage: 'Patient profile not found',
+			message: 'Doctor account not found',
 		});
-
-	const [doctorRow] = await useDb()
-		.select()
-		.from(doctors)
-		.where(eq(doctors.userId, doctorId))
-		.limit(1);
-	if (!doctorRow)
-		throw createError({ statusCode: 404, statusMessage: 'Doctor not found' });
+	if (doctorUser.banned) {
+		throw createError({
+			statusCode: 400,
+			message: 'Lekarz nie przyjmuje nowych wizyt.',
+		});
+	}
 
 	const slotStart = new Date(datetime);
 	if (Number.isNaN(slotStart.getTime()))
-		throw createError({ statusCode: 400, statusMessage: 'Invalid datetime' });
+		throw createError({ statusCode: 400, message: 'Invalid datetime' });
 
 	const durationMinutes = getDurationMinutes(type);
 	const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60_000);
 	const dateStr = slotStart.toISOString().slice(0, 10);
 
-	const frames = await useDb()
-		.select({ start: availability.timeStart, end: availability.timeEnd })
-		.from(availability)
-		.where(
-			and(
-				eq(availability.doctorUserId, doctorId),
-				eq(availability.day, dateStr)
-			)
-		);
+	let frames: Array<{ start: string; end: string; roomId: number | null }>;
+	try {
+		frames = await useDb()
+			.select({
+				start: availability.timeStart,
+				end: availability.timeEnd,
+				roomId: availability.roomRoomId,
+			})
+			.from(availability)
+			.where(
+				and(
+					eq(availability.doctorUserId, doctorId),
+					eq(availability.day, dateStr)
+				)
+			);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 
 	const toMinutes = (time: string) => {
 		const [h, m] = time.split(':').map(Number);
 		return (h || 0) * 60 + (m || 0);
 	};
 
-	const inAvailability = frames.some((f) => {
+	const slotStartMinutes = slotStart.getHours() * 60 + slotStart.getMinutes();
+	const slotEndMinutes = slotEnd.getHours() * 60 + slotEnd.getMinutes();
+
+	const matchingFrame = frames.find((f) => {
 		const start = toMinutes(f.start);
 		const end = toMinutes(f.end);
-		const slotStartMinutes = slotStart.getHours() * 60 + slotStart.getMinutes();
-		const slotEndMinutes = slotEnd.getHours() * 60 + slotEnd.getMinutes();
 		return slotStartMinutes >= start && slotEndMinutes <= end;
 	});
 
-	if (!inAvailability)
+	if (!matchingFrame)
 		throw createError({
 			statusCode: 400,
-			statusMessage: 'Slot outside doctor availability',
+			message: 'Slot outside doctor availability',
 		});
+
+	// Get room from doctor's availability for that timeframe
+	const assignedRoomId = matchingFrame.roomId ?? null;
 
 	const dayStart = new Date(`${dateStr}T00:00:00`);
 	const dayEnd = new Date(`${dateStr}T23:59:59`);
 
-	const existing = await useDb()
-		.select({
-			datetime: appointments.datetime,
-			type: appointments.type,
-		})
-		.from(appointments)
-		.where(
-			and(
-				eq(appointments.doctorId, doctorId),
-				gte(appointments.datetime, dayStart),
-				lte(appointments.datetime, dayEnd),
-				inArray(appointments.status, ['scheduled', 'checked_in'])
-			)
-		);
+	let created: typeof appointments.$inferSelect | undefined;
+	try {
+		await useDb().transaction(async (tx) => {
+			const existing = await tx
+				.select({
+					datetime: appointments.datetime,
+					type: appointments.type,
+				})
+				.from(appointments)
+				.where(
+					and(
+						eq(appointments.doctorId, doctorId),
+						gte(appointments.datetime, dayStart),
+						lte(appointments.datetime, dayEnd),
+						inArray(appointments.status, ['scheduled', 'checked_in'])
+					)
+				)
+				.for('update');
 
-	const conflict = existing.some((row) => {
-		const existingStart = new Date(row.datetime);
-		const existingDuration = getDurationMinutes(
-			row.type as 'consultation' | 'procedure'
-		);
-		const existingEnd = new Date(
-			existingStart.getTime() + existingDuration * 60_000
-		);
-		return existingStart < slotEnd && slotStart < existingEnd;
+			const conflict = existing.some((row) => {
+				const existingStart = new Date(row.datetime);
+				const existingDuration = getDurationMinutes(
+					row.type as 'consultation' | 'procedure'
+				);
+				const existingEnd = new Date(
+					existingStart.getTime() + existingDuration * 60_000
+				);
+				return existingStart < slotEnd && slotStart < existingEnd;
+			});
+
+			if (conflict) {
+				throw createError({
+					statusCode: 409,
+					message: 'Ktoś właśnie zarezerwował tę wizytę.',
+				});
+			}
+
+			const [inserted] = await tx
+				.insert(appointments)
+				.values({
+					patientId: session.user.id,
+					doctorId,
+					datetime: slotStart,
+					status: 'scheduled',
+					type,
+					isOnline,
+					notes,
+					roomRoomId: assignedRoomId,
+				})
+				.returning();
+
+			if (!inserted) {
+				throw createError({
+					statusCode: 500,
+					message: 'Nie udało się utworzyć wizyty.',
+				});
+			}
+
+			created = inserted;
+		});
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
+
+	if (!created) {
+		throw createError({
+			statusCode: 500,
+			message: 'Nie udało się utworzyć wizyty.',
+		});
+	}
+
+	const html = await renderEmailComponent(
+		'AppointmentBooked',
+		{
+			patientName: session.user.name,
+			doctorName: doctorUser.name,
+			appointmentDateTime: formatAppointmentDateTime(slotStart),
+			visitMode: formatVisitMode(isOnline),
+			appointmentType: formatAppointmentType(type),
+		},
+		{
+			pretty: true,
+		}
+	);
+
+	await queue.add('appointment booked', {
+		to: session.user.email,
+		subject: 'Potwierdzenie zapisu na wizytę',
+		html,
 	});
-	if (conflict)
-		throw createError({ statusCode: 409, statusMessage: 'Slot already taken' });
-
-	const [created] = await useDb()
-		.insert(appointments)
-		.values({
-			patientId: patientRow.userId,
-			doctorId,
-			datetime: slotStart,
-			status: 'scheduled',
-			type,
-			isOnline,
-			notes,
-			roomRoomId: null,
-		})
-		.returning();
 
 	return {
 		appointmentId: created.appointmentId,

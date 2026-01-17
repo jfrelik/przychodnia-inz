@@ -1,7 +1,11 @@
 import { and, asc, eq } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
-import { auth } from '~~/lib/auth';
-import { availability, doctors } from '~~/server/db/clinic';
+import {
+	availability,
+	doctors,
+	room,
+	roomSpecializations,
+} from '~~/server/db/clinic';
 
 type RawAvailability = {
 	scheduleId: string;
@@ -63,56 +67,79 @@ const mergeTimeframes = (slots: RawAvailability[]): Timeframe[] => {
 };
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				availability: ['list'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		availability: ['list'],
 	});
 
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
-
-	const [doctorRow] = await useDb()
-		.select({ userId: doctors.userId })
-		.from(doctors)
-		.where(eq(doctors.userId, session.user.id))
-		.limit(1);
+	let doctorRow:
+		| { userId: string; specializationId: number | null }
+		| undefined;
+	try {
+		[doctorRow] = await useDb()
+			.select({
+				userId: doctors.userId,
+				specializationId: doctors.specializationId,
+			})
+			.from(doctors)
+			.where(eq(doctors.userId, session.user.id))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 
 	if (!doctorRow) {
 		throw createError({
 			statusCode: 404,
-			statusMessage: 'Doctor profile not found.',
+			message: 'Nie znaleziono profilu lekarza.',
 		});
+	}
+
+	// Get room number for doctor's specialization
+	let roomNumber: number | null = null;
+	if (doctorRow.specializationId) {
+		try {
+			const [roomRow] = await useDb()
+				.select({ number: room.number })
+				.from(roomSpecializations)
+				.innerJoin(room, eq(roomSpecializations.roomId, room.roomId))
+				.where(
+					eq(roomSpecializations.specializationId, doctorRow.specializationId)
+				)
+				.limit(1);
+			roomNumber = roomRow?.number ?? null;
+		} catch {
+			// Ignore room fetch errors, it's not critical
+		}
 	}
 
 	const today = buildTodayDate();
 
-	const slots = await useDb()
-		.select({
-			scheduleId: availability.scheduleId,
-			day: availability.day,
-			timeStart: availability.timeStart,
-			timeEnd: availability.timeEnd,
-		})
-		.from(availability)
-		.where(
-			and(
-				eq(availability.doctorUserId, doctorRow.userId),
-				eq(availability.day, today)
+	let slots: RawAvailability[];
+	try {
+		slots = await useDb()
+			.select({
+				scheduleId: availability.scheduleId,
+				day: availability.day,
+				timeStart: availability.timeStart,
+				timeEnd: availability.timeEnd,
+			})
+			.from(availability)
+			.where(
+				and(
+					eq(availability.doctorUserId, doctorRow.userId),
+					eq(availability.day, today)
+				)
 			)
-		)
-		.orderBy(asc(availability.timeStart));
+			.orderBy(asc(availability.timeStart));
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 
 	return {
 		day: today,
 		timeframes: mergeTimeframes(slots),
+		roomNumber,
 	};
 });

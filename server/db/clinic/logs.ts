@@ -7,7 +7,7 @@ export const logs = pgTable('logs', {
 		onDelete: 'set null',
 	}),
 	action: text('action').notNull(),
-	timestamp: timestamp('timestamp', { withTimezone: false })
+	timestamp: timestamp('timestamp', { withTimezone: true, mode: 'date' })
 		.notNull()
 		.defaultNow(),
 	ipAddress: text('ip_address').notNull(),

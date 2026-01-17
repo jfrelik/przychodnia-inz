@@ -1,4 +1,3 @@
-import consola from 'consola';
 import { eq } from 'drizzle-orm';
 import {
 	createError,
@@ -25,25 +24,25 @@ const payloadSchema = z
 	.strict();
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				users: ['create'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		users: ['create'],
 	});
 
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
-
 	const body = await readBody(event);
-	const payload = payloadSchema.parse(body);
+	const payload = payloadSchema.safeParse(body);
+
+	if (payload.error) {
+		const flat = z.flattenError(payload.error);
+
+		const firstFieldError = Object.values(flat.fieldErrors)
+			.flat()
+			.find((m): m is string => !!m);
+
+		throw createError({
+			statusCode: 400,
+			message: firstFieldError ?? 'Nieprawidłowe dane wejściowe.',
+		});
+	}
 
 	const tempPassword = crypto.randomBytes(32).toString('hex');
 
@@ -56,10 +55,10 @@ export default defineEventHandler(async (event) => {
 	try {
 		const signUpResult = await auth.api.createUser({
 			body: {
-				email: payload.email,
+				email: payload.data.email,
 				password: tempPassword,
-				name: payload.name,
-				role: 'receptionist',
+				name: payload.data.name,
+				role: 'receptionist' as any,
 			},
 		});
 
@@ -74,75 +73,83 @@ export default defineEventHandler(async (event) => {
 			body?: { code?: string };
 		};
 
-		consola.error({
-			operation: 'AdminCreateReceptionist',
-			targetEmail: payload.email,
-			errorCode: apiError?.body?.code ?? apiError?.statusCode,
-			error: apiError,
-		});
-
 		if (
 			apiError?.statusCode === 422 &&
 			apiError.body?.code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL'
 		) {
 			throw createError({
 				statusCode: 409,
-				statusMessage: 'Użytkownik o tym adresie email już istnieje.',
+				message: 'Użytkownik o tym adresie email już istnieje.',
 			});
 		}
 
-		throw error;
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
 	}
 
 	const newUserId = createdUser.id;
 
-	await useDb().transaction(async (tx) => {
-		await tx.insert(receptionists).values({
-			userId: newUserId,
-		});
-
-		await tx
-			.update(user)
-			.set({ emailVerified: true })
-			.where(eq(user.id, newUserId));
-	});
-
 	try {
-		await auth.api.requestPasswordReset({
-			body: {
-				email: payload.email,
-				redirectTo: '/change-password',
-			},
+		await useDb().transaction(async (tx) => {
+			await tx.insert(receptionists).values({
+				userId: newUserId,
+			});
+
+			await tx
+				.update(user)
+				.set({ emailVerified: true })
+				.where(eq(user.id, newUserId));
 		});
 	} catch (error) {
-		consola.error({
-			operation: 'AdminSendReceptionistReset',
-			targetEmail: payload.email,
-			error,
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
 		});
 	}
 
-	const [receptionistRow] = await useDb()
-		.select({
-			userId: receptionists.userId,
-			userName: user.name,
-			userEmail: user.email,
-		})
-		.from(receptionists)
-		.leftJoin(user, eq(receptionists.userId, user.id))
-		.where(eq(receptionists.userId, newUserId))
-		.limit(1);
+	await auth.api.requestPasswordReset({
+		body: {
+			email: payload.data.email,
+			redirectTo: '/change-password',
+		},
+	});
 
-	await useAuditLog(
-		event,
-		session.user.id,
-		`Utworzono konto rejestratora "${receptionistRow?.userName ?? payload.name}" i wysłano link do ustawienia hasła.`
-	);
+	try {
+		const [receptionistRow] = await useDb()
+			.select({
+				userId: receptionists.userId,
+				userName: user.name,
+				userEmail: user.email,
+			})
+			.from(receptionists)
+			.leftJoin(user, eq(receptionists.userId, user.id))
+			.where(eq(receptionists.userId, newUserId))
+			.limit(1);
 
-	setResponseStatus(event, 201);
+		await useAuditLog(
+			event,
+			session.user.id,
+			`Utworzono konto rejestratora "${receptionistRow?.userName ?? payload.data.name}" i wysłano link do ustawienia hasła.`
+		);
 
-	return {
-		status: 'ok',
-		receptionist: receptionistRow,
-	};
+		setResponseStatus(event, 201);
+
+		return {
+			status: 'ok',
+			receptionist: receptionistRow,
+		};
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });

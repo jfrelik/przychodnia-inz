@@ -32,11 +32,22 @@
 		error,
 		refresh,
 		pending,
-	} = await useFetch<AuditLog[]>('/api/admin/logs', {
+	} = await useLazyFetch<AuditLog[]>('/api/admin/logs', {
 		default: () => [],
+		server: false,
 	});
 
 	const logsData = computed(() => logs.value ?? []);
+
+	const tableKey = ref(0);
+
+	watch(
+		() => logs.value,
+		() => {
+			tableKey.value++;
+		},
+		{ deep: false }
+	);
 
 	const table = ref();
 	const globalFilter = ref('');
@@ -54,7 +65,7 @@
 				h(UButton, {
 					color: 'neutral',
 					variant: 'ghost',
-					icon: 'i-lucide-chevron-down',
+					icon: 'lucide:chevron-down',
 					square: true,
 					'aria-label': 'Expand',
 					ui: {
@@ -165,7 +176,7 @@
 			<UAlert
 				v-if="error"
 				color="error"
-				icon="i-lucide-alert-triangle"
+				icon="lucide:alert-triangle"
 				title="Nie udało się pobrać logów"
 				description="Spróbuj ponownie odświeżyć stronę."
 			>
@@ -190,7 +201,7 @@
 						</div>
 						<UButton
 							variant="soft"
-							icon="i-lucide-refresh-cw"
+							icon="lucide:refresh-cw"
 							class="cursor-pointer"
 							@click="refresh()"
 						>
@@ -202,47 +213,52 @@
 				<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
 					<UInput
 						v-model="globalFilter"
-						icon="i-lucide-search"
+						icon="lucide:search"
 						placeholder="Szukaj w logach..."
 						clearable
 						class="max-w-md"
 					/>
-					<UTable
-						ref="table"
-						v-model:global-filter="globalFilter"
-						v-model:column-filters="columnFilters"
-						v-model:sorting="sorting"
-						v-model:pagination="pagination"
-						:data="logsData"
-						:columns
-						:loading="pending"
-						loading-color="primary"
-						loading-animation="elastic"
-						empty="Brak logów do wyświetlenia."
-						sticky="header"
-						class="min-h-0 min-w-full flex-1 overflow-y-auto"
-						:pagination-options="{
-							getPaginationRowModel: getPaginationRowModel(),
-						}"
-					>
-						<template #expanded="{ row }">
-							<div
-								class="max-w-full overflow-hidden rounded-lg bg-neutral-50 p-4 text-sm wrap-break-word whitespace-pre-wrap"
-							>
-								{{ row.getValue('action') }}
-							</div>
-						</template>
-					</UTable>
-					<div class="flex justify-center pt-4">
-						<UPagination
-							:default-page="
-								(table?.tableApi?.getState().pagination.pageIndex || 0) + 1
-							"
-							:items-per-page="table?.tableApi?.getState().pagination.pageSize"
-							:total="table?.tableApi?.getFilteredRowModel().rows.length || 0"
-							@update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
-						/>
-					</div>
+					<ClientOnly>
+						<UTable
+							:key="tableKey"
+							ref="table"
+							v-model:global-filter="globalFilter"
+							v-model:column-filters="columnFilters"
+							v-model:sorting="sorting"
+							v-model:pagination="pagination"
+							:data="logsData"
+							:columns
+							:loading="pending"
+							loading-color="primary"
+							loading-animation="elastic"
+							empty="Nie ma logów do wyświetlenia."
+							sticky="header"
+							class="min-h-0 min-w-full flex-1 overflow-y-auto"
+							:pagination-options="{
+								getPaginationRowModel: getPaginationRowModel(),
+							}"
+						>
+							<template #expanded="{ row }">
+								<div
+									class="max-w-full overflow-hidden rounded-lg bg-neutral-50 p-4 text-sm wrap-break-word whitespace-pre-wrap"
+								>
+									{{ row.getValue('action') }}
+								</div>
+							</template>
+						</UTable>
+						<div class="flex justify-center pt-4">
+							<UPagination
+								:default-page="
+									(table?.tableApi?.getState().pagination.pageIndex || 0) + 1
+								"
+								:items-per-page="
+									table?.tableApi?.getState().pagination.pageSize
+								"
+								:total="table?.tableApi?.getFilteredRowModel().rows.length || 0"
+								@update:page="(p) => table?.tableApi?.setPageIndex(p - 1)"
+							/>
+						</div>
+					</ClientOnly>
 				</div>
 			</UCard>
 		</div>

@@ -3,12 +3,20 @@
 	import * as z from 'zod';
 	import { authClient } from '~~/lib/auth-client';
 
+	useHead({
+		title: 'Logowanie',
+	});
+
 	const toast = useToast();
-	const session = authClient.useSession();
+	const _session = authClient.useSession();
 	const show = ref(false);
 	const isSubmitting = ref(false);
 	const turnstile = ref();
 	const route = useRoute();
+
+	const turnstileOptions = {
+		language: 'pl',
+	};
 
 	const resetError = computed(() => {
 		const value = route.query.error;
@@ -39,7 +47,7 @@
 				title: 'Weryfikacja nie powiodła się',
 				description: 'Odśwież stronę i spróbuj ponownie.',
 				color: 'error',
-				icon: 'carbon:error',
+				icon: 'lucide:circle-x',
 			});
 			return;
 		}
@@ -61,7 +69,7 @@
 					description:
 						'Sprawdź połączenie z internetem lub spróbuj ponownie za chwilę.',
 					color: 'error',
-					icon: 'carbon:warning',
+					icon: 'lucide:alert-triangle',
 				});
 				return;
 			}
@@ -72,12 +80,12 @@
 					title: 'Weryfikacja wygasła',
 					description: 'Zabezpieczenie wygasło. Wykonaj ponownie weryfikację.',
 					color: 'warning',
-					icon: 'carbon:warning',
+					icon: 'lucide:alert-triangle',
 				});
 				return;
 			}
 
-			const { data, error } = await authClient.signIn.email({
+			const { error } = await authClient.signIn.email({
 				email: event.data.email,
 				password: event.data.password,
 			});
@@ -90,10 +98,10 @@
 						description:
 							'Email nie dotarł? Kliknij przycisk poniżej, aby wysłać go ponownie.',
 						color: 'warning',
-						icon: 'carbon:warning',
+						icon: 'lucide:alert-triangle',
 						actions: [
 							{
-								icon: 'i-lucide-refresh-cw',
+								icon: 'lucide:refresh-cw',
 								label: 'Wyślij ponownie',
 								color: 'neutral',
 								variant: 'outline',
@@ -101,14 +109,14 @@
 									e?.stopPropagation();
 									await authClient.sendVerificationEmail({
 										email: event.data.email,
-										callbackURL: '/login',
+										callbackURL: '/verify-email',
 									});
 									toast.add({
 										title: 'Email wysłany',
 										description:
 											'Sprawdź swoją skrzynkę odbiorczą (oraz folder spam).',
 										color: 'success',
-										icon: 'carbon:checkmark',
+										icon: 'lucide:check',
 									});
 								},
 							},
@@ -120,14 +128,14 @@
 					title: 'Wystąpił problem podczas logowania',
 					description: error.message,
 					color: 'error',
-					icon: 'carbon:error',
+					icon: 'lucide:circle-x',
 				});
 			} else {
 				toast.add({
 					title: 'Zalogowano',
 					description: 'Proces logowania powiódł się',
 					color: 'success',
-					icon: 'carbon:checkmark',
+					icon: 'lucide:check',
 				});
 
 				const session = authClient.useSession();
@@ -172,14 +180,14 @@
 
 <template>
 	<div
-		class="flex min-h-screen w-full flex-col items-center justify-center gap-10"
+		class="flex min-h-screen w-full flex-col items-center justify-center gap-6 px-4 py-10"
 	>
-		<div class="flex items-center gap-2 text-3xl font-bold">
-			<UIcon name="carbon:hospital" class="h-8 w-8" />
-			Nazwa Przychodni
+		<div class="flex items-center gap-2 text-2xl font-bold md:text-3xl">
+			<UIcon name="lucide:hospital" class="h-8 w-8" />
+			Przychodnia
 		</div>
 		<div
-			class="inline-block w-1/3 flex-col items-center rounded-xl border border-gray-300 p-6 shadow-xl"
+			class="w-full max-w-md flex-col items-center rounded-xl border border-gray-300 p-6 shadow-xl"
 		>
 			<div class="flex flex-col items-center pb-6">
 				<h1 class="text-2xl font-bold">Logowanie</h1>
@@ -234,7 +242,7 @@
 								variant="link"
 								size="sm"
 								color="neutral"
-								:icon="show ? 'carbon:view-off' : 'carbon:view'"
+								:icon="show ? 'lucide:eye-off' : 'lucide:eye'"
 								:aria-label="show ? 'Schowaj hasło' : 'Pokaż hasło'"
 								:aria-pressed="show"
 								aria-controls="password"
@@ -244,8 +252,10 @@
 					</UInput>
 				</UFormField>
 
-				<div class="w-full">
-					<NuxtTurnstile v-model="turnstile" class="w-full" />
+				<div class="flex w-full items-center justify-center">
+					<div class="turnstile-wrap">
+						<NuxtTurnstile v-model="turnstile" :options="turnstileOptions" />
+					</div>
 				</div>
 
 				<UButton
@@ -258,7 +268,7 @@
 				</UButton>
 			</UForm>
 
-			<div class="flex flex-col items-center">
+			<div class="flex flex-col items-center gap-1">
 				<p class="pt-2">
 					Nie masz konta?
 					<ULink to="/register" class="text-primary">Zarejestruj się</ULink>
@@ -272,4 +282,18 @@
 	</div>
 </template>
 
-<style></style>
+<style scoped>
+	.turnstile-wrap {
+		transform: scale(0.95);
+		transform-origin: top center;
+		margin-left: auto;
+		margin-right: auto;
+	}
+
+	@media (max-width: 380px) {
+		.turnstile-wrap {
+			transform: scale(0.8);
+			transform-origin: top center;
+		}
+	}
+</style>

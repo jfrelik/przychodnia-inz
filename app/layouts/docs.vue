@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 	import { useToast } from '#imports';
 	import type { NavigationMenuItem } from '@nuxt/ui';
+	import { pl } from '@nuxt/ui/locale';
 	import { authClient } from '~~/lib/auth-client';
 
 	const route = useRoute();
@@ -16,7 +17,7 @@
 							title: 'Wylogowano',
 							description: 'Proces wylogowywania powiódł się',
 							color: 'success',
-							icon: 'carbon:checkmark',
+							icon: 'lucide:check',
 						});
 						navigateTo('/');
 					},
@@ -28,7 +29,7 @@
 				title: 'Błąd wylogowania',
 				description: 'Błąd: ' + message,
 				color: 'error',
-				icon: 'carbon:error',
+				icon: 'lucide:alert-circle',
 			});
 		}
 	};
@@ -37,52 +38,38 @@
 		[
 			{
 				label: 'Strona Główna',
-				icon: 'carbon:home',
+				icon: 'lucide:home',
 				class: 'cursor-pointer',
 				active: route.path === '/doctor/home',
 				to: '/doctor/home',
 			},
 			{
 				label: 'Wizyty',
-				icon: 'carbon:calendar',
+				icon: 'lucide:calendar',
 				class: 'cursor-pointer',
-				active: route.path === '/doctor/visits/all',
-				to: '/doctor/visits/all',
-			},
-			{
-				label: 'Pacjenci',
-				icon: 'carbon:stethoscope',
-				class: 'cursor-pointer',
-				active: route.path === '/doctor/patients',
-				to: '/doctor/patients',
+				active: route.path.startsWith('/doctor/visits'),
+				to: '/doctor/visits',
 			},
 			{
 				label: 'Dyspozycja',
-				icon: 'carbon:calendar-heat-map',
+				icon: 'lucide:calendar-cog',
 				class: 'cursor-pointer',
 				active: route.path === '/doctor/disposition',
 				to: '/doctor/disposition',
 			},
 			{
 				label: 'Dni pracy',
-				icon: 'carbon:calendar',
+				icon: 'lucide:calendar-days',
 				class: 'cursor-pointer',
 				active: route.path === '/doctor/workdays',
 				to: '/doctor/workdays',
-			},
-			{
-				label: 'Badania',
-				icon: 'carbon:document',
-				class: 'cursor-pointer',
-				active: route.path === '/doctor/testResults',
-				to: '/doctor/testResults',
 			},
 		],
 	]);
 </script>
 
 <template>
-	<UApp>
+	<UApp :locale="pl">
 		<UDashboardGroup class="flex h-screen min-h-0">
 			<UDashboardSidebar
 				collapsible
@@ -103,9 +90,9 @@
 				<template #default="{ collapsed }">
 					<UButton
 						label="Obsłuż wizytę..."
-						icon="carbon:calendar-add"
+						icon="lucide:stethoscope"
 						class="cursor-pointer justify-center"
-						to="/doctor/visits/today"
+						to="/doctor/visits"
 					/>
 					<UNavigationMenu
 						:collapsed="collapsed"
@@ -122,7 +109,7 @@
 							variant="ghost"
 							class="w-full cursor-pointer"
 							:block="collapsed"
-							icon="i-lucide-log-out"
+							icon="lucide:log-out"
 							@click="handleSignout"
 						/>
 						<UButton
@@ -131,7 +118,7 @@
 							variant="ghost"
 							class="mt-2 w-full"
 							:block="collapsed"
-							icon="i-lucide-info"
+							icon="lucide:info"
 							:to="'https://github.com/jfrelik/przychodnia-inz'"
 							target="_blank"
 						/>
@@ -145,7 +132,7 @@
 							variant="ghost"
 							class="mt-2 w-full"
 							:block="collapsed"
-							icon="i-lucide-code"
+							icon="lucide:code"
 							disabled
 						/>
 					</div>

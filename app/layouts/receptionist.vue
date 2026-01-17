@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 	import { useToast } from '#imports';
 	import type { NavigationMenuItem } from '@nuxt/ui';
+	import { pl } from '@nuxt/ui/locale';
 	import { authClient } from '~~/lib/auth-client';
 
 	const route = useRoute();
@@ -16,7 +17,7 @@
 							title: 'Wylogowano',
 							description: 'Proces wylogowywania powiódł się',
 							color: 'success',
-							icon: 'carbon:checkmark',
+							icon: 'lucide:check',
 						});
 						navigateTo('/');
 					},
@@ -28,7 +29,7 @@
 				title: 'Błąd wylogowania',
 				description: 'Błąd: ' + message,
 				color: 'error',
-				icon: 'carbon:error',
+				icon: 'lucide:circle-x',
 			});
 		}
 	};
@@ -37,22 +38,40 @@
 		[
 			{
 				label: 'Strona główna',
-				icon: 'i-lucide-house',
+				icon: 'lucide:home',
 				active: route.path === '/receptionist/home',
 				to: '/receptionist/home',
 			},
 			{
-				label: 'Pacjenci i lekarze',
-				icon: 'i-lucide-users',
-				active: route.path.startsWith('/receptionist/directory'),
-				to: '/receptionist/directory',
+				label: 'Pacjenci',
+				icon: 'lucide:user',
+				active: route.path.startsWith('/receptionist/patients'),
+				to: '/receptionist/patients',
+			},
+			{
+				label: 'Lekarze',
+				icon: 'lucide:users',
+				active: route.path.startsWith('/receptionist/doctors'),
+				to: '/receptionist/doctors',
+			},
+			{
+				label: 'Dzisiejsze wizyty',
+				icon: 'lucide:badge-check',
+				active: route.path.startsWith('/receptionist/visits/today'),
+				to: '/receptionist/visits/today',
+			},
+			{
+				label: 'Przypisywanie pokoi',
+				icon: 'lucide:file-cog',
+				active: route.path.startsWith('/receptionist/assignRoom'),
+				to: '/receptionist/assignRoom',
 			},
 		],
 	]);
 </script>
 
 <template>
-	<UApp>
+	<UApp :locale="pl">
 		<UDashboardGroup class="flex h-screen min-h-0">
 			<UDashboardSidebar
 				collapsible
@@ -85,7 +104,7 @@
 							variant="ghost"
 							class="w-full cursor-pointer"
 							:block="collapsed"
-							icon="i-lucide-log-out"
+							icon="lucide:log-out"
 							@click="handleSignout"
 						/>
 						<UButton
@@ -94,7 +113,7 @@
 							variant="ghost"
 							class="mt-2 w-full"
 							:block="collapsed"
-							icon="i-lucide-info"
+							icon="lucide:info"
 							:to="'https://github.com/jfrelik/przychodnia-inz'"
 							target="_blank"
 						/>
@@ -108,7 +127,7 @@
 							variant="ghost"
 							class="mt-2 w-full"
 							:block="collapsed"
-							icon="i-lucide-code"
+							icon="lucide:code"
 							disabled
 						/>
 					</div>

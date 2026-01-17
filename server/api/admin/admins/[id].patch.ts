@@ -1,7 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { createError, defineEventHandler, readBody } from 'h3';
 import { z } from 'zod';
-import { auth } from '~~/lib/auth';
 import { user } from '~~/server/db/auth';
 
 const payloadSchema = z
@@ -19,29 +18,16 @@ const payloadSchema = z
 	.strict();
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				users: ['update'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		users: ['update'],
 	});
-
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const userId = event.context.params?.id;
 
 	if (!userId) {
 		throw createError({
 			statusCode: 400,
-			statusMessage: 'Identyfikator administratora jest wymagany.',
+			message: 'Identyfikator administratora jest wymagany.',
 		});
 	}
 
@@ -58,19 +44,32 @@ export default defineEventHandler(async (event) => {
 	if (!current) {
 		throw createError({
 			statusCode: 404,
-			statusMessage: 'Administrator nie został znaleziony.',
+			message: 'Administrator nie został znaleziony.',
 		});
 	}
 
 	const body = await readBody(event);
-	const payload = payloadSchema.parse(body);
+	const payload = payloadSchema.safeParse(body);
+
+	if (payload.error) {
+		const flat = z.flattenError(payload.error);
+
+		const firstFieldError = Object.values(flat.fieldErrors)
+			.flat()
+			.find((m): m is string => !!m);
+
+		throw createError({
+			statusCode: 400,
+			message: firstFieldError ?? 'Nieprawidłowe dane wejściowe.',
+		});
+	}
 
 	const update: Record<string, unknown> = {};
 	const auditMessages: string[] = [];
 
-	if (payload.name && payload.name !== current.name) {
-		update.name = payload.name;
-		auditMessages.push(`zmieniono imię i nazwisko na "${payload.name}"`);
+	if (payload.data.name && payload.data.name !== current.name) {
+		update.name = payload.data.name;
+		auditMessages.push(`zmieniono imię i nazwisko na "${payload.data.name}"`);
 	}
 
 	if (Object.keys(update).length === 0) {
@@ -80,27 +79,36 @@ export default defineEventHandler(async (event) => {
 		};
 	}
 
-	await useDb().update(user).set(update).where(eq(user.id, userId));
+	try {
+		await useDb().update(user).set(update).where(eq(user.id, userId));
 
-	const [updated] = await useDb()
-		.select({
-			id: user.id,
-			name: user.name,
-			email: user.email,
-			createdAt: user.createdAt,
-		})
-		.from(user)
-		.where(eq(user.id, userId))
-		.limit(1);
+		const [updated] = await useDb()
+			.select({
+				id: user.id,
+				name: user.name,
+				email: user.email,
+				createdAt: user.createdAt,
+			})
+			.from(user)
+			.where(eq(user.id, userId))
+			.limit(1);
 
-	await useAuditLog(
-		event,
-		session.user.id,
-		`Zaktualizowano administratora "${current.name}": ${auditMessages.join(', ')}`
-	);
+		await useAuditLog(
+			event,
+			session.user.id,
+			`Zaktualizowano administratora "${current.name}": ${auditMessages.join(', ')}`
+		);
 
-	return {
-		status: 'ok',
-		admin: updated,
-	};
+		return {
+			status: 'ok',
+			admin: updated,
+		};
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
+	}
 });

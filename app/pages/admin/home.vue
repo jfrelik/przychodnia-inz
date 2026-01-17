@@ -23,10 +23,11 @@
 		totalLogs: 0,
 	};
 
-	const { data, pending, error, refresh } = await useFetch<Statistics>(
+	const { data, pending, error, refresh } = await useLazyFetch<Statistics>(
 		'/api/admin/statistics',
 		{
 			default: () => defaultStatistics,
+			server: false,
 		}
 	);
 
@@ -43,7 +44,7 @@
 			v-if="error"
 			class="mb-4"
 			color="error"
-			icon="i-lucide-alert-triangle"
+			icon="lucide:alert-triangle"
 			description="Nie udało się pobrać statystyk. Spróbuj ponownie."
 		>
 			<template #actions>
@@ -56,7 +57,7 @@
 					<div
 						class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100"
 					>
-						<Icon name="i-lucide-users" class-name="h-6 w-6 text-blue-600" />
+						<Icon name="lucide:users" class-name="h-6 w-6 text-blue-600" />
 					</div>
 					<div>
 						<div class="text-2xl font-bold text-gray-800">
@@ -73,7 +74,7 @@
 						class="flex h-12 w-12 items-center justify-center rounded-full bg-green-100"
 					>
 						<Icon
-							name="i-lucide-stethoscope"
+							name="lucide:stethoscope"
 							class-name="h-6 w-6 text-green-600"
 						/>
 					</div>
@@ -91,7 +92,7 @@
 					<div
 						class="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100"
 					>
-						<Icon name="i-lucide-shield" class-name="h-6 w-6 text-purple-600" />
+						<Icon name="lucide:shield" class-name="h-6 w-6 text-purple-600" />
 					</div>
 					<div>
 						<div class="text-2xl font-bold text-gray-800">
@@ -108,7 +109,7 @@
 						class="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100"
 					>
 						<Icon
-							name="i-lucide-file-text"
+							name="lucide:file-text"
 							class-name="h-6 w-6 text-yellow-600"
 						/>
 					</div>

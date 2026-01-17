@@ -1,5 +1,6 @@
-import { date, pgTable, text, time } from 'drizzle-orm/pg-core';
+import { date, integer, pgTable, text, time } from 'drizzle-orm/pg-core';
 import { doctors } from './doctors';
+import { room } from './rooms';
 
 export const availability = pgTable('availability', {
 	scheduleId: text('schedule_id').primaryKey(),
@@ -9,4 +10,7 @@ export const availability = pgTable('availability', {
 	doctorUserId: text('doctors_user_id')
 		.notNull()
 		.references(() => doctors.userId),
+	roomRoomId: integer('room_room_id').references(() => room.roomId, {
+		onDelete: 'set null',
+	}),
 });

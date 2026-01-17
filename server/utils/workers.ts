@@ -1,4 +1,9 @@
-import { type Processor, type WorkerOptions, Worker } from 'bullmq';
+import {
+	type ConnectionOptions,
+	type Processor,
+	type WorkerOptions,
+	Worker,
+} from 'bullmq';
 import { Redis } from 'ioredis';
 
 const workerMap = new Map<string, Worker>();
@@ -29,7 +34,7 @@ export const useWorker = <
 		 * @see https://docs.bullmq.io/guide/connections#maxretriesperrequest
 		 */
 		maxRetriesPerRequest: null,
-	});
+	}) as unknown as ConnectionOptions;
 
 	const worker = new Worker<DataType, ResultType, NameType>(name, fn, {
 		...opts,

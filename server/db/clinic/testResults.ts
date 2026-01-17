@@ -9,5 +9,4 @@ export const testResults = pgTable('test_results', {
 	testType: text('test_type').notNull(),
 	result: text('result').notNull(),
 	testDate: date('test_date').notNull(),
-	fileName: text('file_name').notNull(),
 });

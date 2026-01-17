@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-	import { Icon } from '#components';
-
 	definePageMeta({
 		layout: 'docs',
 	});
@@ -9,7 +7,7 @@
 		title: 'Panel doktora',
 	});
 
-	type VisitStatus = 'scheduled' | 'completed' | 'canceled';
+	type VisitStatus = 'scheduled' | 'checked_in' | 'completed' | 'canceled';
 	type Visit = {
 		appointmentId: number;
 		datetime: string | Date;
@@ -25,51 +23,111 @@
 	type TodayDispositionResponse = {
 		day: string;
 		timeframes: { start: string; end: string }[];
+		roomNumber: number | null;
 	};
 
-	const { data: visitsData, pending: visitsLoading } = await useFetch<Visit[]>(
-		'/api/doctor/visits/today',
-		{
-			key: 'doctor-home-today-visits',
-		}
-	);
+	type VisitStatusColor = 'primary' | 'success' | 'error' | 'warning' | 'info';
+
+	const router = useRouter();
+	const toast = useToast();
+
+	const todayDateStr = computed(() => {
+		const now = new Date();
+		const year = now.getFullYear();
+		const month = String(now.getMonth() + 1).padStart(2, '0');
+		const day = String(now.getDate()).padStart(2, '0');
+		return `${year}-${month}-${day}`;
+	});
+
+	const {
+		data: visitsData,
+		pending: visitsLoading,
+		error: visitsError,
+		refresh: refreshVisits,
+	} = await useLazyFetch<Visit[]>('/api/doctor/visits', {
+		query: { date: todayDateStr },
+		server: false,
+	});
 
 	const {
 		data: dispositionData,
 		pending: dispositionLoading,
 		error: dispositionError,
-	} = await useFetch<TodayDispositionResponse>(
+	} = await useLazyFetch<TodayDispositionResponse>(
 		'/api/doctor/dispositions/today',
 		{
-			key: 'doctor-home-disposition-today',
+			server: false,
 		}
 	);
 
 	const visits = computed(() => visitsData.value ?? []);
 
-	const nearestVisit = computed(() => {
-		const nowTs = Date.now();
-		return (
-			visits.value
-				.map((visit) => {
-					const ts = new Date(visit.datetime).getTime();
-					return { ...visit, ts };
-				})
-				.filter((v) => v.ts >= nowTs)
-				.sort((a, b) => a.ts - b.ts)[0] ?? null
+	const remainingVisits = computed(() => {
+		return visits.value.filter(
+			(v) => v.status === 'scheduled' || v.status === 'checked_in'
 		);
 	});
 
-	const formatDate = (value: string | Date) =>
-		new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium' }).format(
-			new Date(value)
-		);
+	const remainingOnsite = computed(() => {
+		return remainingVisits.value.filter(
+			(v) => v.roomNumber !== null && v.roomNumber !== undefined
+		).length;
+	});
 
-	const formatTime = (value: string | Date) =>
-		new Intl.DateTimeFormat('pl-PL', {
+	const remainingOnline = computed(() => {
+		return remainingVisits.value.filter(
+			(v) => v.roomNumber === null || v.roomNumber === undefined
+		).length;
+	});
+
+	const nearestVisits = computed(() => {
+		return remainingVisits.value
+			.map((visit) => {
+				const ts = new Date(visit.datetime).getTime();
+				return { ...visit, ts };
+			})
+			.sort((a, b) => a.ts - b.ts)
+			.slice(0, 3);
+	});
+
+	const showVisitsEmptyState = computed(
+		() =>
+			!visitsLoading.value &&
+			!visitsError.value &&
+			nearestVisits.value.length === 0
+	);
+
+	const visitStatusMeta: Record<
+		VisitStatus,
+		{ label: string; color: VisitStatusColor }
+	> = {
+		scheduled: { label: 'Zaplanowana', color: 'primary' },
+		checked_in: { label: 'Obecność potwierdzona', color: 'warning' },
+		completed: { label: 'Zakończona', color: 'success' },
+		canceled: { label: 'Odwołana', color: 'error' },
+	};
+
+	const getStatusLabel = (status: VisitStatus) =>
+		visitStatusMeta[status]?.label ?? 'Nieznany status';
+	const getStatusColor = (status: VisitStatus): VisitStatusColor =>
+		visitStatusMeta[status]?.color ?? 'primary';
+
+	const formatDate = (value: string | Date) => {
+		const date = new Date(value);
+		return date.toLocaleDateString('pl-PL', {
+			day: '2-digit',
+			month: '2-digit',
+			year: 'numeric',
+		});
+	};
+
+	const formatTime = (value: string | Date) => {
+		const date = new Date(value);
+		return date.toLocaleTimeString('pl-PL', {
 			hour: '2-digit',
 			minute: '2-digit',
-		}).format(new Date(value));
+		});
+	};
 
 	const todayTimeframes = computed(
 		() => dispositionData.value?.timeframes ?? []
@@ -78,199 +136,391 @@
 	const formatTimeframe = (timeframe: { start: string; end: string }) => {
 		const start = timeframe.start.slice(0, 5);
 		const end = timeframe.end.slice(0, 5);
-		return `${start}-${end}`;
+		return `${start} - ${end}`;
 	};
 
-	const availabilityLabel = computed(() => {
-		if (dispositionLoading.value) return 'Ładowanie...';
-		if (dispositionError.value)
-			return 'Nie udało się pobrać dyspozycji na dziś';
-		if (!todayTimeframes.value.length) return 'Brak dyspozycji na dziś';
-		return todayTimeframes.value.map((tf) => formatTimeframe(tf)).join(', ');
-	});
+	const showDispositionEmptyState = computed(
+		() =>
+			!dispositionLoading.value &&
+			!dispositionError.value &&
+			todayTimeframes.value.length === 0
+	);
 
-	const dispositionReminder = ref(true);
+	const todayRoomNumber = computed(
+		() => dispositionData.value?.roomNumber ?? null
+	);
 
-	// temp placeholders
-	const weeklyVisits = [
-		{ week: 'Tydzień 1', visits: 18 },
-		{ week: 'Tydzień 2', visits: 22 },
-		{ week: 'Tydzień 3', visits: 19 },
-		{ week: 'Tydzień 4', visits: 25 },
-		{ week: 'Tydzień 5', visits: 21 },
-		{ week: 'Tydzień 6', visits: 24 },
-		{ week: 'Tydzień 7', visits: 20 },
-		{ week: 'Tydzień 8', visits: 23 },
-	];
-	const weeklyVisitsCategories = {
-		visits: { name: 'Obsłużone wizyty', color: '#2563eb' },
-	} as const;
+	const REFRESH_INTERVAL = 60;
+	const refreshCountdown = ref(REFRESH_INTERVAL);
+	const isRefreshing = ref(false);
 
-	const weeklyTicks = weeklyVisits.map((_, idx) => idx);
-	const formatWeekTick = (tick: number) => weeklyVisits[tick]?.week ?? '';
+	const performRefresh = async (showToast = false) => {
+		isRefreshing.value = true;
+		try {
+			await refreshVisits();
+			if (showToast) {
+				toast.add({
+					title: 'Odświeżono panel',
+					description: 'Dane dashboardu zostały zaktualizowane.',
+					color: 'success',
+					icon: 'lucide:check',
+				});
+			}
+		} finally {
+			isRefreshing.value = false;
+			refreshCountdown.value = REFRESH_INTERVAL;
+		}
+	};
 
-	const visitTypeData = [38, 22];
-	const visitTypeCategories = {
-		onsite: { name: 'Wizyty w placówce', color: '#2563eb' },
-		remote: { name: 'Konsultacje telefoniczne', color: '#10b981' },
-	} as const;
+	const handleManualRefresh = () => performRefresh(true);
+
+	useIntervalFn(() => {
+		if (refreshCountdown.value > 0) {
+			refreshCountdown.value--;
+		} else {
+			performRefresh(false);
+		}
+	}, 1000);
+
+	const handleAppointment = (appointmentId: number) =>
+		router.push(`/doctor/handleAppointment/${appointmentId}`);
 </script>
 
 <template>
 	<PageContainer>
-		<PageHeader
-			title="Panel doktora"
-			description="Witamy w panelu doktora. Tutaj możesz przeglądać swoje wizyty, pacjentów oraz powiązane dane"
-		/>
-		<UAlert
-			v-if="dispositionReminder"
-			color="error"
-			title="Uzupełnij dyspozycję"
-			description="Przejdź do panelu dyspozycji, aby wpisać swoją dostępność w nadchodzący okres."
-			icon="carbon:warning"
-		/>
-		<div class="grid grid-cols-2 gap-4">
-			<UCard :ui="{ body: 'p-6' }">
-				<h1 class="text-2xl font-bold">Godziny pracy dzisiaj</h1>
-				<div v-if="dispositionLoading" class="mt-2 space-y-2">
-					<div class="h-4 w-24 rounded bg-gray-200" />
-					<div class="h-4 w-32 rounded bg-gray-200" />
-				</div>
-				<p v-else-if="dispositionError" class="text-sm text-red-600">
-					Nie udało się pobrać dyspozycji na dziś
-				</p>
-				<template v-else-if="todayTimeframes.length">
-					<p
-						v-for="timeframe in todayTimeframes"
-						:key="`${timeframe.start}-${timeframe.end}`"
-						class="text-sm"
-					>
-						{{ formatTimeframe(timeframe) }}
-					</p>
-				</template>
-				<p v-else class="text-sm text-gray-600">{{ availabilityLabel }}</p>
-			</UCard>
-			<UCard :ui="{ body: 'p-6' }">
-				<h1 class="text-2xl font-bold">Pozostałe wizyty</h1>
-				<p>Stacjonarne: 4</p>
-				<p>Telefoniczne: 6</p>
-			</UCard>
-		</div>
-		<UCard :ui="{ body: 'p-6' }">
-			<div class="flex items-center justify-between pb-6">
-				<h1 class="text-2xl font-bold">Najbliższa wizyta</h1>
+		<div
+			class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+		>
+			<PageHeader
+				title="Panel doktora"
+				description="Witamy w panelu doktora. Tutaj możesz przeglądać swoje wizyty, pacjentów oraz powiązane dane"
+			/>
+			<div class="flex items-center gap-3">
+				<span class="text-sm text-gray-500 dark:text-gray-400">
+					Odświeżenie za {{ refreshCountdown }}s
+				</span>
 				<UButton
 					variant="soft"
 					color="neutral"
-					class="w-fit cursor-pointer"
-					to="/doctor/visits/today"
+					icon="lucide:refresh-cw"
+					:loading="isRefreshing"
+					class="cursor-pointer"
+					@click="handleManualRefresh"
 				>
-					Pokaż wszystkie dzisiaj
+					Odśwież
 				</UButton>
 			</div>
+		</div>
 
-			<UCard v-if="visitsLoading" :ui="{ body: 'p-6' }">
-				<div class="animate-pulse space-y-2">
-					<div class="h-4 w-1/3 rounded bg-gray-200" />
-					<div class="h-3 w-1/4 rounded bg-gray-200" />
-					<div class="h-3 w-1/5 rounded bg-gray-200" />
-				</div>
-			</UCard>
-
-			<UCard v-else-if="nearestVisit" :ui="{ body: 'p-6' }">
-				<div class="flex items-center justify-between gap-4">
-					<div class="flex items-center gap-4">
+		<ClientOnly>
+			<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+				<UCard>
+					<div class="flex items-center gap-3 pb-4">
 						<div
-							class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100"
+							class="bg-primary-100 dark:bg-primary-900 flex h-12 w-12 items-center justify-center rounded-full"
 						>
-							<Icon name="carbon:calendar" class-name="w-6 h-6 text-blue-600" />
+							<Icon
+								name="lucide:clock"
+								class="text-primary-600 dark:text-primary-400 h-6 w-6"
+							/>
+						</div>
+						<div>
+							<h2 class="text-xl font-bold">Godziny pracy dzisiaj</h2>
+							<p class="text-sm text-gray-500 dark:text-gray-400">
+								Twoja dyspozycja na dziś
+							</p>
+						</div>
+					</div>
+
+					<div v-auto-animate>
+						<USkeleton v-if="dispositionLoading" class="h-20 w-full" />
+
+						<UAlert
+							v-else-if="dispositionError"
+							title="Nie udało się pobrać dyspozycji"
+							color="error"
+							variant="soft"
+							:description="
+								getErrorMessage(
+									dispositionError,
+									'Nie udało się pobrać dyspozycji na dziś.'
+								)
+							"
+						/>
+
+						<div
+							v-else-if="showDispositionEmptyState"
+							class="flex flex-col items-center justify-center gap-2 py-6 text-center"
+						>
+							<Icon
+								name="lucide:calendar-off"
+								class="h-10 w-10 text-gray-400"
+							/>
+							<p class="text-sm text-gray-500">Brak dyspozycji na dziś</p>
+							<UButton
+								variant="soft"
+								color="primary"
+								size="sm"
+								to="/doctor/disposition"
+								class="mt-2"
+							>
+								Ustaw dyspozycję
+							</UButton>
 						</div>
 
-						<div class="flex flex-col">
-							<h2 class="text-xl font-bold">
-								{{ nearestVisit.patientName || 'Pacjent' }}
-							</h2>
-							<p class="text-sm text-gray-500">
-								{{
-									nearestVisit.roomNumber
-										? `Gabinet ${nearestVisit.roomNumber}`
-										: 'Gabinet przydzielany'
-								}}
-							</p>
+						<div v-else class="space-y-3">
+							<div
+								v-for="timeframe in todayTimeframes"
+								:key="`${timeframe.start}-${timeframe.end}`"
+								class="bg-primary-50 dark:bg-primary-950 flex items-center gap-3 rounded-lg p-3"
+							>
+								<Icon
+									name="lucide:alarm-clock"
+									class="text-primary-600 dark:text-primary-400 h-5 w-5"
+								/>
+								<span
+									class="text-primary-700 dark:text-primary-300 text-lg font-semibold"
+								>
+									{{ formatTimeframe(timeframe) }}
+								</span>
+							</div>
 
 							<div
-								class="mt-1 flex flex-row flex-wrap gap-3 text-sm text-gray-600"
+								v-if="todayRoomNumber"
+								class="flex items-center gap-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-800"
 							>
-								<p>{{ formatDate(nearestVisit.datetime) }}</p>
-								<p>{{ formatTime(nearestVisit.datetime) }}</p>
-								<UBadge variant="subtle" color="info">Wizyta</UBadge>
+								<Icon
+									name="lucide:door-open"
+									class="h-5 w-5 text-gray-600 dark:text-gray-400"
+								/>
+								<span class="text-gray-700 dark:text-gray-300">
+									Gabinet
+									<span class="font-semibold">{{ todayRoomNumber }}</span>
+								</span>
 							</div>
 						</div>
 					</div>
-					<div class="flex gap-4">
-						<UButton
-							variant="soft"
-							color="neutral"
-							label="Przyjmij teraz"
-							icon="carbon:play"
-							class="cursor-pointer"
-							:to="`/doctor/handleAppointment/${nearestVisit.appointmentId}`"
-						/>
-						<UButton
-							variant="soft"
-							color="neutral"
-							icon="carbon:view"
-							size="xl"
-							class="cursor-pointer"
-							to="/doctor/visits/today"
-						/>
+				</UCard>
+
+				<UCard>
+					<div class="flex items-center gap-3 pb-4">
+						<div
+							class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900"
+						>
+							<Icon
+								name="lucide:list-todo"
+								class="h-6 w-6 text-blue-600 dark:text-blue-400"
+							/>
+						</div>
+						<div>
+							<h2 class="text-xl font-bold">Pozostałe wizyty dzisiaj</h2>
+							<p class="text-sm text-gray-500 dark:text-gray-400">
+								Wizyty do obsłużenia
+							</p>
+						</div>
 					</div>
-				</div>
-			</UCard>
 
-			<UCard v-else :ui="{ body: 'p-6' }">
-				<div class="flex items-center gap-3 text-gray-600">
-					<Icon name="carbon:checkmark" class-name="w-5 h-5 text-green-600" />
-					<p>Brak kolejnych wizyt zaplanowanych na dziś.</p>
-				</div>
-			</UCard>
-		</UCard>
+					<div v-auto-animate>
+						<USkeleton v-if="visitsLoading" class="h-20 w-full" />
 
-		<div class="grid grid-cols-2 gap-4">
-			<UCard :ui="{ body: 'p-6' }">
-				<div class="flex items-center justify-between pb-4">
-					<h2 class="text-xl font-semibold">
-						Wizyty tygodniowo (ostatnie 2 miesiące)
-					</h2>
+						<UAlert
+							v-else-if="visitsError"
+							title="Nie udało się pobrać wizyt"
+							color="error"
+							variant="soft"
+							:description="
+								getErrorMessage(visitsError, 'Nie udało się pobrać wizyt.')
+							"
+						/>
+
+						<div v-else class="grid grid-cols-2 gap-4">
+							<div
+								class="flex flex-col items-center rounded-lg bg-green-50 p-4 dark:bg-green-950"
+							>
+								<Icon
+									name="lucide:map-pin"
+									class="mb-2 h-8 w-8 text-green-600 dark:text-green-400"
+								/>
+								<span
+									class="text-3xl font-bold text-green-700 dark:text-green-300"
+								>
+									{{ remainingOnsite }}
+								</span>
+								<span class="text-sm text-green-600 dark:text-green-400">
+									Stacjonarne
+								</span>
+							</div>
+							<div
+								class="flex flex-col items-center rounded-lg bg-purple-50 p-4 dark:bg-purple-950"
+							>
+								<Icon
+									name="lucide:video"
+									class="mb-2 h-8 w-8 text-purple-600 dark:text-purple-400"
+								/>
+								<span
+									class="text-3xl font-bold text-purple-700 dark:text-purple-300"
+								>
+									{{ remainingOnline }}
+								</span>
+								<span class="text-sm text-purple-600 dark:text-purple-400">
+									Online
+								</span>
+							</div>
+						</div>
+					</div>
+				</UCard>
+			</div>
+
+			<UCard class="mt-4">
+				<div
+					class="flex flex-col gap-3 pb-6 sm:flex-row sm:items-center sm:justify-between"
+				>
+					<div class="flex items-center gap-3">
+						<div
+							class="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900"
+						>
+							<Icon
+								name="lucide:calendar-clock"
+								class="h-6 w-6 text-orange-600 dark:text-orange-400"
+							/>
+						</div>
+						<div>
+							<h2 class="text-xl font-bold">Najbliższe wizyty</h2>
+							<p class="text-sm text-gray-500 dark:text-gray-400">
+								Wizyty oczekujące na obsługę
+							</p>
+						</div>
+					</div>
+					<UButton
+						variant="soft"
+						color="neutral"
+						class="w-full cursor-pointer sm:w-fit"
+						to="/doctor/visits"
+					>
+						Pokaż wszystkie dzisiaj
+					</UButton>
 				</div>
-				<ClientOnly>
-					<BarChart
-						:data="weeklyVisits"
-						:categories="weeklyVisitsCategories"
-						:y-axis="['visits']"
-						:x-explicit-ticks="weeklyTicks"
-						:x-formatter="formatWeekTick"
-						:height="280"
-						:bar-padding="0.25"
-						:group-padding="0.2"
+
+				<div v-auto-animate class="flex flex-col gap-4">
+					<USkeleton v-if="visitsLoading" class="h-32 w-full" />
+
+					<UAlert
+						v-else-if="visitsError"
+						title="Nie udało się pobrać wizyt"
+						color="error"
+						variant="soft"
+						:description="
+							getErrorMessage(
+								visitsError,
+								'Nie udało się pobrać najbliższych wizyt.'
+							)
+						"
 					/>
-				</ClientOnly>
-			</UCard>
 
-			<UCard :ui="{ body: 'p-6' }">
-				<div class="flex items-center justify-between pb-4">
-					<h2 class="text-xl font-semibold">Podział typów wizyt</h2>
+					<div
+						v-else-if="showVisitsEmptyState"
+						class="flex flex-col items-center justify-center gap-2 py-8 text-center"
+					>
+						<Icon name="lucide:check-circle" class="h-12 w-12 text-green-500" />
+						<p class="text-lg font-medium text-gray-700 dark:text-gray-300">
+							Wszystkie wizyty na dziś zostały obsłużone
+						</p>
+						<p class="text-sm text-gray-500">
+							Brak kolejnych wizyt zaplanowanych na dziś.
+						</p>
+					</div>
+
+					<UCard
+						v-for="visit in nearestVisits"
+						v-else
+						:key="visit.appointmentId"
+						:class="[
+							visit.status === 'checked_in'
+								? 'ring-warning-500 dark:ring-warning-400 ring-2'
+								: '',
+						]"
+					>
+						<div class="flex items-center justify-between gap-4">
+							<div class="flex items-center gap-4">
+								<div
+									class="hidden h-12 w-12 items-center justify-center rounded-full sm:flex"
+									:class="
+										visit.status === 'checked_in'
+											? 'bg-warning-100 dark:bg-warning-900'
+											: 'bg-blue-100 dark:bg-blue-900'
+									"
+								>
+									<Icon
+										:name="
+											visit.status === 'checked_in'
+												? 'lucide:user-check'
+												: 'lucide:calendar'
+										"
+										:class="
+											visit.status === 'checked_in'
+												? 'text-warning-600 dark:text-warning-400 h-6 w-6'
+												: 'h-6 w-6 text-blue-600 dark:text-blue-400'
+										"
+									/>
+								</div>
+
+								<div class="flex flex-col">
+									<h3 class="text-xl font-bold">
+										{{ visit.patientName || 'Pacjent' }}
+									</h3>
+									<p class="text-sm text-gray-500 dark:text-gray-400">
+										{{
+											visit.roomNumber
+												? `Gabinet ${visit.roomNumber}`
+												: 'Wizyta online'
+										}}
+									</p>
+
+									<div
+										class="mt-1 flex flex-row flex-wrap gap-3 text-sm text-gray-600 dark:text-gray-400"
+									>
+										<span class="flex items-center gap-1">
+											<Icon name="lucide:calendar" class="h-4 w-4" />
+											{{ formatDate(visit.datetime) }}
+										</span>
+										<span class="flex items-center gap-1">
+											<Icon name="lucide:clock" class="h-4 w-4" />
+											{{ formatTime(visit.datetime) }}
+										</span>
+										<UBadge
+											variant="subtle"
+											:color="getStatusColor(visit.status)"
+										>
+											{{ getStatusLabel(visit.status) }}
+										</UBadge>
+									</div>
+								</div>
+							</div>
+
+							<div class="flex flex-col gap-2 sm:flex-row">
+								<UButton
+									v-if="visit.status === 'checked_in'"
+									variant="solid"
+									color="primary"
+									label="Przyjmij"
+									icon="lucide:play"
+									class="cursor-pointer"
+									@click="handleAppointment(visit.appointmentId)"
+								/>
+								<UButton
+									v-else
+									variant="soft"
+									color="neutral"
+									label="Szczegóły"
+									icon="lucide:eye"
+									class="cursor-pointer"
+									@click="handleAppointment(visit.appointmentId)"
+								/>
+							</div>
+						</div>
+					</UCard>
 				</div>
-				<ClientOnly>
-					<DonutChart
-						:data="visitTypeData"
-						:categories="visitTypeCategories"
-						:height="280"
-						:radius="110"
-						:arc-width="36"
-					/>
-				</ClientOnly>
 			</UCard>
-		</div>
+		</ClientOnly>
 	</PageContainer>
 </template>

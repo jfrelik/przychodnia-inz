@@ -70,7 +70,7 @@
 										color: #0f172a;
 									"
 								>
-									Witaj, {{ userName }}!
+									Dzień dobry, {{ userName }}!
 								</EHeading>
 								<EText
 									style="

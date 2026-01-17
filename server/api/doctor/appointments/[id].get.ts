@@ -1,9 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
-import { auth } from '~~/lib/auth';
 import { user as authUser } from '~~/server/db/auth';
 import {
 	appointments,
+	medications,
 	patients,
 	prescriptions,
 	recommendations,
@@ -22,73 +22,101 @@ const buildPatientName = (
 };
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				appointments: ['read'],
-				users: ['read'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		appointments: ['read'],
+		users: ['read'],
 	});
-
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
 
 	const appointmentId = Number(event.context.params?.id);
 	if (!Number.isFinite(appointmentId))
 		throw createError({
 			statusCode: 400,
-			statusMessage: 'Invalid appointment id',
+			message: 'Nieprawidłowy identyfikator wizyty',
 		});
 
-	const [row] = await useDb()
-		.select({
-			appointmentId: appointments.appointmentId,
-			datetime: appointments.datetime,
-			status: appointments.status,
-			type: appointments.type,
-			isOnline: appointments.isOnline,
-			notes: appointments.notes,
-			doctorId: appointments.doctorId,
-			patientId: appointments.patientId,
-			patientFirstName: patients.firstName,
-			patientLastName: patients.lastName,
-			patientAuthName: authUser.name,
-			patientEmail: authUser.email,
-			roomId: room.roomId,
-			roomNumber: room.number,
-			recommendationContent: recommendations.content,
-			prescriptionMedications: prescriptions.medications,
-		})
-		.from(appointments)
-		.leftJoin(patients, eq(appointments.patientId, patients.userId))
-		.leftJoin(authUser, eq(appointments.patientId, authUser.id))
-		.leftJoin(room, eq(appointments.roomRoomId, room.roomId))
-		.leftJoin(
-			recommendations,
-			eq(appointments.recommendationId, recommendations.recommendationId)
-		)
-		.leftJoin(
-			prescriptions,
-			eq(appointments.prescriptionId, prescriptions.prescriptionId)
-		)
-		.where(eq(appointments.appointmentId, appointmentId))
-		.limit(1);
+	let row:
+		| {
+				appointmentId: number;
+				datetime: Date;
+				status: string;
+				type: string;
+				isOnline: boolean;
+				notes: string | null;
+				doctorId: string;
+				patientId: string;
+				patientFirstName: string | null;
+				patientLastName: string | null;
+				patientAuthName: string | null;
+				patientEmail: string | null;
+				patientPhone: string | null;
+				roomId: number | null;
+				roomNumber: number | null;
+				recommendationContent: string | null;
+				prescriptionId: number | null;
+		  }
+		| undefined;
+	try {
+		[row] = await useDb()
+			.select({
+				appointmentId: appointments.appointmentId,
+				datetime: appointments.datetime,
+				status: appointments.status,
+				type: appointments.type,
+				isOnline: appointments.isOnline,
+				notes: appointments.notes,
+				doctorId: appointments.doctorId,
+				patientId: appointments.patientId,
+				patientFirstName: patients.firstName,
+				patientLastName: patients.lastName,
+				patientAuthName: authUser.name,
+				patientEmail: authUser.email,
+				patientPhone: patients.phone,
+				roomId: room.roomId,
+				roomNumber: room.number,
+				recommendationContent: recommendations.content,
+				prescriptionId: prescriptions.prescriptionId,
+			})
+			.from(appointments)
+			.leftJoin(patients, eq(appointments.patientId, patients.userId))
+			.leftJoin(authUser, eq(appointments.patientId, authUser.id))
+			.leftJoin(room, eq(appointments.roomRoomId, room.roomId))
+			.leftJoin(
+				recommendations,
+				eq(appointments.recommendationId, recommendations.recommendationId)
+			)
+			.leftJoin(
+				prescriptions,
+				eq(appointments.prescriptionId, prescriptions.prescriptionId)
+			)
+			.where(eq(appointments.appointmentId, appointmentId))
+			.limit(1);
+	} catch (error) {
+		const { message } = getDbErrorMessage(error);
+		throw createError({ statusCode: 500, message });
+	}
 
 	if (!row)
 		throw createError({
 			statusCode: 404,
-			statusMessage: 'Appointment not found',
+			message: 'Nie znaleziono wizyty',
 		});
 
 	if (row.doctorId !== session.user.id)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
+		throw createError({ statusCode: 403, message: 'Brak dostępu' });
+
+	let prescriptionMedications: Array<{ description: string }> = [];
+	if (row.prescriptionId) {
+		try {
+			prescriptionMedications = await useDb()
+				.select({ description: medications.description })
+				.from(medications)
+				.where(eq(medications.prescriptionId, row.prescriptionId))
+				.orderBy(asc(medications.createdAt));
+		} catch (error) {
+			const { message } = getDbErrorMessage(error);
+			throw createError({ statusCode: 500, message });
+		}
+	}
 
 	return {
 		appointmentId: row.appointmentId,
@@ -104,12 +132,15 @@ export default defineEventHandler(async (event) => {
 			row.patientAuthName
 		),
 		patientEmail: row.patientEmail ?? null,
+		patientPhone: row.patientPhone ?? null,
 		roomId: row.roomId ?? null,
 		roomNumber:
 			row.roomNumber === undefined || row.roomNumber === null
 				? null
 				: String(row.roomNumber),
 		recommendation: row.recommendationContent ?? null,
-		prescription: row.prescriptionMedications ?? null,
+		prescription: row.prescriptionId
+			? prescriptionMedications.map((item) => item.description)
+			: null,
 	};
 });

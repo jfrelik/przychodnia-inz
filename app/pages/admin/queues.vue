@@ -53,18 +53,28 @@
 		error,
 		refresh,
 		pending,
-	} = await useFetch<QueueSummary[]>('/api/admin/queues', {
+	} = await useLazyFetch<QueueSummary[]>('/api/admin/queues', {
 		default: () => [],
+		server: false,
 	});
 
 	const queues = computed(() => queuesResponse.value ?? []);
-	const selectedQueueName = ref<string | null>(null);
+	const selectedQueueName = ref<string | undefined>(undefined);
+	const tableKey = ref(0);
+
+	watch(
+		() => queuesResponse.value,
+		() => {
+			tableKey.value++;
+		},
+		{ deep: false }
+	);
 
 	watch(
 		queues,
 		(list) => {
 			if (!selectedQueueName.value && list.length > 0) {
-				selectedQueueName.value = list[0].name;
+				selectedQueueName.value = list[0]!.name;
 			}
 		},
 		{ immediate: true }
@@ -97,7 +107,16 @@
 		isJobModalOpen.value = false;
 	};
 
-	const stateColors: Record<string, string> = {
+	type BadgeColor =
+		| 'error'
+		| 'primary'
+		| 'secondary'
+		| 'success'
+		| 'info'
+		| 'warning'
+		| 'neutral';
+
+	const stateColors: Record<string, BadgeColor> = {
 		active: 'primary',
 		completed: 'success',
 		failed: 'error',
@@ -142,27 +161,10 @@
 			size: 220,
 		},
 		{
-			accessorKey: 'attemptsMade',
-			header: 'Podejścia',
-			size: 90,
-		},
-		{
 			accessorKey: 'timestamp',
 			header: 'Dodano',
 			cell: ({ row }) => formatDate(row.original.timestamp),
 			size: 140,
-		},
-		{
-			accessorKey: 'finishedOn',
-			header: 'Zakończono',
-			cell: ({ row }) => formatDate(row.original.finishedOn),
-			size: 140,
-		},
-		{
-			accessorKey: 'failedReason',
-			header: 'Błąd',
-			cell: ({ row }) => row.original.failedReason ?? '—',
-			size: 240,
 		},
 		{
 			id: 'details',
@@ -174,7 +176,7 @@
 						color: 'neutral',
 						variant: 'ghost',
 						size: 'xs',
-						icon: 'i-lucide-eye',
+						icon: 'lucide:eye',
 						class: 'cursor-pointer',
 						'aria-label': 'Szczegóły zadania',
 						onClick: () => openJobModal(row.original),
@@ -197,7 +199,7 @@
 			<UAlert
 				v-if="error"
 				color="error"
-				icon="i-lucide-alert-triangle"
+				icon="lucide:alert-triangle"
 				description="Nie udało się pobrać danych kolejek."
 			>
 				<template #actions>
@@ -225,10 +227,11 @@
 								:items="queueOptions"
 								placeholder="Wybierz kolejkę"
 								class="min-w-56"
+								:value-key="'value'"
 							/>
 							<UButton
 								variant="soft"
-								icon="i-lucide-refresh-cw"
+								icon="lucide:refresh-cw"
 								class="cursor-pointer"
 								@click="refresh()"
 							>
@@ -281,24 +284,24 @@
 				</div>
 
 				<div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-					<UTable
-						:data="jobs"
-						:columns="columns"
-						:loading="pending"
-						class="min-h-0 min-w-full flex-1 overflow-y-auto"
-						:empty-state="{
-							icon: 'i-lucide-inbox',
-							label: 'Brak zadań w kolejce',
-						}"
-					>
-						<template #state-cell="{ row }">
-							<UBadge
-								variant="soft"
-								:color="stateColors[row.original.state] ?? 'neutral'"
-								:label="row.original.state"
-							/>
-						</template>
-					</UTable>
+					<ClientOnly>
+						<UTable
+							:key="tableKey"
+							:data="jobs"
+							:columns="columns"
+							:loading="pending"
+							class="min-h-0 min-w-full flex-1 overflow-y-auto"
+							empty="Nie ma zadań w kolejce."
+						>
+							<template #state-cell="{ row }">
+								<UBadge
+									variant="soft"
+									:color="stateColors[row.original.state] ?? 'neutral'"
+									:label="row.original.state"
+								/>
+							</template>
+						</UTable>
+					</ClientOnly>
 				</div>
 			</UCard>
 		</div>

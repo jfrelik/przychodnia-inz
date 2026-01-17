@@ -13,7 +13,7 @@
 							title: 'Wylogowano',
 							description: 'Proces wylogowywania powiódł się',
 							color: 'success',
-							icon: 'carbon:checkmark',
+							icon: 'lucide:check',
 						});
 						navigateTo('/');
 					},
@@ -24,7 +24,7 @@
 				title: 'Błąd wylogowania',
 				description: 'Błąd: ' + error,
 				color: 'error',
-				icon: 'carbon:error',
+				icon: 'lucide:circle-x',
 			});
 		}
 	};

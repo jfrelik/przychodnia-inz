@@ -1,7 +1,7 @@
 <template>
-	<UContainer
-		class="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-8"
+	<div
+		class="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col gap-6 sm:px-0 lg:px-6 lg:py-8"
 	>
 		<slot />
-	</UContainer>
+	</div>
 </template>

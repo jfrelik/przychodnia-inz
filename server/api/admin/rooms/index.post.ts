@@ -1,5 +1,4 @@
-import consola from 'consola';
-import { eq, inArray, sql } from 'drizzle-orm';
+import { count, eq, inArray } from 'drizzle-orm';
 import {
 	createError,
 	defineEventHandler,
@@ -7,7 +6,6 @@ import {
 	setResponseStatus,
 } from 'h3';
 import { z } from 'zod';
-import { auth } from '~~/lib/auth';
 import {
 	appointments,
 	room,
@@ -36,53 +34,73 @@ const payloadSchema = z
 const normalizeIds = (ids?: (number | null)[]) =>
 	(ids ?? []).filter((id): id is number => id !== null);
 
-const fetchRoomWithMeta = async (roomId: number) =>
-	useDb()
+const fetchRoomWithMeta = async (roomId: number) => {
+	const [roomRow] = await useDb()
 		.select({
 			roomId: room.roomId,
 			number: room.number,
-			appointmentCount: sql<number>`count(DISTINCT ${appointments.appointmentId})`,
-			specializationIds: sql<
-				number[]
-			>`coalesce(array_agg(DISTINCT ${roomSpecializations.specializationId}), '{}'::int[])`,
-			specializationNames: sql<
-				string[]
-			>`coalesce(array_agg(DISTINCT ${specializations.name}), '{}'::text[])`,
 		})
 		.from(room)
-		.leftJoin(appointments, eq(appointments.roomRoomId, room.roomId))
-		.leftJoin(roomSpecializations, eq(room.roomId, roomSpecializations.roomId))
+		.where(eq(room.roomId, roomId))
+		.limit(1);
+
+	if (!roomRow) {
+		return undefined;
+	}
+
+	const [appointmentCountRow] = await useDb()
+		.select({
+			appointmentCount: count(appointments.appointmentId),
+		})
+		.from(appointments)
+		.where(eq(appointments.roomRoomId, roomId));
+
+	const specializationRows = await useDb()
+		.select({
+			specializationId: roomSpecializations.specializationId,
+			specializationName: specializations.name,
+		})
+		.from(roomSpecializations)
 		.leftJoin(
 			specializations,
 			eq(roomSpecializations.specializationId, specializations.id)
 		)
-		.where(eq(room.roomId, roomId))
-		.groupBy(room.roomId, room.number)
-		.limit(1);
+		.where(eq(roomSpecializations.roomId, roomId));
+
+	return {
+		...roomRow,
+		appointmentCount: Number(appointmentCountRow?.appointmentCount ?? 0),
+		specializationIds: specializationRows.map((row) => row.specializationId),
+		specializationNames: specializationRows
+			.map((row) => row.specializationName)
+			.filter((name): name is string => !!name),
+	};
+};
 
 export default defineEventHandler(async (event) => {
-	const session = await auth.api.getSession({ headers: event.headers });
-
-	if (!session)
-		throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
-
-	const hasPermission = await auth.api.userHasPermission({
-		body: {
-			userId: session.user.id,
-			permissions: {
-				rooms: ['create'],
-			},
-		},
+	const session = await requireSessionWithPermissions(event, {
+		rooms: ['create'],
 	});
 
-	if (!hasPermission.success)
-		throw createError({ statusCode: 403, statusMessage: 'Forbidden' });
-
 	const body = await readBody(event);
-	const payload = payloadSchema.parse(body);
 
-	const specializationIds = payload.specializations
-		? Array.from(new Set(payload.specializations))
+	const payload = payloadSchema.safeParse(body);
+
+	if (payload.error) {
+		const flat = z.flattenError(payload.error);
+
+		const firstFieldError = Object.values(flat.fieldErrors)
+			.flat()
+			.find((m): m is string => !!m);
+
+		throw createError({
+			statusCode: 400,
+			message: firstFieldError ?? 'Nieprawidłowe dane wejściowe.',
+		});
+	}
+
+	const specializationIds = payload.data.specializations
+		? Array.from(new Set(payload.data.specializations))
 		: [];
 
 	let specializationNames: string[] = [];
@@ -96,7 +114,7 @@ export default defineEventHandler(async (event) => {
 		if (found.length !== specializationIds.length) {
 			throw createError({
 				statusCode: 400,
-				statusMessage: 'Jedna lub więcej specjalizacji nie istnieje.',
+				message: 'Jedna lub więcej specjalizacji nie istnieje.',
 			});
 		}
 
@@ -108,12 +126,19 @@ export default defineEventHandler(async (event) => {
 			const [created] = await tx
 				.insert(room)
 				.values({
-					number: payload.number,
+					number: payload.data.number,
 				})
 				.returning({
 					roomId: room.roomId,
 					number: room.number,
 				});
+
+			if (!created) {
+				throw createError({
+					statusCode: 500,
+					message: 'Nie udało się utworzyć gabinetu.',
+				});
+			}
 
 			if (specializationIds.length > 0) {
 				await tx.insert(roomSpecializations).values(
@@ -127,12 +152,12 @@ export default defineEventHandler(async (event) => {
 			return created;
 		});
 
-		const [savedRoom] = await fetchRoomWithMeta(createdRoom.roomId);
+		const savedRoom = await fetchRoomWithMeta(createdRoom.roomId);
 
 		if (!savedRoom) {
 			throw createError({
 				statusCode: 500,
-				statusMessage: 'Nie udało się wczytać gabinetu po utworzeniu.',
+				message: 'Nie udało się wczytać gabinetu po utworzeniu.',
 			});
 		}
 
@@ -160,20 +185,18 @@ export default defineEventHandler(async (event) => {
 	} catch (error: unknown) {
 		const dbError = error as { code?: string };
 
-		consola.error({
-			operation: 'AdminCreateRoom',
-			targetNumber: payload.number,
-			errorCode: dbError?.code,
-			error,
-		});
-
 		if (dbError?.code === '23505') {
 			throw createError({
 				statusCode: 409,
-				statusMessage: 'Gabinet o tym numerze już istnieje.',
+				message: 'Gabinet o tym numerze już istnieje.',
 			});
 		}
 
-		throw error;
+		const { message } = getDbErrorMessage(error);
+
+		throw createError({
+			statusCode: 500,
+			message,
+		});
 	}
 });

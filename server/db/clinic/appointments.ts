@@ -9,7 +9,8 @@ import {
 import { doctors } from './doctors';
 import { appointmentStatusEnum, appointmentTypeEnum } from './enums';
 import { patients } from './patients';
-import { prescriptions, recommendations } from './prescriptions';
+import { prescriptions } from './prescriptions';
+import { recommendations } from './recommendations';
 import { room } from './rooms';
 
 export const appointments = pgTable('appointments', {
@@ -20,7 +21,10 @@ export const appointments = pgTable('appointments', {
 	doctorId: text('doctor_id')
 		.notNull()
 		.references(() => doctors.userId, { onDelete: 'cascade' }),
-	datetime: timestamp('datetime', { withTimezone: false }).notNull(),
+	datetime: timestamp('datetime', {
+		withTimezone: true,
+		mode: 'date',
+	}).notNull(),
 	status: appointmentStatusEnum('status').notNull(),
 	type: appointmentTypeEnum('type').notNull().default('consultation'),
 	isOnline: boolean('is_online').notNull().default(false),

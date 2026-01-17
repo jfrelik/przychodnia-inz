@@ -1,4 +1,4 @@
-import { Queue, type QueueOptions } from 'bullmq';
+import { Queue, type ConnectionOptions, type QueueOptions } from 'bullmq';
 import { Redis } from 'ioredis';
 
 const queueMap = new Map<string, Queue>();
@@ -21,7 +21,7 @@ export const useQueue = <
 		throw new Error('env NUXT_REDIS_URL is not defined');
 	}
 
-	const connection = new Redis(NUXT_REDIS_URL);
+	const connection = new Redis(NUXT_REDIS_URL) as ConnectionOptions;
 
 	queueMap.set(
 		name,

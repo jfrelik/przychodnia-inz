@@ -1,48 +1,55 @@
 # Przychodnia — aplikacja Nuxt (Projekt inżynierski PJATK)
 
-Aplikacja do obsługi przychodni (pacjenci, lekarze, wizyty, recepty), zbudowana w oparciu o Nuxt 4 + Vue 3, PostgreSQL oraz Drizzle ORM. Uwierzytelnianie realizuje Better Auth, a dokumentacja API jest dostępna w Scalar.
+Aplikacja do obsługi przychodni (pacjenci, lekarze, recepcja, admin) zbudowana na Nuxt 4 + Vue 3.
 
-## Technologie
+## Stos technologiczny
 
-- Nuxt 4
-- PostgreSQL + Drizzle ORM
+- Nuxt 4 + Vue 3 + Nuxt UI
+- Nitro + Drizzle ORM + PostgreSQL 17
 - Better Auth
+- BullMQ + Redis (Valkey) do kolejek
+- Nodemailer + Nuxt Email Renderer
 - TypeScript
-- Scalar
+
+## Architektura
+
+- `app/` — warstwa kliencka (Vue 3 + Nuxt UI).
+- `server/api/` — endpointy Nitro, walidacja Zod.
+- `server/db/` — definicje schematu Drizzle.
+- `emails/` — szablony maili renderowane po stronie serwera.
+
+## Funkcjonalności
+
+- Pacjent: rejestracja/logowanie, umawianie/odwoływanie wizyt, recepty, zalecenia, wyniki badań
+- Lekarz: dyspozycje, podgląd wizyt, obsługa wizyty
+- Recepcja: przypisywanie gabinetów, check-in pacjentów, kalendarz wizyt
+- Admin: zarządzanie użytkownikami, specjalizacjami, gabinetami, logami
 
 ## Wymagania
 
-- Node.js ≥ 22.18.0
-- pnpm
+- Node.js ≥ 24 i pnpm
 - PostgreSQL 17
+- Redis/Valkey
 
 ## Konfiguracja środowiska
 
-1. Zainstaluj zależności
+1. Skopiuj `.env.example` do `.env` i uzupełnij wartości.
+2. Zainstaluj zależności:
 
 ```bash
 pnpm install
 ```
 
-2. Skonfiguruj zmienne środowiskowe (`.env` w katalogu głównym)
-
-```env
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/db
-BETTER_AUTH_SECRET=dev-secret-or-random
-BETTER_AUTH_URL=http://localhost:3000
-```
-
-## Uruchomienie w trybie deweloperskim
+## Uruchomienie (dev)
 
 ```bash
 pnpm run dev
 ```
 
-Aplikacja będzie dostępna pod `http://localhost:3000`.
+Aplikacja: http://localhost:3000
 
-## Dokumentacja API
+## Uruchomienie przez Docker Compose
 
-- OpenAPI: `/_openapi.json`
-- Podgląd w Scalar: `/docs`
-
-Projekt inżynierski realizowany podczas procesu nauczania w Polsko‑Japońskiej Akademii Technik Komputerowych (PJATK).
+```bash
+docker compose up --build
+```
