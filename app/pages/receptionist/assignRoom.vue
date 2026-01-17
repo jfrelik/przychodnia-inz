@@ -122,11 +122,9 @@
 			selectedRooms.value[row.scheduleId] = roomId;
 			await refresh();
 		} catch (err) {
-			const message =
-				err instanceof Error ? err.message : 'Nie udało się zapisać przydziału';
 			toast.add({
 				title: 'Błąd przydziału',
-				description: message,
+				description: getErrorMessage(err, 'Nie udało się zapisać przydziału'),
 				color: 'error',
 			});
 		} finally {
@@ -145,7 +143,7 @@
 		<UAlert
 			v-if="error"
 			color="error"
-			icon="i-lucide-alert-triangle"
+			icon="lucide:alert-triangle"
 			title="Nie udało się pobrać danych"
 			description="Sprawdź połączenie i spróbuj ponownie."
 			class="mb-4"
@@ -160,7 +158,7 @@
 					</p>
 					<UInput
 						v-model="globalFilter"
-						icon="i-lucide-search"
+						icon="lucide:search"
 						placeholder="Szukaj lekarza, specjalizacji lub pokoju"
 						clearable
 						class="mt-4 w-full"
@@ -170,7 +168,7 @@
 					<UButton
 						variant="soft"
 						color="neutral"
-						icon="i-lucide-refresh-ccw"
+						icon="lucide:refresh-ccw"
 						class="cursor-pointer"
 						@click="refresh()"
 					>
@@ -187,7 +185,7 @@
 				sticky="header"
 				class="min-h-0 min-w-full flex-1 overflow-y-auto"
 				:empty-state="{
-					icon: 'i-lucide-clock',
+					icon: 'lucide:clock',
 					label: 'Brak dyspozycji na dzisiaj',
 					description: 'Lekarze nie mają dyspozycji w tym dniu.',
 				}"
@@ -226,13 +224,13 @@
 							value-attribute="value"
 							option-attribute="label"
 							:disabled="!row.original.compatibleRooms.length"
-							class="min-w-[180px]"
+							class="min-w-45"
 							placeholder="Wybierz pokój"
 						/>
 						<UButton
 							size="sm"
 							color="primary"
-							icon="carbon:edit"
+							icon="lucide:pencil"
 							variant="ghost"
 							:loading="saving[row.original.scheduleId]"
 							:disabled="!row.original.compatibleRooms.length"

@@ -6,8 +6,10 @@
 	});
 
 	useHead({
-		title: 'Panel recepcji',
+		title: 'Recepcja',
 	});
+
+	const toast = useToast();
 
 	type VisitBuckets = {
 		day: string;
@@ -81,19 +83,19 @@
 			{
 				label: 'Dzisiejsze wizyty',
 				value: total,
-				icon: 'carbon:calendar',
+				icon: 'lucide:calendar',
 				accent: 'bg-blue-100 text-blue-600',
 			},
 			{
 				label: 'Stacjonarne',
 				value: totals.onsite,
-				icon: 'carbon:building',
+				icon: 'lucide:building',
 				accent: 'bg-emerald-100 text-emerald-700',
 			},
 			{
 				label: 'Zdalne',
 				value: totals.remote,
-				icon: 'carbon:phone',
+				icon: 'lucide:phone',
 				accent: 'bg-sky-100 text-sky-700',
 			},
 		];
@@ -116,14 +118,65 @@
 	const visitTicks = computed(() => visitChartData.value.map((_, idx) => idx));
 	const formatVisitTick = (tick: number) =>
 		visitChartData.value[tick]?.label ?? '';
+
+	const REFRESH_INTERVAL = 60;
+	const refreshCountdown = ref(REFRESH_INTERVAL);
+	const isRefreshing = ref(false);
+
+	const performRefresh = async (showToast = false) => {
+		isRefreshing.value = true;
+		try {
+			await Promise.all([refreshVisits(), refreshQueue()]);
+			if (showToast) {
+				toast.add({
+					title: 'Odświeżono panel',
+					description: 'Dane dashboardu zostały zaktualizowane.',
+					color: 'success',
+					icon: 'lucide:check',
+				});
+			}
+		} finally {
+			isRefreshing.value = false;
+			refreshCountdown.value = REFRESH_INTERVAL;
+		}
+	};
+
+	const handleManualRefresh = () => performRefresh(true);
+
+	useIntervalFn(() => {
+		if (refreshCountdown.value > 0) {
+			refreshCountdown.value--;
+		} else {
+			performRefresh(false);
+		}
+	}, 1000);
 </script>
 
 <template>
 	<PageContainer>
-		<PageHeader
-			title="Panel recepcji"
-			description="Szybki podgląd dnia: wizyty, check-in oraz obciążenie recepcji."
-		/>
+		<div
+			class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+		>
+			<PageHeader
+				title="Recepcja"
+				description="Szybki podgląd dnia: wizyty, check-in oraz obciążenie recepcji."
+			/>
+			<div class="flex items-center gap-3">
+				<span class="text-sm text-gray-500 dark:text-gray-400">
+					Odświeżenie za {{ refreshCountdown }}s
+				</span>
+				<UButton
+					variant="soft"
+					color="neutral"
+					icon="lucide:refresh-cw"
+					:loading="isRefreshing"
+					class="cursor-pointer"
+					@click="handleManualRefresh"
+				>
+					Odśwież
+				</UButton>
+			</div>
+		</div>
 
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
 			<UCard
@@ -151,21 +204,12 @@
 			<UCard :ui="{ body: 'p-5' }">
 				<div class="flex items-center justify-between pb-4">
 					<h2 class="text-lg font-semibold">Kolejka na dziś</h2>
-					<UButton
-						variant="soft"
-						color="neutral"
-						icon="i-lucide-refresh-ccw"
-						class="cursor-pointer"
-						@click="refreshQueue()"
-					>
-						Odśwież
-					</UButton>
 				</div>
 
 				<UAlert
 					v-if="queueError"
 					color="error"
-					icon="i-lucide-alert-triangle"
+					icon="lucide:alert-triangle"
 					title="Nie udało się pobrać wizyt"
 					description="Spróbuj ponownie za chwilę."
 					class="mb-3"
@@ -203,7 +247,7 @@
 							>
 								<div class="flex items-center gap-1">
 									<Icon
-										name="carbon:user"
+										name="lucide:user"
 										class-name="h-4 w-4 text-neutral-500"
 									/>
 									<span>{{ item.patientName || 'Pacjent' }}</span>
@@ -211,7 +255,7 @@
 								<span class="text-neutral-400">|</span>
 								<div class="flex items-center gap-1">
 									<Icon
-										name="carbon:stethoscope"
+										name="lucide:stethoscope"
 										class-name="h-4 w-4 text-neutral-500"
 									/>
 									<span>{{ item.doctorName || 'Lekarz' }}</span>
@@ -219,7 +263,7 @@
 								<span class="text-neutral-400">|</span>
 								<div class="flex items-center gap-1">
 									<Icon
-										name="carbon:location"
+										name="lucide:map-pin"
 										class-name="h-4 w-4 text-neutral-500"
 									/>
 									<span>
@@ -250,30 +294,19 @@
 
 		<div class="grid grid-cols-1 gap-4">
 			<UCard :ui="{ body: 'p-5' }">
-				<div class="flex items-center justify-between pb-3">
-					<div>
-						<h2 class="text-lg font-semibold">
-							Wizyty dzisiaj (stacjonarne vs zdalne)
-						</h2>
-						<p class="text-sm text-neutral-500">
-							Dwukolumnowy wykres dla bieżącego dnia.
-						</p>
-					</div>
-					<UButton
-						variant="soft"
-						color="neutral"
-						icon="i-lucide-refresh-ccw"
-						class="cursor-pointer"
-						@click="refreshVisits()"
-					>
-						Odśwież
-					</UButton>
+				<div class="pb-3">
+					<h2 class="text-lg font-semibold">
+						Wizyty dzisiaj (stacjonarne vs zdalne)
+					</h2>
+					<p class="text-sm text-neutral-500">
+						Dwukolumnowy wykres dla bieżącego dnia.
+					</p>
 				</div>
 
 				<UAlert
 					v-if="visitsError"
 					color="error"
-					icon="i-lucide-alert-triangle"
+					icon="lucide:alert-triangle"
 					title="Nie udało się pobrać danych"
 					description="Spróbuj ponownie za chwilę."
 					class="mb-3"
