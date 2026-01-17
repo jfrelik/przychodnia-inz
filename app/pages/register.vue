@@ -8,7 +8,7 @@
 	});
 
 	const toast = useToast();
-	const session = authClient.useSession();
+	const _session = authClient.useSession();
 	const show = ref(false);
 	const isSubmitting = ref(false);
 	const turnstile = ref();
@@ -145,7 +145,7 @@
 				title: 'Weryfikacja nie powiodła się',
 				description: 'Odśwież stronę i spróbuj ponownie.',
 				color: 'error',
-				icon: 'carbon:error',
+				icon: 'lucide:circle-x',
 			});
 			return;
 		}
@@ -165,7 +165,7 @@
 					title: 'Weryfikacja nie powiodła się',
 					description: 'Odśwież stronę i spróbuj ponownie.',
 					color: 'error',
-					icon: 'carbon:error',
+					icon: 'lucide:circle-x',
 				});
 				return;
 			}
@@ -194,7 +194,7 @@
 						data.message ||
 						'Proces rejestracji powiódł się. Sprawdź swoją skrzynkę email, aby potwierdzić konto.',
 					color: 'success',
-					icon: 'carbon:checkmark',
+					icon: 'lucide:check',
 				});
 				await navigateTo('/login');
 			} catch (error) {
@@ -203,28 +203,27 @@
 				if (error && typeof error === 'object') {
 					const fetchError = error as {
 						statusCode?: number;
-						statusMessage?: string;
+						message?: string;
 						response?: { status?: number };
-						data?: { statusMessage?: string };
+						data?: { message?: string };
 					};
 
 					const statusCode =
 						fetchError.statusCode || fetchError.response?.status;
-					const statusMessage =
-						fetchError.statusMessage || fetchError.data?.statusMessage;
+					const apiMessage = fetchError.message || fetchError.data?.message;
 
 					if (statusCode === 400) {
 						errorMessage =
-							statusMessage ||
+							apiMessage ||
 							'Błąd walidacji danych. Sprawdź poprawność wprowadzonych danych.';
 					} else if (statusCode === 409) {
 						errorMessage =
-							statusMessage ||
+							apiMessage ||
 							'Użytkownik o podanym email lub PESEL już istnieje.';
 					} else if (statusCode === 500) {
 						errorMessage = 'Wystąpił błąd serwera. Spróbuj ponownie później.';
-					} else if (statusMessage) {
-						errorMessage = statusMessage;
+					} else if (apiMessage) {
+						errorMessage = apiMessage;
 					}
 				}
 
@@ -233,7 +232,7 @@
 					title: 'Wystąpił problem podczas rejestracji',
 					description: errorMessage,
 					color: 'error',
-					icon: 'carbon:error',
+					icon: 'lucide:circle-x',
 				});
 			}
 		} finally {
@@ -247,8 +246,8 @@
 		class="flex min-h-screen w-full flex-col items-center justify-center gap-6 px-4 py-10"
 	>
 		<div class="flex items-center gap-2 text-2xl font-bold md:text-3xl">
-			<UIcon name="carbon:hospital" class="h-8 w-8" />
-			Nazwa Przychodni
+			<UIcon name="lucide:hospital" class="h-8 w-8" />
+			Przychodnia
 		</div>
 		<div
 			class="w-full max-w-2xl flex-col items-center rounded-xl border border-gray-300 p-6 shadow-xl"
@@ -349,7 +348,7 @@
 								variant="link"
 								size="sm"
 								color="neutral"
-								:icon="show ? 'carbon:view-off' : 'carbon:view'"
+								:icon="show ? 'lucide:eye-off' : 'lucide:eye'"
 								:aria-label="show ? 'Schowaj hasło' : 'Pokaż hasło'"
 								:aria-pressed="show"
 								aria-controls="password"
@@ -381,9 +380,7 @@
 								"
 							>
 								<UIcon
-									:name="
-										requirement.passed ? 'carbon:checkmark' : 'carbon:close'
-									"
+									:name="requirement.passed ? 'lucide:check' : 'lucide:x'"
 									class="h-4 w-4"
 									:class="
 										requirement.passed ? 'text-emerald-500' : 'text-neutral-400'

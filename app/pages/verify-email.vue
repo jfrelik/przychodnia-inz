@@ -33,18 +33,18 @@
 						>
 							<Icon
 								v-if="pending"
-								name="i-lucide-loader-2"
+								name="lucide:loader-2"
 								class="animate-spin text-xl"
 							/>
 							<template v-else>
 								<Icon
 									v-if="status === 'success'"
-									name="i-lucide-check-circle"
+									name="lucide:check-circle"
 									class="text-3xl"
 								/>
 								<Icon
 									v-if="status === 'error'"
-									name="i-lucide-alert-octagon"
+									name="lucide:alert-octagon"
 									class="text-3xl"
 								/>
 							</template>
@@ -74,16 +74,16 @@
 							color="primary"
 							to="/login"
 							variant="solid"
-							icon="i-lucide-log-in"
+							icon="lucide:log-in"
 						>
 							Przejdź do logowania
 						</UButton>
-						<UButton variant="soft" to="/" icon="i-lucide-home">
+						<UButton variant="soft" to="/" icon="lucide:home">
 							Strona główna
 						</UButton>
 					</div>
 					<div v-else class="flex items-center gap-2 text-sm text-neutral-500">
-						<span class="i-lucide-loader-2 animate-spin" />
+						<span class="lucide:loader-2 animate-spin" />
 						<span>Proszę czekać...</span>
 					</div>
 				</div>

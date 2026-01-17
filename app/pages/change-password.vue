@@ -102,7 +102,7 @@
 					title: 'Link do zmiany hasła wygasł',
 					description: 'Wygeneruj nowy link i spróbuj ponownie.',
 					color: 'error',
-					icon: 'carbon:time',
+					icon: 'lucide:clock',
 				});
 			}
 		},
@@ -168,7 +168,7 @@
 					title: 'Weryfikacja nie powiodła się',
 					description: 'Odśwież stronę i spróbuj ponownie.',
 					color: 'error',
-					icon: 'carbon:error',
+					icon: 'lucide:circle-x',
 				});
 				return;
 			}
@@ -186,7 +186,7 @@
 					title: 'Weryfikacja nie powiodła się',
 					description: 'Odśwież stronę i spróbuj ponownie.',
 					color: 'error',
-					icon: 'carbon:error',
+					icon: 'lucide:circle-x',
 				});
 				return;
 			}
@@ -202,7 +202,7 @@
 					title: 'Nie udało się wysłać wiadomości',
 					description: error.message ?? 'Spróbuj ponownie za chwilę.',
 					color: 'error',
-					icon: 'carbon:error',
+					icon: 'lucide:circle-x',
 				});
 				return;
 			}
@@ -213,7 +213,7 @@
 					data?.message ??
 					'Jeśli adres email istnieje w systemie, wysłaliśmy link do zmiany hasła.',
 				color: 'success',
-				icon: 'carbon:checkmark',
+				icon: 'lucide:check',
 			});
 			requestState.email = '';
 		} catch (err) {
@@ -222,7 +222,7 @@
 				title: 'Nie udało się wysłać wiadomości',
 				description: 'Spróbuj ponownie za chwilę.',
 				color: 'error',
-				icon: 'carbon:error',
+				icon: 'lucide:circle-x',
 			});
 		} finally {
 			isRequesting.value = false;
@@ -240,7 +240,7 @@
 				title: 'Brakuje tokenu',
 				description: 'Użyj linku z wiadomości email, aby zmienić hasło.',
 				color: 'error',
-				icon: 'carbon:error',
+				icon: 'lucide:circle-x',
 			});
 			return;
 		}
@@ -258,7 +258,7 @@
 					title: 'Nie udało się zmienić hasła',
 					description: error.message ?? 'Spróbuj ponownie.',
 					color: 'error',
-					icon: 'carbon:error',
+					icon: 'lucide:circle-x',
 				});
 				return;
 			}
@@ -268,7 +268,7 @@
 					title: 'Hasło zostało zmienione',
 					description: 'Możesz zalogować się używając nowego hasła.',
 					color: 'success',
-					icon: 'carbon:checkmark',
+					icon: 'lucide:check',
 				});
 			}
 
@@ -282,7 +282,7 @@
 				title: 'Nie udało się zmienić hasła',
 				description: 'Spróbuj ponownie.',
 				color: 'error',
-				icon: 'carbon:error',
+				icon: 'lucide:circle-x',
 			});
 		} finally {
 			isResetting.value = false;
@@ -295,7 +295,7 @@
 		class="flex min-h-screen w-full flex-col items-center justify-center gap-10"
 	>
 		<div class="flex items-center gap-2 text-3xl font-bold">
-			<UIcon name="carbon:hospital" class="h-8 w-8" />
+			<UIcon name="lucide:hospital" class="h-8 w-8" />
 			Nazwa Przychodni
 		</div>
 		<div
@@ -374,7 +374,7 @@
 								variant="link"
 								size="sm"
 								color="neutral"
-								:icon="showPassword ? 'carbon:view-off' : 'carbon:view'"
+								:icon="showPassword ? 'lucide:eye-off' : 'lucide:eye'"
 								:aria-label="showPassword ? 'Schowaj hasło' : 'Pokaż hasło'"
 								:aria-pressed="showPassword"
 								aria-controls="new-password"
@@ -406,9 +406,7 @@
 								"
 							>
 								<UIcon
-									:name="
-										requirement.passed ? 'carbon:checkmark' : 'carbon:close'
-									"
+									:name="requirement.passed ? 'lucide:check' : 'lucide:x'"
 									class="h-4 w-4"
 									:class="
 										requirement.passed ? 'text-emerald-500' : 'text-neutral-400'
