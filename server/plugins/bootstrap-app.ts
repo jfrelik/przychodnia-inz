@@ -2,8 +2,23 @@ import consola from 'consola';
 import { count, eq, inArray } from 'drizzle-orm';
 import crypto from 'node:crypto';
 import { auth } from '~~/lib/auth';
-import { user } from '~~/server/db/auth';
-import { doctors, receptionists } from '~~/server/db/clinic';
+import { account, session, user, verification } from '~~/server/db/auth';
+import {
+	appointments,
+	availability,
+	doctors,
+	logs,
+	medicalRecords,
+	medications,
+	patients,
+	prescriptions,
+	receptionists,
+	recommendations,
+	room,
+	roomSpecializations,
+	specializations,
+	testResults,
+} from '~~/server/db/clinic';
 
 const getRequiredEnv = (key: string, fallback?: string) => {
 	const value = process.env[key] ?? fallback;
@@ -67,6 +82,28 @@ const markEmailsVerified = async (emails: string[]) => {
 		.where(inArray(user.email, emails));
 };
 
+const clearDatabase = async () => {
+	const db = useDb();
+	await db.delete(prescriptions);
+	await db.delete(recommendations);
+	await db.delete(testResults);
+	await db.delete(medicalRecords);
+	await db.delete(appointments);
+	await db.delete(availability);
+	await db.delete(logs);
+	await db.delete(roomSpecializations);
+	await db.delete(room);
+	await db.delete(doctors);
+	await db.delete(receptionists);
+	await db.delete(patients);
+	await db.delete(specializations);
+	await db.delete(medications);
+	await db.delete(session);
+	await db.delete(account);
+	await db.delete(verification);
+	await db.delete(user);
+};
+
 export default defineNitroPlugin(async () => {
 	const runtimeConfig = useRuntimeConfig();
 	const demoEnabled = ['1', 'true', 'yes', 'on'].includes(
@@ -80,13 +117,11 @@ export default defineNitroPlugin(async () => {
 		.select({ usersCount: count() })
 		.from(user);
 
-	// Skip any further setup if any users exist
-	if (usersCount > 0) {
-		if (demoEnabled) {
-			consola.warn(
-				'Demo mode enabled, but users already exist. Skipping demo data insertion.'
-			);
-		}
+	// In demo mode, clear DB if users exist to recreate demo accounts
+	if (demoEnabled && usersCount > 0) {
+		consola.warn('Demo mode enabled: clearing database...');
+		await clearDatabase();
+	} else if (usersCount > 0) {
 		return;
 	}
 
@@ -170,6 +205,26 @@ export default defineNitroPlugin(async () => {
 	}
 
 	await markEmailsVerified([adminEmail, doctorEmail, receptionistEmail]);
+
+	await useDb()
+		.insert(specializations)
+		.values([
+			{
+				name: 'Pediatria',
+				description: 'Opieka medyczna dla dzieci i młodzieży',
+				icon: 'lucide:baby',
+			},
+			{
+				name: 'Kardiologia',
+				description: 'Diagnostyka i leczenie chorób serca i układu krążenia',
+				icon: 'lucide:heart-pulse',
+			},
+			{
+				name: 'Dermatologia',
+				description: 'Leczenie chorób skóry, włosów i paznokci',
+				icon: 'lucide:scan-face',
+			},
+		]);
 
 	consola.success('DEMO data inserted.');
 });
