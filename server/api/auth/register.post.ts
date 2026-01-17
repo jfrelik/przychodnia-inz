@@ -124,6 +124,9 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
+	const peselHmacValue = peselHmac(payload.pesel);
+	const peselEncValue = encryptPesel(payload.pesel);
+
 	// Calculate date of birth from PESEL
 	const yearPart = parseInt(payload.pesel.substring(0, 2), 10);
 	const monthPart = parseInt(payload.pesel.substring(2, 4), 10);
@@ -160,7 +163,8 @@ export default defineEventHandler(async (event) => {
 				firstName: payload.name,
 				lastName: payload.surname,
 				dateOfBirth: dateOfBirth,
-				pesel: payload.pesel,
+				peselHmac: peselHmacValue,
+				peselEnc: peselEncValue,
 				phone: payload.phone,
 				address: payload.address,
 			});
