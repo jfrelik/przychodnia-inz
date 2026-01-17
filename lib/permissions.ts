@@ -17,7 +17,7 @@ const statements = {
 	specializations: ['read', 'list', 'create', 'update', 'delete'] as const,
 	users: ['read', 'list', 'create', 'update', 'delete'] as const,
 	statistics: ['view'] as const,
-} as const;
+};
 
 export const ac = createAccessControl(statements);
 
@@ -54,6 +54,20 @@ export const roles = {
 
 	// Admin: everything
 	admin: ac.newRole({
-		...statements,
+		appointments: ['read', 'list', 'create', 'update', 'delete'],
+		availability: ['read', 'list', 'create', 'update', 'delete'],
+		doctors: ['read', 'list', 'create', 'update', 'delete'],
+		logs: ['read', 'list'],
+		medicalRecords: ['read', 'list', 'create', 'update', 'delete'],
+		patients: ['read', 'list', 'create', 'update', 'delete'],
+		prescriptions: ['read', 'list', 'create', 'update', 'delete'],
+		queues: ['read', 'list'],
+		testResults: ['read', 'list', 'create', 'update', 'delete'],
+		recommendations: ['read', 'list', 'create', 'update', 'delete'],
+		rooms: ['read', 'list', 'create', 'update', 'delete'],
+		specializations: ['read', 'list', 'create', 'update', 'delete'],
+		users: ['read', 'list', 'create', 'update', 'delete'],
+		statistics: ['view'],
+		user: ['create', 'list', 'set-role', 'ban', 'delete', 'get', 'update'],
 	}),
 };
