@@ -66,6 +66,13 @@ export default defineEventHandler(async (event) => {
 				icon: specializations.icon,
 			});
 
+		if (!created) {
+			throw createError({
+				statusCode: 500,
+				message: 'Nie udało się utworzyć specjalizacji.',
+			});
+		}
+
 		await useAuditLog(
 			event,
 			session.user.id,

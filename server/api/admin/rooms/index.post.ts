@@ -133,6 +133,13 @@ export default defineEventHandler(async (event) => {
 					number: room.number,
 				});
 
+			if (!created) {
+				throw createError({
+					statusCode: 500,
+					message: 'Nie udało się utworzyć gabinetu.',
+				});
+			}
+
 			if (specializationIds.length > 0) {
 				await tx.insert(roomSpecializations).values(
 					specializationIds.map((specId: number) => ({
