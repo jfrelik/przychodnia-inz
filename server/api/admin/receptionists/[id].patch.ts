@@ -7,7 +7,7 @@ import { receptionists } from '~~/server/db/clinic';
 const payloadSchema = z.object({}).strict();
 
 export default defineEventHandler(async (event) => {
-	const session = await requireSessionWithPermissions(event, {
+	await requireSessionWithPermissions(event, {
 		users: ['update'],
 	});
 

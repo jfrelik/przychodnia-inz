@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
 		});
 
 		payload = result.payload;
-	} catch (err) {
+	} catch {
 		throw createError({
 			statusCode: 401,
 			message: 'Nie udało się zweryfikować tokenu.',
@@ -75,7 +75,7 @@ export default defineEventHandler(async (event) => {
 		await auth.api.verifyEmail({
 			query: { token: String(query.token) },
 		});
-	} catch (error) {
+	} catch {
 		throw createError({
 			statusCode: 400,
 			message: 'Nie udało się zweryfikować adresu e-mail.',
