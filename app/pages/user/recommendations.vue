@@ -58,7 +58,7 @@
 			title: 'Odświeżono zalecenia',
 			description: 'Lista zaleceń została zaktualizowana.',
 			color: 'success',
-			icon: 'carbon:checkmark',
+			icon: 'lucide:check',
 		});
 	};
 </script>
@@ -76,7 +76,7 @@
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-3xl"
 						>
-							<Icon name="carbon:pen" class-name="w-6 h-6 text-blue-600" />
+							<Icon name="lucide:pen" class-name="w-6 h-6 text-blue-600" />
 						</div>
 						<div v-auto-animate>
 							<USkeleton v-if="pending" class="h-8 w-8" />
@@ -93,7 +93,7 @@
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-sky-100 text-3xl"
 						>
-							<Icon name="carbon:time" class-name="w-6 h-6 text-sky-600" />
+							<Icon name="lucide:clock" class-name="w-6 h-6 text-sky-600" />
 						</div>
 						<div v-auto-animate>
 							<USkeleton v-if="pending" class="h-8 w-8" />
@@ -110,7 +110,7 @@
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 text-3xl"
 						>
-							<Icon name="carbon:user" class-name="w-6 h-6 text-purple-600" />
+							<Icon name="lucide:user" class-name="w-6 h-6 text-purple-600" />
 						</div>
 						<div v-auto-animate>
 							<USkeleton v-if="pending" class="h-8 w-8" />
@@ -133,7 +133,7 @@
 							v-if="!pending && !error"
 							variant="soft"
 							color="neutral"
-							icon="carbon:renew"
+							icon="lucide:refresh-cw"
 							class="w-full cursor-pointer sm:w-fit"
 							@click="handleRefresh"
 						>
@@ -146,7 +146,9 @@
 						title="Nie udało się pobrać zaleceń"
 						color="error"
 						variant="soft"
-						:description="error.message || 'Wystąpił nieoczekiwany błąd.'"
+						:description="
+							getErrorMessage(error, 'Wystąpił nieoczekiwany błąd.')
+						"
 					>
 						<template #actions>
 							<UButton
@@ -170,7 +172,7 @@
 							v-else-if="data?.length === 0"
 							class="flex flex-col items-center justify-center gap-2 py-12 text-center"
 						>
-							<Icon name="carbon:pen" class-name="h-10 w-10 text-gray-400" />
+							<Icon name="lucide:pen" class-name="h-10 w-10 text-gray-400" />
 							<p class="text-sm text-gray-500">Brak zaleceń lekarskich.</p>
 						</div>
 
@@ -181,7 +183,7 @@
 										class="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100"
 									>
 										<Icon
-											name="carbon:pen"
+											name="lucide:pen"
 											class-name="h-6 w-6 text-blue-600"
 										/>
 									</div>

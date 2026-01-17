@@ -1,4 +1,4 @@
-﻿<script lang="ts" setup>
+<script lang="ts" setup>
 	definePageMeta({
 		layout: 'user',
 	});
@@ -56,13 +56,11 @@
 	};
 
 	const router = useRouter();
-	const toast = useToast();
 
 	const {
 		data: dashboardData,
 		pending: dashboardPending,
 		error: dashboardError,
-		refresh: refreshDashboard,
 	} = await useLazyFetch<DashboardData>('/api/patient/dashboard', {
 		server: false,
 	});
@@ -87,32 +85,11 @@
 	const upcomingVisits = computed(
 		() => dashboardData.value?.upcomingVisits ?? []
 	);
-	const upcomingCards = computed(() => upcomingVisits.value);
-	const showUpcomingEmptyState = computed(
-		() =>
-			!dashboardPending.value &&
-			!dashboardError.value &&
-			upcomingVisits.value.length === 0
-	);
 	const recentResults = computed(
 		() => dashboardData.value?.recentResults ?? []
 	);
-	const recentResultCards = computed(() => recentResults.value);
-	const showRecentEmptyState = computed(
-		() =>
-			!dashboardPending.value &&
-			!dashboardError.value &&
-			recentResults.value.length === 0
-	);
 	const activePrescriptions = computed(
 		() => dashboardData.value?.activePrescriptions ?? []
-	);
-	const activeCards = computed(() => activePrescriptions.value);
-	const showActiveEmptyState = computed(
-		() =>
-			!dashboardPending.value &&
-			!dashboardError.value &&
-			activePrescriptions.value.length === 0
 	);
 	const normalizeDate = (value: DateInput) => {
 		if (!value) return null;
@@ -169,26 +146,15 @@
 	const viewVisit = () => router.push('/user/visits');
 	const viewResults = () => router.push('/user/testResults');
 	const viewPrescription = () => router.push('/user/prescriptions');
-
-	const handleRefresh = async () => {
-		await refreshDashboard();
-		toast.add({
-			title: 'Odświeżono panel',
-			description: 'Dane dashboardu zostały zaktualizowane.',
-			color: 'success',
-			icon: 'carbon:checkmark',
-		});
-	};
 </script>
 
 <template>
 	<PageContainer>
 		<PageHeader
 			title="Panel pacjenta"
-			description="Witamy w panelu pacjenta. Wpisz opis."
+			description="Witamy w panelu pacjenta."
 		/>
 		<ClientOnly>
-			<!-- Top part -->
 			<div class="mt-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
 				<UCard>
 					<div
@@ -222,18 +188,18 @@
 						/>
 
 						<div
-							v-else-if="showUpcomingEmptyState"
+							v-else-if="upcomingVisits.length === 0"
 							class="flex flex-col items-center justify-center gap-2 py-8 text-center"
 						>
 							<Icon
-								name="carbon:calendar"
+								name="lucide:calendar"
 								class-name="h-10 w-10 text-gray-400"
 							/>
 							<p class="text-sm text-gray-500">Brak zaplanowanych wizyt.</p>
 						</div>
 
 						<UCard
-							v-for="visit in upcomingCards"
+							v-for="visit in upcomingVisits"
 							v-else
 							:key="visit.appointmentId"
 						>
@@ -243,7 +209,7 @@
 										class="hidden h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-3xl sm:flex"
 									>
 										<Icon
-											name="carbon:calendar"
+											name="lucide:calendar"
 											class-name="w-6 h-6 text-blue-600"
 										/>
 									</div>
@@ -308,27 +274,26 @@
 						/>
 
 						<div
-							v-else-if="showRecentEmptyState"
+							v-else-if="recentResults.length === 0"
 							class="flex flex-col items-center justify-center gap-2 py-8 text-center"
 						>
-							<Icon name="carbon:result" class-name="h-10 w-10 text-gray-400" />
+							<Icon
+								name="lucide:file-text"
+								class-name="h-10 w-10 text-gray-400"
+							/>
 							<p class="text-sm text-gray-500">
 								Brak dostępnych wyników badań.
 							</p>
 						</div>
 
-						<UCard
-							v-for="result in recentResultCards"
-							v-else
-							:key="result.testId"
-						>
+						<UCard v-for="result in recentResults" v-else :key="result.testId">
 							<div class="flex items-center justify-between gap-4">
 								<div class="flex items-center gap-4">
 									<div
 										class="hidden h-12 w-12 items-center justify-center rounded-full bg-yellow-100 text-3xl sm:flex"
 									>
 										<Icon
-											name="carbon:result"
+											name="lucide:file-text"
 											class-name="w-6 h-6 text-yellow-600"
 										/>
 									</div>
@@ -381,15 +346,15 @@
 						/>
 
 						<div
-							v-else-if="showActiveEmptyState"
+							v-else-if="activePrescriptions.length === 0"
 							class="flex flex-col items-center justify-center gap-2 py-8 text-center"
 						>
-							<Icon name="carbon:pills" class-name="h-10 w-10 text-gray-400" />
+							<Icon name="lucide:pill" class-name="h-10 w-10 text-gray-400" />
 							<p class="text-sm text-gray-500">Brak aktywnych recept.</p>
 						</div>
 
 						<UCard
-							v-for="prescription in activeCards"
+							v-for="prescription in activePrescriptions"
 							v-else
 							:key="
 								prescription.prescriptionId ??
@@ -403,7 +368,7 @@
 										class="hidden h-12 w-12 items-center justify-center rounded-full bg-green-100 text-3xl sm:flex"
 									>
 										<Icon
-											name="carbon:pills"
+											name="lucide:pill"
 											class-name="w-6 h-6 text-green-600"
 										/>
 									</div>

@@ -39,7 +39,7 @@
 			title: 'Odświeżono recepty',
 			description: 'Lista recept została zaktualizowana.',
 			color: 'success',
-			icon: 'carbon:checkmark',
+			icon: 'lucide:check',
 		});
 	};
 
@@ -62,7 +62,7 @@
 				title: 'Recepta zrealizowana',
 				description: 'Status recepty został zaktualizowany.',
 				color: 'success',
-				icon: 'carbon:checkmark',
+				icon: 'lucide:check',
 			});
 			isFulfillModalOpen.value = false;
 			fulfillTarget.value = null;
@@ -71,7 +71,7 @@
 				title: 'Nie udało się zaktualizować recepty',
 				description: getErrorMessage(error, 'Spróbuj ponownie później.'),
 				color: 'error',
-				icon: 'carbon:warning',
+				icon: 'lucide:alert-triangle',
 			});
 		} finally {
 			fulfillLoading.value = false;
@@ -102,7 +102,7 @@
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-3xl"
 						>
-							<Icon name="carbon:pills" class-name="h-6 w-6 text-green-600" />
+							<Icon name="lucide:pill" class-name="h-6 w-6 text-green-600" />
 						</div>
 						<div v-auto-animate class="min-h-8">
 							<USkeleton v-if="pending" class="h-8 w-8" />
@@ -119,10 +119,7 @@
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-3xl"
 						>
-							<Icon
-								name="carbon:checkmark"
-								class-name="h-6 w-6 text-emerald-600"
-							/>
+							<Icon name="lucide:check" class-name="h-6 w-6 text-emerald-600" />
 						</div>
 						<div v-auto-animate class="min-h-8">
 							<USkeleton v-if="pending" class="h-8 w-8" />
@@ -140,7 +137,7 @@
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-3xl"
 						>
 							<Icon
-								name="carbon:document-add"
+								name="lucide:file-plus"
 								class-name="h-6 w-6 text-gray-700"
 							/>
 						</div>
@@ -163,7 +160,7 @@
 							v-if="!pending && !error"
 							variant="soft"
 							color="neutral"
-							icon="carbon:renew"
+							icon="lucide:refresh-cw"
 							class="cursor-pointer"
 							@click="handleRefresh"
 						>
@@ -176,7 +173,7 @@
 						title="Nie udało się pobrać recept"
 						color="error"
 						variant="soft"
-						:description="error.message || 'Spróbuj ponownie później.'"
+						:description="getErrorMessage(error, 'Spróbuj ponownie później.')"
 					>
 						<template #actions>
 							<UButton
@@ -198,7 +195,7 @@
 							v-else-if="data?.length === 0"
 							class="flex flex-col items-center justify-center gap-2 py-12 text-center"
 						>
-							<Icon name="carbon:pills" class-name="h-10 w-10 text-gray-400" />
+							<Icon name="lucide:pill" class-name="h-10 w-10 text-gray-400" />
 							<p class="text-sm text-gray-500">Brak wystawionych recept.</p>
 						</div>
 
@@ -216,7 +213,7 @@
 										class="flex h-12 w-12 items-center justify-center rounded-full bg-green-100"
 									>
 										<Icon
-											name="carbon:pills"
+											name="lucide:pill"
 											class-name="h-6 w-6 text-green-600"
 										/>
 									</div>

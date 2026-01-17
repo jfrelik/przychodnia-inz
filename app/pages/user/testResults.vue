@@ -22,7 +22,6 @@
 	);
 
 	const toast = useToast();
-	const totalTestResultsCount = computed(() => data.value?.length || 0);
 	const recentTestResultsCount = computed(() => {
 		if (!data.value) return 0;
 		const threshold = new Date();
@@ -41,7 +40,7 @@
 			title: 'Odświeżono wyniki badań',
 			description: 'Lista wyników została zaktualizowana.',
 			color: 'success',
-			icon: 'carbon:checkmark',
+			icon: 'lucide:check',
 		});
 	};
 
@@ -51,7 +50,7 @@
 			title: 'Skopiowano wynik',
 			description: 'Wynik badania został zapisany w schowku.',
 			color: 'success',
-			icon: 'carbon:copy',
+			icon: 'lucide:copy',
 		});
 	};
 </script>
@@ -69,12 +68,15 @@
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100 text-3xl"
 						>
-							<Icon name="carbon:result" class-name="w-6 h-6 text-yellow-600" />
+							<Icon
+								name="lucide:file-text"
+								class-name="w-6 h-6 text-yellow-600"
+							/>
 						</div>
 						<div v-auto-animate>
 							<USkeleton v-if="pending" class="h-8 w-8" />
 							<p v-else class="text-2xl font-bold text-gray-800">
-								{{ totalTestResultsCount }}
+								{{ data?.length ?? 0 }}
 							</p>
 							<p class="text-sm text-gray-600">Łącznie wyników</p>
 						</div>
@@ -86,7 +88,7 @@
 						<div
 							class="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 text-3xl"
 						>
-							<Icon name="carbon:time" class-name="w-6 h-6 text-orange-600" />
+							<Icon name="lucide:clock" class-name="w-6 h-6 text-orange-600" />
 						</div>
 						<div v-auto-animate>
 							<USkeleton v-if="pending" class="h-8 w-8" />
@@ -107,7 +109,7 @@
 							v-if="!pending && !error"
 							variant="soft"
 							color="neutral"
-							icon="carbon:renew"
+							icon="lucide:refresh-cw"
 							class="cursor-pointer"
 							@click="handleRefresh"
 						>
@@ -120,7 +122,7 @@
 						title="Nie udało się pobrać wyników badań"
 						color="error"
 						variant="soft"
-						:description="error.message || 'Spróbuj ponownie później.'"
+						:description="getErrorMessage(error, 'Spróbuj ponownie później.')"
 					>
 						<template #actions>
 							<UButton
@@ -144,7 +146,10 @@
 							v-else-if="data?.length === 0"
 							class="flex flex-col items-center justify-center gap-2 py-12 text-center"
 						>
-							<Icon name="carbon:result" class-name="h-10 w-10 text-gray-400" />
+							<Icon
+								name="lucide:file-text"
+								class-name="h-10 w-10 text-gray-400"
+							/>
 							<p class="text-sm text-gray-500">Brak wyników badań.</p>
 						</div>
 
@@ -155,7 +160,7 @@
 										class="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100"
 									>
 										<Icon
-											name="carbon:result"
+											name="lucide:file-text"
 											class-name="h-6 w-6 text-yellow-600"
 										/>
 									</div>
@@ -170,7 +175,7 @@
 												<UButton
 													size="xs"
 													variant="ghost"
-													icon="carbon:copy"
+													icon="lucide:copy"
 													class="cursor-pointer"
 													:disabled="!test.result"
 													@click="handleCopyResult(test.result ?? '')"
