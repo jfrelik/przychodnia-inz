@@ -23,7 +23,7 @@ export const auth = betterAuth({
 	emailAndPassword: {
 		enabled: true,
 		requireEmailVerification: true,
-		sendResetPassword: async ({ user, url, token }, _request) => {
+		sendResetPassword: async ({ user, url }, _request) => {
 			const html = await renderEmailComponent(
 				'PasswordReset',
 				{
@@ -43,7 +43,7 @@ export const auth = betterAuth({
 		},
 	},
 	emailVerification: {
-		sendVerificationEmail: async ({ user, url, token }, request) => {
+		sendVerificationEmail: async ({ user, token }, _request) => {
 			const betterAuthUrl = process.env.BETTER_AUTH_URL;
 
 			const html = await renderEmailComponent(
