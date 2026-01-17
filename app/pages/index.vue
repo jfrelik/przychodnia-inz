@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 	useHead({
 		title: 'Przychodnia',
 	});
@@ -20,12 +20,12 @@
 		}))
 	);
 
-	const selectedSpecId = ref<number | null>(null);
+	const selectedSpecId = ref<number | undefined>(undefined);
 
 	watch(
 		() => data.value.specializations,
 		(specializations) => {
-			if (specializations.length > 0 && selectedSpecId.value === null) {
+			if (specializations.length > 0 && selectedSpecId.value === undefined) {
 				selectedSpecId.value = specializations[0]!.id;
 			}
 		},
@@ -40,17 +40,17 @@
 		data.value.specializations.find((spec) => spec.id === effectiveSpecId.value)
 	);
 
-	const formatNextVisit = (iso: string | null) => {
-		if (!iso) return 'Brak wolnych terminów';
-		const date = new Date(iso);
-		return `Najbliższa wizyta: ${date.toLocaleString('pl-PL', {
+	const formatNextAvailableDate = (dateStr: string | null) => {
+		if (!dateStr) return 'Brak wolnych terminów';
+		const [y, m, d] = dateStr.split('-').map(Number);
+		const date = new Date(y!, m! - 1, d);
+		return `Najbliższy termin: ${date.toLocaleDateString('pl-PL', {
 			dateStyle: 'long',
-			timeStyle: 'short',
 		})}`;
 	};
 
 	const nextVisitInfo = computed(() =>
-		formatNextVisit(selectedSpec.value?.nextVisitAt ?? null)
+		formatNextAvailableDate(selectedSpec.value?.nextAvailableDate ?? null)
 	);
 </script>
 
@@ -242,7 +242,7 @@
 								</label>
 
 								<USelect
-									v-model="selectedSpecId!"
+									v-model="selectedSpecId"
 									:items="specializationOptions"
 									class="w-full"
 								>
@@ -333,7 +333,7 @@
 				<div
 					class="flex flex-col items-center rounded-xl bg-blue-50 p-6 text-center shadow"
 				>
-					<UIcon name="carbon:calendar" class="mb-2 text-3xl text-blue-700" />
+					<UIcon name="lucide:calendar" class="mb-2 text-3xl text-blue-700" />
 					<span class="mb-2 text-lg font-bold">Szybkie umawianie wizyt</span>
 					<span class="text-gray-700">
 						Wybierz specjalistę i termin w kilka sekund.
@@ -342,7 +342,7 @@
 				<div
 					class="flex flex-col items-center rounded-xl bg-blue-50 p-6 text-center shadow"
 				>
-					<UIcon name="carbon:document" class="mb-2 text-3xl text-blue-700" />
+					<UIcon name="lucide:file" class="mb-2 text-3xl text-blue-700" />
 					<span class="mb-2 text-lg font-bold">Historia leczenia online</span>
 					<span class="text-gray-700">
 						Wszystkie wizyty i wyniki badań w jednym miejscu.
@@ -351,7 +351,7 @@
 				<div
 					class="flex flex-col items-center rounded-xl bg-blue-50 p-6 text-center shadow"
 				>
-					<UIcon name="carbon:security" class="mb-2 text-3xl text-blue-700" />
+					<UIcon name="lucide:shield" class="mb-2 text-3xl text-blue-700" />
 					<span class="mb-2 text-lg font-bold">Bezpieczeństwo danych</span>
 					<span class="text-gray-700">
 						Twoje dane są chronione i dostępne tylko dla Ciebie.
