@@ -38,7 +38,7 @@
 		"@schedule-x/theme-default": "^4.1.0",
 		"@schedule-x/vue": "^4.0.0",
 		"@vueuse/nuxt": "14.1.0",
-		"better-auth": "^1.4.14",
+		"better-auth": "^1.4.15",
 		"better-auth-localization": "^2.2.3",
 		"bullmq": "^5.66.5",
 		"dotenv": "^17.2.3",
