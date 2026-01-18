@@ -1,12 +1,6 @@
 <script lang="ts" setup>
-	import {
-		CalendarDate,
-		getLocalTimeZone,
-		today,
-		type DateValue,
-	} from '@internationalized/date';
+	import { getLocalTimeZone, today } from '@internationalized/date';
 	import type { StepperItem } from '@nuxt/ui';
-	import type { DateRange } from 'reka-ui';
 	import * as z from 'zod';
 
 	type Specialization = {
@@ -168,36 +162,45 @@
 
 	const tz = getLocalTimeZone();
 	const todayDate = today(tz);
-	const selectedDateRange = ref<DateRange | null>({
-		start: todayDate,
-		end: todayDate.add({ weeks: 1 }),
-	});
 
-	const timeWindow = ref({ start: '08:00', end: '18:00' });
 	const slots = ref<UiSlot[]>([]);
 	const slotsPending = ref(false);
 	const selectedSlotId = ref<string | null>(null);
 	const selectedDay = ref<string | null>(null);
 	const bookingPending = ref(false);
 
-	const unavailableDates = (date: DateValue) => {
-		let calendarDate: CalendarDate;
-		if ('toCalendar' in date && typeof date.toCalendar === 'function') {
-			calendarDate = date as CalendarDate;
-		} else {
-			const [yearStr, monthStr, dayStr] = date.toString().split('-');
-			const year = Number(yearStr);
-			const month = Number(monthStr);
-			const day = Number(dayStr);
-			if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
-				throw new Error('Invalid date value');
-			}
-			calendarDate = new CalendarDate(year, month, day);
+	// Date navigation - show 30 days ahead
+	const DAYS_TO_SHOW = 30;
+	const availableDays = computed(() => {
+		const days: string[] = [];
+		for (let i = 0; i < DAYS_TO_SHOW; i++) {
+			days.push(todayDate.add({ days: i }).toString());
 		}
-		return calendarDate.compare(todayDate) < 0;
+		return days;
+	});
+
+	// Current visible day index for navigation
+	const dayScrollRef = ref<HTMLElement | null>(null);
+
+	const scrollDays = (direction: 'left' | 'right') => {
+		if (dayScrollRef.value) {
+			const scrollAmount = 200;
+			dayScrollRef.value.scrollBy({
+				left: direction === 'left' ? -scrollAmount : scrollAmount,
+				behavior: 'smooth',
+			});
+		}
 	};
 
 	const formatDateTime = (iso: string) => {
+		const d = new Date(iso);
+		return d.toLocaleString('pl-PL', {
+			hour: '2-digit',
+			minute: '2-digit',
+		});
+	};
+
+	const formatDateFull = (iso: string) => {
 		const d = new Date(iso);
 		return d.toLocaleString('pl-PL', {
 			year: 'numeric',
@@ -208,29 +211,21 @@
 		});
 	};
 
-	const formatDateLabel = (isoDate: string) => {
-		return new Date(`${isoDate}T00:00:00`).toLocaleDateString('pl-PL', {
-			weekday: 'short',
-			day: '2-digit',
-			month: '2-digit',
-		});
-	};
-
 	const formatDayMonth = (isoDate: string) =>
 		new Date(`${isoDate}T00:00:00`).toLocaleDateString('pl-PL', {
 			day: '2-digit',
 			month: '2-digit',
 		});
 
+	const formatWeekdayShort = (isoDate: string) =>
+		new Date(`${isoDate}T00:00:00`).toLocaleDateString('pl-PL', {
+			weekday: 'short',
+		});
+
 	const formatWeekday = (isoDate: string) =>
 		new Date(`${isoDate}T00:00:00`).toLocaleDateString('pl-PL', {
 			weekday: 'long',
 		});
-
-	const timeToMinutes = (time: string) => {
-		const [h, m] = time.split(':').map(Number);
-		return (h || 0) * 60 + (m || 0);
-	};
 
 	const slotsByDay = computed<Record<string, UiSlot[]>>(() => {
 		const grouped: Record<string, UiSlot[]> = {};
@@ -245,7 +240,11 @@
 		return grouped;
 	});
 
-	const daysWithSlots = computed(() => Object.keys(slotsByDay.value).sort());
+	const daysWithSlots = computed(() =>
+		availableDays.value.filter(
+			(day) => (slotsByDay.value[day]?.length ?? 0) > 0
+		)
+	);
 
 	const slotsForSelectedDay = computed(() =>
 		selectedDay.value ? (slotsByDay.value[selectedDay.value] ?? []) : []
@@ -267,40 +266,6 @@
 	const fetchSlots = async () => {
 		const parsed = schema.safeParse(schemaState.value);
 		if (!parsed.success || !schemaState.value.specializationId) {
-			toast.add({
-				title: 'Brak danych',
-				description: 'Wybierz specjalizację i tryb wizyty.',
-				color: 'warning',
-			});
-			return;
-		}
-
-		if (!selectedDateRange.value) {
-			toast.add({
-				title: 'Brak zakresu dat',
-				description: 'Ustaw zakres dat przed wyszukiwaniem.',
-				color: 'warning',
-			});
-			return;
-		}
-		if (!selectedDateRange.value.start) {
-			toast.add({
-				title: 'Brak daty początkowej',
-				description: 'Wybierz datę startową przed wyszukiwaniem.',
-				color: 'warning',
-			});
-			return;
-		}
-
-		const { start: windowStart, end: windowEnd } = timeWindow.value;
-		const fromMinutes = timeToMinutes(windowStart);
-		const toMinutes = timeToMinutes(windowEnd);
-		if (!windowStart || !windowEnd || fromMinutes >= toMinutes) {
-			toast.add({
-				title: 'Nieprawidłowy zakres godzin',
-				description: 'Ustaw godziny od i do (od < do).',
-				color: 'warning',
-			});
 			return;
 		}
 
@@ -309,17 +274,15 @@
 		selectedDay.value = null;
 
 		try {
-			const start = selectedDateRange.value.start.toString();
-			const end =
-				selectedDateRange.value.end?.toString() ??
-				selectedDateRange.value.start.toString();
+			const startDate = todayDate.toString();
+			const endDate = todayDate.add({ days: DAYS_TO_SHOW - 1 }).toString();
 
 			const params: Record<string, string | number> = {
-				startDate: start,
-				endDate: end,
+				startDate,
+				endDate,
 				specializationId: schemaState.value.specializationId,
-				startTime: windowStart,
-				endTime: windowEnd,
+				startTime: '00:00',
+				endTime: '23:59',
 			};
 
 			// Receptionist API accepts type param for procedure slots
@@ -345,14 +308,10 @@
 			);
 
 			slots.value = flattened;
-			selectedDay.value = daysWithSlots.value[0] ?? null;
 
-			if (!flattened.length) {
-				toast.add({
-					title: 'Brak terminów',
-					description: 'Brak wolnych slotów dla wybranych kryteriów.',
-					color: 'warning',
-				});
+			// Auto-select first day with slots
+			if (daysWithSlots.value.length > 0) {
+				selectedDay.value = daysWithSlots.value[0] ?? null;
 			}
 		} catch (error) {
 			toast.add({
@@ -365,6 +324,13 @@
 			slotsPending.value = false;
 		}
 	};
+
+	// Auto-fetch slots when entering step 3
+	watch(currentStep, async (newStep) => {
+		if (newStep === 3 && schemaState.value.specializationId) {
+			await fetchSlots();
+		}
+	});
 
 	const selectSlot = (id: string) => {
 		selectedSlotId.value = selectedSlotId.value === id ? null : id;
@@ -512,16 +478,18 @@
 								</template>
 							</UAlert>
 						</div>
-						<UButton
-							label="Dalej"
-							color="info"
-							trailing-icon="lucide:arrow-right"
-							:disabled="
-								!schemaState.specializationId || specsPending || !canProceed
-							"
-							class="mt-auto w-full"
-							@click="goNext"
-						/>
+						<div class="mt-auto flex justify-end">
+							<UButton
+								label="Dalej"
+								color="info"
+								trailing-icon="lucide:arrow-right"
+								:disabled="
+									!schemaState.specializationId || specsPending || !canProceed
+								"
+								class="w-full cursor-pointer sm:w-auto"
+								@click="goNext"
+							/>
+						</div>
 					</section>
 
 					<!-- Step 2: Visit type and mode -->
@@ -578,14 +546,14 @@
 								variant="outline"
 								color="neutral"
 								trailing-icon="lucide:arrow-left"
-								class="w-full cursor-pointer"
+								class="w-full cursor-pointer sm:w-auto"
 								@click="goPrev"
 							/>
 							<UButton
 								label="Dalej"
 								color="info"
 								trailing-icon="lucide:arrow-right"
-								class="w-full cursor-pointer"
+								class="w-full cursor-pointer sm:w-auto"
 								:disabled="!canProceed"
 								@click="goNext"
 							/>
@@ -594,193 +562,161 @@
 
 					<!-- Step 3: Date/time selection -->
 					<section v-else-if="item.id === 3" class="flex flex-col gap-4">
-						<div class="flex flex-col gap-4">
-							<div
-								class="grid gap-4 lg:grid-cols-[minmax(240px,280px)_1fr] lg:items-start"
-							>
-								<div class="space-y-3">
-									<!-- @vue-ignore -->
-									<UCalendar
-										v-model="selectedDateRange"
-										:year-controls="false"
-										range
-										:is-date-unavailable="unavailableDates"
-									/>
-									<div class="grid grid-cols-2 gap-2">
-										<UFormField label="Od" name="time-from">
-											<UInput v-model="timeWindow.start" type="time" />
-										</UFormField>
-										<UFormField label="Do" name="time-to">
-											<UInput v-model="timeWindow.end" type="time" />
-										</UFormField>
-									</div>
+						<!-- Loading state -->
+						<div
+							v-if="slotsPending"
+							class="flex min-h-48 items-center justify-center"
+						>
+							<div class="flex flex-col items-center gap-3">
+								<UIcon
+									name="lucide:loader-2"
+									class="size-8 animate-spin text-neutral-400"
+								/>
+								<p class="text-sm text-neutral-600">
+									Szukam dostępnych terminów...
+								</p>
+							</div>
+						</div>
+
+						<!-- Content -->
+						<template v-else>
+							<!-- Date selector with arrows -->
+							<div class="flex flex-col gap-2">
+								<p class="text-sm font-medium text-gray-700">Wybierz dzień:</p>
+								<div class="flex items-center gap-2">
 									<UButton
-										label="Szukaj wizyty"
-										icon="lucide:search"
-										:loading="slotsPending"
-										class="w-full cursor-pointer justify-center"
-										:disabled="!canProceed"
-										@click="fetchSlots"
+										icon="lucide:chevron-left"
+										variant="outline"
+										color="neutral"
+										size="sm"
+										class="shrink-0 cursor-pointer"
+										@click="scrollDays('left')"
 									/>
-								</div>
-
-								<!-- Right: available days -->
-								<div class="flex flex-col gap-3">
-									<p class="text-sm text-neutral-600">
-										Wybierz dzień i odpowiadającą Ci wizytę. Możesz zawęzić
-										godziny wyszukiwania.
-									</p>
-
 									<div
-										v-if="slotsPending"
-										class="rounded-lg border border-dashed p-4 text-sm text-neutral-600"
+										ref="dayScrollRef"
+										class="flex flex-1 gap-2 overflow-x-auto scroll-smooth py-1"
+										style="scrollbar-width: none; -ms-overflow-style: none"
 									>
-										Ładuję dostępne terminy...
-									</div>
-
-									<div
-										v-else-if="!slots.length"
-										class="rounded-lg border border-dashed p-4 text-sm text-neutral-600"
-									>
-										Brak wyników — wybierz inny zakres dat lub godzin.
-									</div>
-
-									<div v-else v-auto-animate>
-										<UScrollArea
-											:orientation="isMobile ? 'horizontal' : 'vertical'"
-											:class="
-												isMobile
-													? 'w-full max-w-full'
-													: 'max-h-72 w-full max-w-full'
+										<button
+											v-for="day in availableDays"
+											:key="day"
+											:class="[
+												'flex shrink-0 cursor-pointer flex-col items-center rounded-lg border px-3 py-2 transition',
+												selectedDay === day
+													? 'border-primary-500 bg-primary-50 text-primary-700'
+													: (slotsByDay[day]?.length ?? 0) > 0
+														? 'hover:border-primary-300 border-gray-200 bg-white'
+														: 'cursor-not-allowed border-gray-100 bg-gray-50 text-gray-400',
+											]"
+											:disabled="(slotsByDay[day]?.length ?? 0) === 0"
+											@click="
+												(slotsByDay[day]?.length ?? 0) > 0
+													? (selectedDay = day)
+													: null
 											"
 										>
-											<div
-												:class="
-													isMobile
-														? 'flex gap-4 px-2 py-2'
-														: 'flex flex-col gap-4 py-2 pr-3'
-												"
+											<span class="text-xs uppercase">
+												{{ formatWeekdayShort(day) }}
+											</span>
+											<span class="text-sm font-semibold">
+												{{ formatDayMonth(day) }}
+											</span>
+											<span
+												v-if="(slotsByDay[day]?.length ?? 0) > 0"
+												class="text-xs text-gray-500"
 											>
-												<div
-													v-for="day in daysWithSlots"
-													:key="day"
-													:class="[
-														'cursor-pointer rounded-xl border bg-white px-4 py-4 shadow-sm transition',
-														isMobile ? 'min-w-40 shrink-0' : 'w-full',
-														selectedDay === day
-															? 'border-secondary-400 bg-secondary-50'
-															: 'hover:border-primary-300 border-gray-200',
-													]"
-													@click="selectedDay = day"
-												>
-													<div
-														:class="
-															isMobile
-																? 'flex flex-col gap-2 text-left'
-																: 'grid grid-cols-[auto_1fr] items-center gap-3'
-														"
-													>
-														<div class="flex flex-col">
-															<p class="text-lg font-semibold text-gray-900">
-																{{ formatDayMonth(day) }}
-															</p>
-															<p
-																class="text-xs tracking-wide text-gray-500 uppercase"
-															>
-																Dzień
-															</p>
-														</div>
-														<div class="flex flex-col gap-1">
-															<p
-																class="text-sm font-medium text-gray-700 capitalize"
-															>
-																{{ formatWeekday(day) }}
-															</p>
-															<p class="text-xs text-gray-600">
-																{{ slotsByDay[day]?.length ?? 0 }} wizyt
-															</p>
-														</div>
-													</div>
-												</div>
-											</div>
-										</UScrollArea>
+												{{ slotsByDay[day]?.length }} term.
+											</span>
+										</button>
 									</div>
+									<UButton
+										icon="lucide:chevron-right"
+										variant="outline"
+										color="neutral"
+										size="sm"
+										class="shrink-0 cursor-pointer"
+										@click="scrollDays('right')"
+									/>
 								</div>
 							</div>
 
-							<!-- Below both: available visits for selected day -->
-							<div v-if="!slotsPending && slots.length" class="space-y-2">
-								<p class="text-sm font-semibold text-gray-700">
-									{{
-										selectedDay ? formatDateLabel(selectedDay) : 'Wybierz dzień'
-									}}
+							<!-- No slots message -->
+							<div
+								v-if="slots.length === 0"
+								class="rounded-lg border border-dashed p-6 text-center"
+							>
+								<UIcon
+									name="lucide:calendar-x"
+									class="mx-auto mb-2 size-10 text-neutral-400"
+								/>
+								<p class="text-sm font-medium text-neutral-600">
+									Brak dostępnych terminów
+								</p>
+								<p class="mt-1 text-xs text-neutral-500">
+									W najbliższych {{ DAYS_TO_SHOW }} dniach nie ma wolnych
+									terminów dla wybranej specjalizacji.
+								</p>
+							</div>
+
+							<!-- Available slots for selected day -->
+							<div v-else-if="selectedDay" class="flex flex-col gap-3">
+								<p class="text-sm font-medium text-gray-700">
+									Dostępne terminy w dniu
+									<span class="capitalize">
+										{{ formatWeekday(selectedDay) }},
+									</span>
+									{{ formatDayMonth(selectedDay) }}:
 								</p>
 
 								<div
-									v-if="!selectedDay"
-									class="rounded-lg border border-dashed p-4"
+									v-if="slotsForSelectedDay.length === 0"
+									class="rounded-lg border border-dashed p-4 text-center text-sm text-neutral-500"
 								>
-									<p class="text-sm text-neutral-600">
-										Wybierz dzień z listy po prawej stronie.
-									</p>
+									Brak terminów w tym dniu. Wybierz inny dzień.
 								</div>
 
-								<div v-else v-auto-animate>
-									<UScrollArea
-										:orientation="isMobile ? 'horizontal' : 'vertical'"
-										:class="
-											isMobile
-												? 'w-full max-w-full'
-												: 'max-h-80 w-full max-w-full'
-										"
+								<div v-else class="max-h-64 overflow-y-auto">
+									<div
+										v-auto-animate
+										class="grid gap-2 p-2 sm:grid-cols-2 lg:grid-cols-3"
 									>
 										<div
-											:class="
-												isMobile
-													? 'flex gap-4 px-2 py-2'
-													: 'flex flex-col gap-4 py-2 pr-3'
-											"
+											v-for="slot in slotsForSelectedDay"
+											:key="slot.id"
+											:class="[
+												'cursor-pointer rounded-lg border p-3 transition',
+												selectedSlotId === slot.id
+													? 'border-primary-500 bg-primary-50 ring-primary-500 ring-1'
+													: 'hover:border-primary-300 border-gray-200 bg-white hover:shadow-sm',
+											]"
+											@click="selectSlot(slot.id)"
 										>
-											<div
-												v-for="slot in slotsForSelectedDay"
-												:key="slot.id"
-												:class="[
-													'cursor-pointer rounded-xl border bg-white px-4 py-4 shadow-sm transition',
-													isMobile ? 'min-w-60 shrink-0' : 'w-full',
-													selectedSlotId === slot.id
-														? 'border-secondary-400 bg-secondary-50'
-														: 'border-gray-200 hover:border-green-300',
-												]"
-												@click="selectSlot(slot.id)"
-											>
-												<div class="flex flex-col gap-2">
-													<div class="flex items-start justify-between gap-3">
-														<p class="text-sm font-semibold text-gray-900">
-															{{ slot.doctorName }}
-														</p>
-														<p class="text-sm font-semibold text-gray-800">
-															{{ formatDateTime(slot.start) }}
-														</p>
-													</div>
-													<div class="flex items-center justify-between gap-2">
-														<p class="text-xs text-gray-600">
-															{{ slot.specializationName || 'Specjalizacja' }}
-														</p>
-														<p class="text-xs text-gray-500">Termin</p>
-													</div>
-												</div>
+											<div class="flex items-center justify-between gap-2">
+												<span class="text-lg font-semibold text-gray-900">
+													{{ formatDateTime(slot.start) }}
+												</span>
+												<UIcon
+													v-if="selectedSlotId === slot.id"
+													name="lucide:check-circle"
+													class="text-primary-600 size-5"
+												/>
 											</div>
+											<p class="mt-1 text-sm text-gray-600">
+												{{ slot.doctorName }}
+											</p>
 										</div>
-									</UScrollArea>
-									<p
-										v-if="selectedDay && !slotsForSelectedDay.length"
-										class="text-sm text-neutral-500"
-									>
-										Brak terminów w wybranym dniu.
-									</p>
+									</div>
 								</div>
 							</div>
-						</div>
+
+							<!-- Prompt to select day -->
+							<div
+								v-else
+								class="rounded-lg border border-dashed p-4 text-center text-sm text-neutral-500"
+							>
+								Wybierz dzień z listy powyżej, aby zobaczyć dostępne terminy.
+							</div>
+						</template>
 
 						<div class="flex flex-col gap-3 sm:flex-row sm:justify-between">
 							<UButton
@@ -788,14 +724,14 @@
 								variant="outline"
 								color="neutral"
 								icon="lucide:arrow-left"
-								class="w-full cursor-pointer"
+								class="w-full cursor-pointer sm:w-auto"
 								@click="goPrev"
 							/>
 							<UButton
 								label="Zatwierdź termin"
 								color="info"
 								icon="lucide:calendar-check"
-								class="w-full cursor-pointer"
+								class="w-full cursor-pointer sm:w-auto"
 								:disabled="!selectedSlotId"
 								@click="goNext"
 							/>
@@ -877,7 +813,7 @@
 										v-if="selectedSlot"
 										class="text-sm font-medium text-gray-900"
 									>
-										{{ formatDateTime(selectedSlot.start) }} -
+										{{ formatDateFull(selectedSlot.start) }} -
 										{{ selectedSlot.doctorName }}
 									</p>
 									<p v-else class="text-sm text-gray-500">
@@ -891,7 +827,7 @@
 							<UButton
 								label="Cofnij"
 								variant="outline"
-								class="w-full cursor-pointer"
+								class="w-full cursor-pointer sm:w-auto"
 								color="neutral"
 								icon="lucide:arrow-left"
 								@click="goPrev"
@@ -900,7 +836,7 @@
 								label="Potwierdź wizytę"
 								color="success"
 								icon="lucide:check-circle"
-								class="w-full cursor-pointer"
+								class="w-full cursor-pointer sm:w-auto"
 								:disabled="!selectedSlotId || !canProceed"
 								:loading="bookingPending"
 								@click="bookVisit"
