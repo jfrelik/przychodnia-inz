@@ -1,7 +1,7 @@
 import pkg from './package.json';
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-	compatibilityDate: '2025-10-10',
+	compatibilityDate: '2026-01-18',
 	devtools: {
 		enabled: true,
 
@@ -10,12 +10,6 @@ export default defineNuxtConfig({
 		},
 	},
 	css: ['~/assets/css/main.css'],
-
-	colorMode: {
-		preference: 'light',
-		fallback: 'light',
-	},
-
 	modules: [
 		'@nuxt/eslint',
 		'@nuxt/fonts',
@@ -30,6 +24,11 @@ export default defineNuxtConfig({
 		'@vueuse/nuxt',
 		'nuxt-security',
 	],
+
+	// Nuxt UI
+	ui: {
+		colorMode: false,
+	},
 
 	routeRules: {
 		'/': {
