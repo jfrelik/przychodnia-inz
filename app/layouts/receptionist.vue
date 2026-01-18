@@ -84,7 +84,7 @@
 					</div>
 					<UIcon
 						v-else
-						name="i-simple-icons-nuxtdotjs"
+						name="lucide:hospital"
 						class="text-primary mx-auto size-5"
 					/>
 				</template>
