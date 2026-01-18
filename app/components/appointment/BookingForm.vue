@@ -512,16 +512,18 @@
 								</template>
 							</UAlert>
 						</div>
-						<UButton
-							label="Dalej"
-							color="info"
-							trailing-icon="lucide:arrow-right"
-							:disabled="
-								!schemaState.specializationId || specsPending || !canProceed
-							"
-							class="mt-auto w-full"
-							@click="goNext"
-						/>
+						<div class="mt-auto flex justify-end">
+							<UButton
+								label="Dalej"
+								color="info"
+								trailing-icon="lucide:arrow-right"
+								:disabled="
+									!schemaState.specializationId || specsPending || !canProceed
+								"
+								class="w-full cursor-pointer sm:w-auto"
+								@click="goNext"
+							/>
+						</div>
 					</section>
 
 					<!-- Step 2: Visit type and mode -->
@@ -578,14 +580,14 @@
 								variant="outline"
 								color="neutral"
 								trailing-icon="lucide:arrow-left"
-								class="w-full cursor-pointer"
+								class="w-full cursor-pointer sm:w-auto"
 								@click="goPrev"
 							/>
 							<UButton
 								label="Dalej"
 								color="info"
 								trailing-icon="lucide:arrow-right"
-								class="w-full cursor-pointer"
+								class="w-full cursor-pointer sm:w-auto"
 								:disabled="!canProceed"
 								@click="goNext"
 							/>
@@ -788,14 +790,14 @@
 								variant="outline"
 								color="neutral"
 								icon="lucide:arrow-left"
-								class="w-full cursor-pointer"
+								class="w-full cursor-pointer sm:w-auto"
 								@click="goPrev"
 							/>
 							<UButton
 								label="Zatwierdź termin"
 								color="info"
 								icon="lucide:calendar-check"
-								class="w-full cursor-pointer"
+								class="w-full cursor-pointer sm:w-auto"
 								:disabled="!selectedSlotId"
 								@click="goNext"
 							/>
@@ -891,7 +893,7 @@
 							<UButton
 								label="Cofnij"
 								variant="outline"
-								class="w-full cursor-pointer"
+								class="w-full cursor-pointer sm:w-auto"
 								color="neutral"
 								icon="lucide:arrow-left"
 								@click="goPrev"
@@ -900,7 +902,7 @@
 								label="Potwierdź wizytę"
 								color="success"
 								icon="lucide:check-circle"
-								class="w-full cursor-pointer"
+								class="w-full cursor-pointer sm:w-auto"
 								:disabled="!selectedSlotId || !canProceed"
 								:loading="bookingPending"
 								@click="bookVisit"
