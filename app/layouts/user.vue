@@ -78,7 +78,57 @@
 	<UApp :locale="pl">
 		<UDashboardGroup class="flex h-screen min-h-0">
 			<UDashboardSidebar
+				class="hidden lg:flex"
+				:ui="{ footer: 'border-t border-default' }"
+			>
+				<template #header>
+					<div class="flex w-full items-center gap-3">
+						<img class="h-5 w-auto shrink-0" src="/hospital.png" />
+						Przychodnia
+					</div>
+				</template>
+
+				<template #default>
+					<UButton
+						label="Umów wizytę"
+						icon="lucide:calendar-plus"
+						class="cursor-pointer justify-center"
+						to="/user/newAppointment"
+					/>
+					<UNavigationMenu :items="items[0]" orientation="vertical" />
+				</template>
+
+				<template #footer>
+					<div class="flex flex-col gap-2">
+						<div class="flex justify-end">
+							<FontSizeSelector :collapsed="false" />
+						</div>
+
+						<UButton
+							label="Wyloguj się"
+							color="neutral"
+							variant="ghost"
+							class="w-full cursor-pointer"
+							icon="lucide:log-out"
+							@click="handleSignout"
+						/>
+
+						<UButton
+							:label="`Wersja ${runtimeConfig.public.appVersion}`"
+							color="neutral"
+							variant="ghost"
+							class="w-full"
+							icon="lucide:code"
+							disabled
+						/>
+					</div>
+				</template>
+			</UDashboardSidebar>
+
+			<!-- Mobile sidebar -->
+			<UDashboardSidebar
 				collapsible
+				class="lg:hidden"
 				:ui="{ footer: 'border-t border-default' }"
 			>
 				<template #header="{ collapsed }">
@@ -121,7 +171,9 @@
 				</template>
 
 				<template #footer="{ collapsed }">
-					<div class="">
+					<div class="flex flex-col gap-2">
+						<FontSizeSelector :collapsed="collapsed" popover-side="top" />
+
 						<UButton
 							:label="collapsed ? undefined : 'Wyloguj się'"
 							color="neutral"
@@ -140,7 +192,7 @@
 							"
 							color="neutral"
 							variant="ghost"
-							class="mt-2 w-full"
+							class="w-full"
 							:block="collapsed"
 							icon="lucide:code"
 							disabled
@@ -148,6 +200,7 @@
 					</div>
 				</template>
 			</UDashboardSidebar>
+
 			<UContainer
 				class="mx-auto flex h-full min-h-0 w-full flex-1 flex-col overflow-y-auto px-6 py-8"
 			>

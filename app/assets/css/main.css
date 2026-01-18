@@ -1,2 +1,15 @@
 @import 'tailwindcss';
 @import '@nuxt/ui';
+
+/* Font size adjustments for accessibility */
+html.app-font-small {
+	font-size: 14px;
+}
+
+html.app-font-medium {
+	font-size: 16px;
+}
+
+html.app-font-large {
+	font-size: 18px;
+}
