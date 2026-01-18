@@ -65,6 +65,26 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
+	// Check if PESEL is already registered BEFORE creating auth user
+	const peselHmacValue = peselHmac(payload.pesel);
+	const existingPatient = await useDb()
+		.select({ userId: patients.userId })
+		.from(patients)
+		.where(eq(patients.peselHmac, peselHmacValue))
+		.limit(1);
+
+	if (existingPatient.length > 0) {
+		consola.warn({
+			operation: 'PatientRegistration',
+			reason: 'PESEL_ALREADY_EXISTS',
+			targetEmail: payload.email,
+		});
+		throw createError({
+			statusCode: 409,
+			message: 'Użytkownik o tym numerze PESEL już istnieje.',
+		});
+	}
+
 	let newUserId: string;
 
 	// Creating auth user
@@ -109,7 +129,6 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const peselHmacValue = peselHmac(payload.pesel);
 	const peselEncValue = encryptPesel(payload.pesel);
 
 	// Calculate date of birth from PESEL
