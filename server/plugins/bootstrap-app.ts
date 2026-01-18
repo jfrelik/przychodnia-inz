@@ -126,6 +126,16 @@ export default defineNitroPlugin(async () => {
 	}
 
 	if (!demoEnabled) {
+		// Check if there is any admin
+		const [{ adminCount }] = await useDb()
+			.select({ adminCount: count() })
+			.from(user)
+			.where(eq(user.role, 'admin'));
+
+		if (adminCount > 0) {
+			return;
+		}
+
 		const password = crypto.randomBytes(16).toString('hex');
 		const { user: created } = await auth.api.createUser({
 			body: {
