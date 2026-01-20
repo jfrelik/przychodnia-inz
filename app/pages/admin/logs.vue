@@ -113,7 +113,7 @@
 		},
 		{
 			accessorKey: 'userName',
-			header: 'Administrator',
+			header: 'Użytkownik',
 			cell: ({ row }) => {
 				const value = String(row.getValue('userName') ?? '');
 				return h(
