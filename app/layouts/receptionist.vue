@@ -1,37 +1,12 @@
 <script lang="ts" setup>
-	import { useToast } from '#imports';
 	import type { NavigationMenuItem } from '@nuxt/ui';
 	import { pl } from '@nuxt/ui/locale';
-	import { authClient } from '~~/lib/auth-client';
 
 	const route = useRoute();
 	const runtimeConfig = useRuntimeConfig();
-	const toast = useToast();
 
-	const handleSignout = async () => {
-		try {
-			await authClient.signOut({
-				fetchOptions: {
-					onSuccess: () => {
-						toast.add({
-							title: 'Wylogowano',
-							description: 'Proces wylogowywania powiódł się',
-							color: 'success',
-							icon: 'lucide:check',
-						});
-						navigateTo('/login?logout=true');
-					},
-				},
-			});
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			toast.add({
-				title: 'Błąd wylogowania',
-				description: 'Błąd: ' + message,
-				color: 'error',
-				icon: 'lucide:circle-x',
-			});
-		}
+	const handleSignout = () => {
+		navigateTo('/logout');
 	};
 
 	const items = computed<NavigationMenuItem[][]>(() => [
