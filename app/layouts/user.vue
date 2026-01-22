@@ -9,14 +9,19 @@
 
 	const handleSignout = async () => {
 		try {
-			await authClient.signOut();
-			toast.add({
-				title: 'Wylogowano',
-				description: 'Proces wylogowywania powiódł się',
-				color: 'success',
-				icon: 'lucide:check',
+			await authClient.signOut({
+				fetchOptions: {
+					onSuccess: () => {
+						toast.add({
+							title: 'Wylogowano',
+							description: 'Proces wylogowywania powiódł się',
+							color: 'success',
+							icon: 'lucide:check',
+						});
+						navigateTo('/login?logout=true');
+					},
+				},
 			});
-			navigateTo('/login?logout=true', { replace: true });
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			toast.add({
