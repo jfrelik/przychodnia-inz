@@ -16,15 +16,6 @@ type RawAvailability = {
 
 type Timeframe = { start: string; end: string };
 
-const buildTodayDate = () => {
-	const now = new Date();
-	const year = now.getFullYear();
-	const month = String(now.getMonth() + 1).padStart(2, '0');
-	const day = String(now.getDate()).padStart(2, '0');
-
-	return `${year}-${month}-${day}`;
-};
-
 const toMinutes = (time: string) => {
 	const [hours, minutes] = time.split(':');
 	return parseInt(hours ?? '0', 10) * 60 + parseInt(minutes ?? '0', 10);
@@ -113,7 +104,7 @@ export default defineEventHandler(async (event) => {
 		}
 	}
 
-	const today = buildTodayDate();
+	const today = todayDateString();
 
 	let slots: RawAvailability[];
 	try {

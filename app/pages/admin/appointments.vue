@@ -183,12 +183,7 @@
 						}"
 					>
 						<template #datetime-cell="{ row }">
-							{{
-								new Date(row.original.datetime).toLocaleString('pl-PL', {
-									dateStyle: 'short',
-									timeStyle: 'short',
-								})
-							}}
+							{{ useDateTimeShort(row.original.datetime) }}
 						</template>
 
 						<template #patientName-cell="{ row }">

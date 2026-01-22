@@ -31,13 +31,7 @@
 	const router = useRouter();
 	const toast = useToast();
 
-	const todayDateStr = computed(() => {
-		const now = new Date();
-		const year = now.getFullYear();
-		const month = String(now.getMonth() + 1).padStart(2, '0');
-		const day = String(now.getDate()).padStart(2, '0');
-		return `${year}-${month}-${day}`;
-	});
+	const todayDateStr = computed(() => useToday());
 
 	const {
 		data: visitsData,
@@ -112,22 +106,8 @@
 	const getStatusColor = (status: VisitStatus): VisitStatusColor =>
 		visitStatusMeta[status]?.color ?? 'primary';
 
-	const formatDate = (value: string | Date) => {
-		const date = new Date(value);
-		return date.toLocaleDateString('pl-PL', {
-			day: '2-digit',
-			month: '2-digit',
-			year: 'numeric',
-		});
-	};
-
-	const formatTime = (value: string | Date) => {
-		const date = new Date(value);
-		return date.toLocaleTimeString('pl-PL', {
-			hour: '2-digit',
-			minute: '2-digit',
-		});
-	};
+	const formatDate = (value: string | Date) => useDateShort(value);
+	const formatTime = (value: string | Date) => useTime(value);
 
 	const todayTimeframes = computed(
 		() => dispositionData.value?.timeframes ?? []

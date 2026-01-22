@@ -8,18 +8,8 @@ import {
 } from '~~/server/db/clinic';
 
 export default defineEventHandler(async () => {
-	const now = new Date();
-	const startOfDay = new Date(now);
-	startOfDay.setHours(0, 0, 0, 0);
-	const endOfDay = new Date(now);
-	endOfDay.setHours(23, 59, 59, 999);
-
-	const todayStr = now.toISOString().slice(0, 10);
-
-	// Look ahead 30 days
-	const endDateObj = new Date(now);
-	endDateObj.setDate(endDateObj.getDate() + 30);
-	const endDateStr = endDateObj.toISOString().slice(0, 10);
+	const { start: startOfDay, end: endOfDay } = todayRange();
+	const todayStr = todayDateString();
 
 	const [patientsResult, visitsResult, specializationRows] = await Promise.all([
 		useDb().select({ count: count() }).from(patients),

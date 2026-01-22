@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
 		medicalRecords: ['read'],
 	});
 
-	const now = new Date();
+	const now = nowTZ().toJSDate();
 
 	let upcomingVisits: Array<{
 		appointmentId: number;

@@ -81,15 +81,7 @@
 		{
 			accessorKey: 'timestamp',
 			header: 'Data',
-			cell: ({ row }) => {
-				return new Date(row.getValue('timestamp')).toLocaleString('pl-PL', {
-					day: 'numeric',
-					month: 'short',
-					hour: '2-digit',
-					minute: '2-digit',
-					hour12: false,
-				});
-			},
+			cell: ({ row }) => useDate(row.getValue('timestamp')),
 			size: 120,
 			enableSorting: true,
 		},

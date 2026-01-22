@@ -13,6 +13,9 @@
 	definePageMeta({ layout: 'docs' });
 	useHead({ title: 'Dni pracy' });
 
+	const TIMEZONE = useAppTimezone();
+	const LOCALE = useAppLocale();
+
 	type Disposition = {
 		scheduleId: string;
 		day: string;
@@ -68,8 +71,8 @@
 					hour12: false,
 				},
 			},
-			locale: 'pl-PL',
-			timezone: 'Europe/Warsaw',
+			locale: LOCALE,
+			timezone: TIMEZONE,
 		});
 
 		watch(

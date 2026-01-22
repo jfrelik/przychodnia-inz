@@ -44,11 +44,7 @@
 		{ id: 'actions', header: 'Akcje' },
 	];
 
-	const formatTime = (value: string | Date) =>
-		new Date(value).toLocaleTimeString('pl-PL', {
-			hour: '2-digit',
-			minute: '2-digit',
-		});
+	const formatTime = (value: string | Date) => useTime(value);
 
 	const statusLabels: Record<string, string> = {
 		scheduled: 'Zaplanowana',

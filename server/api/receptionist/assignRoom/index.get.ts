@@ -19,22 +19,13 @@ const querySchema = z
 	})
 	.strict();
 
-const buildTodayDate = () => {
-	const now = new Date();
-	const year = now.getFullYear();
-	const month = String(now.getMonth() + 1).padStart(2, '0');
-	const day = String(now.getDate()).padStart(2, '0');
-
-	return `${year}-${month}-${day}`;
-};
-
 export default defineEventHandler(async (event) => {
 	await requireSessionWithPermissions(event, {
 		availability: ['list'],
 	});
 
 	const query = querySchema.parse(getQuery(event));
-	const day = query.day ?? buildTodayDate();
+	const day = query.day ?? todayDateString();
 
 	try {
 		const rawRooms = await useDb()

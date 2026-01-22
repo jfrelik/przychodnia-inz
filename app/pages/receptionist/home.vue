@@ -69,11 +69,7 @@
 		return queueVisits.value.slice(start, start + queuePageSize);
 	});
 
-	const formatTime = (value: string | Date) =>
-		new Intl.DateTimeFormat('pl-PL', {
-			hour: '2-digit',
-			minute: '2-digit',
-		}).format(new Date(value));
+	const formatTime = (value: string | Date) => useTime(value);
 
 	const headlineStats = computed(() => {
 		const totals = visitsData.value?.totals ?? { onsite: 0, remote: 0 };

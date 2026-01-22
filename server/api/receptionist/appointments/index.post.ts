@@ -12,11 +12,7 @@ import type { SendEmailJob, SendEmailResult } from '~~/server/types/bullmq';
 
 const queue = useQueue<SendEmailJob, SendEmailResult>('send-email');
 
-const formatAppointmentDateTime = (date: Date) =>
-	date.toLocaleString('pl-PL', {
-		dateStyle: 'long',
-		timeStyle: 'short',
-	});
+const formatAppointmentDateTime = (date: Date) => formatDateTime(date);
 const formatAppointmentType = (type: 'consultation' | 'procedure') =>
 	type === 'procedure' ? 'Zabieg' : 'Konsultacja';
 const formatVisitMode = (isOnline: boolean) =>

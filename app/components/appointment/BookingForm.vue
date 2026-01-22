@@ -1,7 +1,10 @@
 <script lang="ts" setup>
-	import { getLocalTimeZone, today } from '@internationalized/date';
 	import type { StepperItem } from '@nuxt/ui';
+	import { DateTime } from 'luxon';
 	import * as z from 'zod';
+
+	const TIMEZONE = useAppTimezone();
+	const LOCALE = useAppLocale();
 
 	type Specialization = {
 		id: number;
@@ -160,8 +163,7 @@
 
 	const isMobile = useMediaQuery('(max-width: 640px)');
 
-	const tz = getLocalTimeZone();
-	const todayDate = today(tz);
+	const nowWarsaw = () => DateTime.now().setZone(TIMEZONE);
 
 	const slots = ref<UiSlot[]>([]);
 	const slotsPending = ref(false);
@@ -173,8 +175,9 @@
 	const DAYS_TO_SHOW = 30;
 	const availableDays = computed(() => {
 		const days: string[] = [];
+		const today = nowWarsaw().startOf('day');
 		for (let i = 0; i < DAYS_TO_SHOW; i++) {
-			days.push(todayDate.add({ days: i }).toString());
+			days.push(today.plus({ days: i }).toISODate()!);
 		}
 		return days;
 	});
@@ -193,39 +196,43 @@
 	};
 
 	const formatDateTime = (iso: string) => {
-		const d = new Date(iso);
-		return d.toLocaleString('pl-PL', {
-			hour: '2-digit',
-			minute: '2-digit',
-		});
+		return DateTime.fromISO(iso)
+			.setZone(TIMEZONE)
+			.toLocaleString(
+				{ hour: '2-digit', minute: '2-digit' },
+				{ locale: LOCALE }
+			);
 	};
 
 	const formatDateFull = (iso: string) => {
-		const d = new Date(iso);
-		return d.toLocaleString('pl-PL', {
-			year: 'numeric',
-			month: '2-digit',
-			day: '2-digit',
-			hour: '2-digit',
-			minute: '2-digit',
-		});
+		return DateTime.fromISO(iso).setZone(TIMEZONE).toLocaleString(
+			{
+				year: 'numeric',
+				month: '2-digit',
+				day: '2-digit',
+				hour: '2-digit',
+				minute: '2-digit',
+			},
+			{ locale: LOCALE }
+		);
 	};
 
 	const formatDayMonth = (isoDate: string) =>
-		new Date(`${isoDate}T00:00:00`).toLocaleDateString('pl-PL', {
-			day: '2-digit',
-			month: '2-digit',
-		});
+		DateTime.fromISO(isoDate)
+			.setZone(TIMEZONE)
+			.toLocaleString({ day: '2-digit', month: '2-digit' }, { locale: LOCALE });
 
 	const formatWeekdayShort = (isoDate: string) =>
-		new Date(`${isoDate}T00:00:00`).toLocaleDateString('pl-PL', {
-			weekday: 'short',
-		});
+		DateTime.fromISO(isoDate)
+			.setZone(TIMEZONE)
+			.setLocale(LOCALE)
+			.toFormat('ccc');
 
 	const formatWeekday = (isoDate: string) =>
-		new Date(`${isoDate}T00:00:00`).toLocaleDateString('pl-PL', {
-			weekday: 'long',
-		});
+		DateTime.fromISO(isoDate)
+			.setZone(TIMEZONE)
+			.setLocale(LOCALE)
+			.toFormat('cccc');
 
 	const slotsByDay = computed<Record<string, UiSlot[]>>(() => {
 		const grouped: Record<string, UiSlot[]> = {};
@@ -234,7 +241,9 @@
 			const arr = grouped[day] ?? [];
 			arr.push(slot);
 			grouped[day] = arr.sort(
-				(a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+				(a, b) =>
+					DateTime.fromISO(a.start).toMillis() -
+					DateTime.fromISO(b.start).toMillis()
 			);
 		}
 		return grouped;
@@ -274,8 +283,9 @@
 		selectedDay.value = null;
 
 		try {
-			const startDate = todayDate.toString();
-			const endDate = todayDate.add({ days: DAYS_TO_SHOW - 1 }).toString();
+			const today = nowWarsaw().startOf('day');
+			const startDate = today.toISODate()!;
+			const endDate = today.plus({ days: DAYS_TO_SHOW - 1 }).toISODate()!;
 
 			const params: Record<string, string | number> = {
 				startDate,

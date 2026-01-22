@@ -91,32 +91,9 @@
 	const activePrescriptions = computed(
 		() => dashboardData.value?.activePrescriptions ?? []
 	);
-	const normalizeDate = (value: DateInput) => {
-		if (!value) return null;
-		const date = value instanceof Date ? value : new Date(value);
-		return Number.isNaN(date.getTime()) ? null : date;
-	};
 
-	const formatDate = (value: DateInput) => {
-		const date = normalizeDate(value);
-		return date
-			? date.toLocaleDateString('pl-PL', {
-					day: '2-digit',
-					month: '2-digit',
-					year: 'numeric',
-				})
-			: 'Brak danych';
-	};
-
-	const formatTime = (value: DateInput) => {
-		const date = normalizeDate(value);
-		return date
-			? date.toLocaleTimeString('pl-PL', {
-					hour: '2-digit',
-					minute: '2-digit',
-				})
-			: 'Brak danych';
-	};
+	const formatDate = (value: DateInput) => useDateShort(value);
+	const formatTime = (value: DateInput) => useTime(value);
 
 	const getDoctorLabel = (visit: Visit) =>
 		visit.doctorName ? `dr ${visit.doctorName}` : 'Lekarz w trakcie przydzialu';

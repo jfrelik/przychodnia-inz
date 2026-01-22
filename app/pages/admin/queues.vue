@@ -127,12 +127,7 @@
 	};
 
 	const formatDate = (value: number | null) =>
-		value
-			? new Date(value).toLocaleString('pl-PL', {
-					dateStyle: 'short',
-					timeStyle: 'short',
-				})
-			: '—';
+		value ? useDateTimeShort(new Date(value)) : '—';
 
 	const formatJson = (value: unknown) => JSON.stringify(value, null, 2) ?? '—';
 

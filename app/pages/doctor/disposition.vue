@@ -1,14 +1,13 @@
 <script lang="ts" setup>
 	import type { FormSubmitEvent } from '#ui/types';
-	import {
-		CalendarDate,
-		type DateValue,
-		getLocalTimeZone,
-		today,
-	} from '@internationalized/date';
+	import { CalendarDate, type DateValue } from '@internationalized/date';
+	import { DateTime } from 'luxon';
 	import { z } from 'zod';
 
 	type AnyDate = Pick<DateValue, 'year' | 'month' | 'day'>;
+
+	const TIMEZONE = useAppTimezone();
+	const LOCALE = useAppLocale();
 
 	definePageMeta({
 		layout: 'docs',
@@ -28,10 +27,11 @@
 		doctorUserId: string;
 	};
 
-	const todayDate = today(getLocalTimeZone());
-	const minDate = todayDate.add({ days: 1 });
-	const minDateKey = `${minDate.year}-${String(minDate.month).padStart(2, '0')}-${String(minDate.day).padStart(2, '0')}`;
-	const initialMonthValue = `${minDate.year}-${String(minDate.month).padStart(2, '0')}`;
+	const nowWarsaw = () => DateTime.now().setZone(TIMEZONE);
+	const todayDate = nowWarsaw().startOf('day');
+	const minDateTime = todayDate.plus({ days: 1 });
+	const minDateKey = minDateTime.toISODate()!;
+	const initialMonthValue = minDateTime.toFormat('yyyy-MM');
 	const selectedMonth = ref(initialMonthValue);
 	const selectedDates = ref<CalendarDate[]>([]);
 
@@ -46,31 +46,35 @@
 		`${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
 
 	const formatDateLabel = (date: AnyDate) => {
-		const jsDate = new Date(date.year, date.month - 1, date.day);
-
-		return new Intl.DateTimeFormat('pl-PL', {
-			weekday: 'long',
-			day: 'numeric',
-			month: 'long',
-		}).format(jsDate);
+		return DateTime.fromObject(
+			{ year: date.year, month: date.month, day: date.day },
+			{ zone: TIMEZONE }
+		)
+			.setLocale(LOCALE)
+			.toLocaleString({ weekday: 'long', day: 'numeric', month: 'long' });
 	};
 
 	const monthOptions = computed(() => {
 		const options: Array<{ label: string; value: string }> = [];
-		const start = new CalendarDate(todayDate.year, todayDate.month, 1);
+		const current = todayDate.startOf('month');
 
 		for (let i = 0; i < 2; i++) {
-			const monthDate = start.add({ months: i });
-			const label = new Intl.DateTimeFormat('pl-PL', {
-				month: 'long',
-				year: 'numeric',
-			}).format(new Date(monthDate.year, monthDate.month - 1, 1));
-			const value = `${monthDate.year}-${String(monthDate.month).padStart(2, '0')}`;
+			const monthDate = current.plus({ months: i });
+			const label = monthDate
+				.setLocale(LOCALE)
+				.toLocaleString({ month: 'long', year: 'numeric' });
+			const value = monthDate.toFormat('yyyy-MM');
 			options.push({ label, value });
 		}
 
 		return options;
 	});
+
+	const minDate = new CalendarDate(
+		minDateTime.year,
+		minDateTime.month,
+		minDateTime.day
+	);
 
 	const periodStartDate = computed(() => {
 		const [year, month] = selectedMonth.value
@@ -78,9 +82,17 @@
 			.map((v) => Number.parseInt(v, 10)) as [number, number];
 		return new CalendarDate(year, month, 1);
 	});
-	const periodStart = computed(() => dateKey(periodStartDate.value));
-	const periodEnd = computed(() =>
-		dateKey(periodStartDate.value.add({ months: 1, days: -1 }))
+
+	const periodStartLuxon = computed(() => {
+		const [year, month] = selectedMonth.value
+			.split('-')
+			.map((v) => Number.parseInt(v, 10)) as [number, number];
+		return DateTime.fromObject({ year, month, day: 1 }, { zone: TIMEZONE });
+	});
+
+	const periodStart = computed(() => periodStartLuxon.value.toISODate()!);
+	const periodEnd = computed(
+		() => periodStartLuxon.value.endOf('month').toISODate()!
 	);
 	const calendarPlaceholder = computed(() => periodStartDate.value);
 	const dispositionQuery = computed(() => ({
