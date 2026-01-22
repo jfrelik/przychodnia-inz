@@ -30,6 +30,7 @@ ENV NODE_ENV=production \
 
 COPY --from=builder /app/.output /app/.output
 COPY --from=builder /app/drizzle /app/drizzle
+COPY --from=builder /app/public /app/public
 
 RUN groupadd -g 1001 nodejs \
     && useradd -u 1001 -g nodejs -s /bin/sh -m nuxtjs
