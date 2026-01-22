@@ -127,6 +127,16 @@ export default defineEventHandler(async (event) => {
 	if (Number.isNaN(slotStart.getTime()))
 		throw createError({ statusCode: 400, message: 'Nieprawidłowa data' });
 
+	// Check if slot is in the past
+	const now = nowTZ();
+	if (slotStart.getTime() <= now.toMillis()) {
+		throw createError({
+			statusCode: 400,
+			message:
+				'Nie można zarezerwować wizyty w przeszłości. Wybierz inny termin.',
+		});
+	}
+
 	const durationMinutes = getDurationMinutes(type);
 	const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60_000);
 	const dateStr = slotStart.toISOString().slice(0, 10);

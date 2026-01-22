@@ -68,6 +68,14 @@ const mergeFrames = (frames: Frame[]): Frame[] => {
 	return merged;
 };
 
+// Aligns minutes to next slot boundary (0, 20, 40)
+// e.g. 14:08 -> 14:20, 14:21 -> 14:40, 14:41 -> 15:00
+const alignToNextSlot = (minutes: number, slotDuration: number): number => {
+	const remainder = minutes % slotDuration;
+	if (remainder === 0) return minutes;
+	return minutes + (slotDuration - remainder);
+};
+
 export default defineEventHandler(async (event) => {
 	await requireSessionWithPermissions(event, {
 		appointments: ['list'],
@@ -230,8 +238,21 @@ export default defineEventHandler(async (event) => {
 			const isToday = date === todayWarsaw;
 
 			for (const frame of frames) {
-				let start = Math.max(toMinutes(frame.start), filterStartMinutes);
-				const frameEnd = Math.min(toMinutes(frame.end), filterEndMinutes);
+				let start = Math.max(timeToMinutes(frame.start), filterStartMinutes);
+				const frameEnd = Math.min(timeToMinutes(frame.end), filterEndMinutes);
+
+				// For today, skip slots that have already passed
+				// and align to next valid slot boundary (0, 20, 40 minutes)
+				if (isToday) {
+					const minStartForToday = alignToNextSlot(
+						currentMinutes + 1,
+						slotDuration
+					);
+					start = Math.max(start, minStartForToday);
+				}
+
+				// Ensure start is aligned to slot boundary
+				start = alignToNextSlot(start, slotDuration);
 
 				while (start + slotDuration <= frameEnd) {
 					const candidateEnd = start + slotDuration;
