@@ -1,6 +1,6 @@
 import { authClient } from '~~/lib/auth-client';
 
-export default defineNuxtRouteMiddleware(async (to) => {
+export default defineNuxtRouteMiddleware(async (to, from) => {
 	const { data: session } = await authClient.useSession(useFetch);
 	const role = session.value?.user?.role;
 	const isLoggedIn = session.value?.user;
@@ -15,8 +15,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
 	const isPublicPage = publicPages.includes(to.path);
 	const roleHomePage = role ? `/${role}/home` : '/';
 
-	// Allow /login?logout=true for logged in users. Logout redirects there
-	if (to.path === '/login' && to.query.logout === 'true') {
+	// Allow /logout for logged in users
+	if (isLoggedIn && to.path === '/logout') {
 		return;
 	}
 
