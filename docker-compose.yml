@@ -8,6 +8,8 @@ services:
         condition: service_healthy
       valkey:
         condition: service_healthy
+    # ports:
+    #   - "3000:3000"
     environment:
       NUXT_DATABASE_URL: ${NUXT_DATABASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
