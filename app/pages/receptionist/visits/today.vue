@@ -64,17 +64,31 @@
 
 	const confirmCheckIn = async () => {
 		if (!selectedVisit.value) return;
+
+		// PESEL required for in-person visits
+		if (!selectedVisit.value.isOnline && !peselInput.value) {
+			toast.add({
+				title: 'Błąd',
+				description: 'PESEL jest wymagany dla wizyt stacjonarnych',
+				color: 'error',
+			});
+			return;
+		}
+
 		submitting.value = true;
 		try {
 			await $fetch('/api/receptionist/visits/checkin', {
 				method: 'POST',
 				body: {
 					appointmentId: selectedVisit.value.appointmentId,
-					pesel: peselInput.value,
+					// Don't send PESEL for telemedicine visits
+					...(selectedVisit.value.isOnline ? {} : { pesel: peselInput.value }),
 				},
 			});
 			toast.add({
-				title: 'Obecność zweryfikowana',
+				title: selectedVisit.value.isOnline
+					? 'Teleporada potwierdzona'
+					: 'Obecność zweryfikowana',
 				color: 'success',
 			});
 			showModal.value = false;
@@ -188,7 +202,11 @@
 
 		<UModal
 			v-model:open="showModal"
-			title="Potwierdź przybycie pacjenta"
+			:title="
+				selectedVisit?.isOnline
+					? 'Potwierdź teleporadę'
+					: 'Potwierdź przybycie pacjenta'
+			"
 			prevent-close
 		>
 			<template #body>
@@ -205,12 +223,33 @@
 						<span class="font-semibold">Godzina:</span>
 						{{ formatTime(selectedVisit.datetime) }}
 					</p>
-					<p v-if="selectedVisit.roomNumber">
+					<p>
+						<span class="font-semibold">Tryb:</span>
+						<UBadge
+							:color="selectedVisit.isOnline ? 'info' : 'neutral'"
+							variant="subtle"
+							size="sm"
+							class="ml-1"
+						>
+							{{ selectedVisit.isOnline ? 'Teleporada' : 'Stacjonarna' }}
+						</UBadge>
+					</p>
+					<p v-if="selectedVisit.roomNumber && !selectedVisit.isOnline">
 						<span class="font-semibold">Gabinet:</span>
 						{{ selectedVisit.roomNumber }}
 					</p>
 				</div>
-				<UForm class="mt-4 space-y-4" @submit.prevent="confirmCheckIn">
+
+				<UAlert
+					v-if="selectedVisit?.isOnline"
+					class="mt-4"
+					color="info"
+					icon="lucide:video"
+					title="Teleporada"
+					description="Weryfikacja numeru PESEL nie jest wymagana dla wizyt online."
+				/>
+
+				<UForm v-else class="mt-4 space-y-4" @submit.prevent="confirmCheckIn">
 					<UFormField label="PESEL" description="Zweryfikuj numer z dokumentem">
 						<UInput
 							v-model="peselInput"
@@ -233,7 +272,11 @@
 						class="cursor-pointer"
 						@click="confirmCheckIn"
 					>
-						Potwierdź przybycie
+						{{
+							selectedVisit?.isOnline
+								? 'Potwierdź teleporadę'
+								: 'Potwierdź przybycie'
+						}}
 					</UButton>
 				</div>
 			</template>
