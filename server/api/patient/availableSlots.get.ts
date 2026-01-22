@@ -36,45 +36,19 @@ const querySchema = z
 		(v) => {
 			if (!v.startTime && !v.endTime) return true;
 			if (!v.startTime || !v.endTime) return false;
-			return toMinutes(v.startTime) < toMinutes(v.endTime);
+			return timeToMinutes(v.startTime) < timeToMinutes(v.endTime);
 		},
 		{ message: 'Provide a valid time window (from < to)' }
 	);
 
-const parseUtcDate = (date: string) => {
-	const [y, m, d] = date.split('-').map(Number) as [number, number, number];
-	return new Date(Date.UTC(y, m - 1, d));
-};
-
-const buildDateRange = (start: string, end: string) => {
-	const dates: string[] = [];
-	const startDate = parseUtcDate(start);
-	const endDate = parseUtcDate(end);
-	for (
-		let d = new Date(startDate.getTime());
-		d.getTime() <= endDate.getTime();
-		d.setUTCDate(d.getUTCDate() + 1)
-	) {
-		dates.push(d.toISOString().slice(0, 10));
-	}
-	return dates;
-};
-
-const toMinutes = (time: string) => {
-	const [h, m] = time.split(':').map(Number);
-	return (h || 0) * 60 + (m || 0);
-};
-
-const toTime = (date: string, minutes: number) => {
-	const h = String(Math.floor(minutes / 60)).padStart(2, '0');
-	const m = String(minutes % 60).padStart(2, '0');
-	return `${date}T${h}:${m}:00`;
-};
-
 const mergeFrames = (frames: Frame[]): Frame[] => {
 	if (!frames.length) return [];
 	const sorted = frames
-		.map((f) => ({ ...f, s: toMinutes(f.start), e: toMinutes(f.end) }))
+		.map((f) => ({
+			...f,
+			s: timeToMinutes(f.start),
+			e: timeToMinutes(f.end),
+		}))
 		.sort((a, b) => a.s - b.s);
 
 	const merged: Frame[] = [];
@@ -84,7 +58,7 @@ const mergeFrames = (frames: Frame[]): Frame[] => {
 			merged.push({ start: cur.start, end: cur.end });
 			continue;
 		}
-		const lastEnd = toMinutes(last.end);
+		const lastEnd = timeToMinutes(last.end);
 		if (cur.s <= lastEnd) {
 			if (cur.e > lastEnd) last.end = cur.end;
 		} else {
@@ -92,6 +66,14 @@ const mergeFrames = (frames: Frame[]): Frame[] => {
 		}
 	}
 	return merged;
+};
+
+// Aligns minutes to next slot boundary (0, 20, 40)
+// e.g. 14:08 -> 14:20, 14:21 -> 14:40, 14:41 -> 15:00
+const alignToNextSlot = (minutes: number, slotDuration: number): number => {
+	const remainder = minutes % slotDuration;
+	if (remainder === 0) return minutes;
+	return minutes + (slotDuration - remainder);
 };
 
 export default defineEventHandler(async (event) => {
@@ -116,8 +98,12 @@ export default defineEventHandler(async (event) => {
 	const endDate = query.endDate ?? startDate;
 	const slotDuration = getDurationMinutes('consultation');
 	const dateRange = buildDateRange(startDate, endDate);
-	const filterStartMinutes = query.startTime ? toMinutes(query.startTime) : 0;
-	const filterEndMinutes = query.endTime ? toMinutes(query.endTime) : 24 * 60;
+	const filterStartMinutes = query.startTime
+		? timeToMinutes(query.startTime)
+		: 0;
+	const filterEndMinutes = query.endTime
+		? timeToMinutes(query.endTime)
+		: 24 * 60;
 
 	let doctorRows: Array<{
 		doctorId: string;
@@ -165,7 +151,6 @@ export default defineEventHandler(async (event) => {
 	const results = [];
 
 	for (const doc of doctorRows) {
-		// Availability over the range
 		let availabilities: Array<{
 			day: string | Date;
 			start: string;
@@ -195,15 +180,12 @@ export default defineEventHandler(async (event) => {
 		const availabilityByDate = new Map<string, Frame[]>();
 		for (const row of availabilities) {
 			const dayStr =
-				typeof row.day === 'string'
-					? row.day
-					: (row.day as unknown as Date).toISOString().slice(0, 10);
+				typeof row.day === 'string' ? row.day : getDateString(row.day);
 			const arr = availabilityByDate.get(dayStr) ?? [];
 			arr.push({ start: row.start, end: row.end });
 			availabilityByDate.set(dayStr, arr);
 		}
 
-		// Existing appointments over the range
 		let existing: Array<{ datetime: Date; type: string }>;
 		try {
 			existing = await useDb()
@@ -230,9 +212,8 @@ export default defineEventHandler(async (event) => {
 			{ start: number; end: number; type: 'consultation' | 'procedure' }[]
 		>();
 		for (const row of existing) {
-			const start = new Date(row.datetime);
-			const dateStr = start.toISOString().slice(0, 10);
-			const startMinutes = start.getHours() * 60 + start.getMinutes();
+			const dateStr = getDateString(row.datetime);
+			const startMinutes = getMinutesOfDay(row.datetime);
 			const duration = getDurationMinutes(
 				row.type as 'consultation' | 'procedure'
 			);
@@ -240,22 +221,38 @@ export default defineEventHandler(async (event) => {
 			arr.push({
 				start: startMinutes,
 				end: startMinutes + duration,
-				type: row.type as any,
+				type: row.type as 'consultation' | 'procedure',
 			});
 			existingByDate.set(dateStr, arr);
 		}
 
 		const allSlots: { start: string; end: string }[] = [];
+		const todayWarsaw = todayDateString();
+		const currentMinutes = currentMinutesOfDay();
 
 		for (const date of dateRange) {
 			const frames = mergeFrames(availabilityByDate.get(date) ?? []);
 			if (!frames.length) continue;
 
 			const existingWindows = existingByDate.get(date) ?? [];
+			const isToday = date === todayWarsaw;
 
 			for (const frame of frames) {
-				let start = Math.max(toMinutes(frame.start), filterStartMinutes);
-				const frameEnd = Math.min(toMinutes(frame.end), filterEndMinutes);
+				let start = Math.max(timeToMinutes(frame.start), filterStartMinutes);
+				const frameEnd = Math.min(timeToMinutes(frame.end), filterEndMinutes);
+
+				// For today, skip slots that have already passed
+				// and align to next valid slot boundary (0, 20, 40 minutes)
+				if (isToday) {
+					const minStartForToday = alignToNextSlot(
+						currentMinutes + 1,
+						slotDuration
+					);
+					start = Math.max(start, minStartForToday);
+				}
+
+				// Ensure start is aligned to slot boundary
+				start = alignToNextSlot(start, slotDuration);
 
 				while (start + slotDuration <= frameEnd) {
 					const candidateEnd = start + slotDuration;
@@ -264,8 +261,8 @@ export default defineEventHandler(async (event) => {
 					);
 					if (!overlap) {
 						allSlots.push({
-							start: toTime(date, start),
-							end: toTime(date, candidateEnd),
+							start: toTZISO(date, start),
+							end: toTZISO(date, candidateEnd),
 						});
 					}
 					start += slotDuration;

@@ -184,9 +184,7 @@
 												</UButton>
 											</div>
 											<p class="text-xs tracking-wider text-gray-500 uppercase">
-												{{
-													new Date(test.testDate).toLocaleDateString('pl-PL')
-												}}
+												{{ useDateShort(test.testDate) }}
 											</p>
 										</div>
 										<p class="text-sm whitespace-pre-line text-gray-700">

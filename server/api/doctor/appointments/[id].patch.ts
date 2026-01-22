@@ -207,8 +207,7 @@ export default defineEventHandler(async (event) => {
 				}
 
 				if (recordId) {
-					const now = new Date();
-					const testDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+					const testDateStr = todayDateString();
 					await tx.insert(testResults).values(
 						examResultCodes.map((code) => ({
 							recordId: recordId!,

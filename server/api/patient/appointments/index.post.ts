@@ -7,11 +7,7 @@ import type { SendEmailJob, SendEmailResult } from '~~/server/types/bullmq';
 
 const queue = useQueue<SendEmailJob, SendEmailResult>('send-email');
 
-const formatAppointmentDateTime = (date: Date) =>
-	date.toLocaleString('pl-PL', {
-		dateStyle: 'long',
-		timeStyle: 'short',
-	});
+const formatAppointmentDateTime = (date: Date) => formatDateTime(date);
 const formatAppointmentType = (type: 'consultation' | 'procedure') =>
 	type === 'procedure' ? 'Zabieg' : 'Konsultacja';
 const formatVisitMode = (isOnline: boolean) =>
@@ -90,6 +86,16 @@ export default defineEventHandler(async (event) => {
 	const slotStart = new Date(datetime);
 	if (Number.isNaN(slotStart.getTime()))
 		throw createError({ statusCode: 400, message: 'Invalid datetime' });
+
+	// Check if slot is in the past
+	const now = nowTZ();
+	if (slotStart.getTime() <= now.toMillis()) {
+		throw createError({
+			statusCode: 400,
+			message:
+				'Nie można zarezerwować wizyty w przeszłości. Wybierz inny termin.',
+		});
+	}
 
 	const durationMinutes = getDurationMinutes(type);
 	const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60_000);

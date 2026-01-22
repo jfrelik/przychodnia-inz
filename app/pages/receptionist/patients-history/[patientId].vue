@@ -82,15 +82,7 @@
 		router.push(`/receptionist/appointments/${patientId.value}`);
 	};
 
-	const formatDateTime = (iso: string) => {
-		return new Date(iso).toLocaleString('pl-PL', {
-			year: 'numeric',
-			month: '2-digit',
-			day: '2-digit',
-			hour: '2-digit',
-			minute: '2-digit',
-		});
-	};
+	const formatDateTime = (iso: string) => useDateTimeShort(iso);
 
 	const getStatusBadge = (status: string) => {
 		const map: Record<string, { color: string; label: string }> = {

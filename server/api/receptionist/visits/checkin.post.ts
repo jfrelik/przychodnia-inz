@@ -7,7 +7,10 @@ import { peselHmac } from '~~/server/utils/pesel';
 const payloadSchema = z
 	.object({
 		appointmentId: z.number().int().positive(),
-		pesel: z.string().regex(/^\d{11}$/, 'PESEL musi mieć 11 cyfr'),
+		pesel: z
+			.string()
+			.regex(/^\d{11}$/, 'PESEL musi mieć 11 cyfr')
+			.optional(),
 	})
 	.strict();
 
@@ -27,6 +30,7 @@ export default defineEventHandler(async (event) => {
 				doctorId: string;
 				patientId: string | null;
 				peselHmac: string | null;
+				isOnline: boolean;
 		  }
 		| undefined;
 
@@ -39,6 +43,7 @@ export default defineEventHandler(async (event) => {
 				doctorId: appointments.doctorId,
 				patientId: appointments.patientId,
 				peselHmac: patients.peselHmac,
+				isOnline: appointments.isOnline,
 			})
 			.from(appointments)
 			.leftJoin(patients, eq(appointments.patientId, patients.userId))
@@ -68,13 +73,23 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const incomingHmac = peselHmac(payload.pesel);
+	// PESEL verification not required for telemedicine visits
+	if (!row.isOnline) {
+		if (!payload.pesel) {
+			throw createError({
+				statusCode: 400,
+				message: 'PESEL jest wymagany dla wizyt stacjonarnych',
+			});
+		}
 
-	if (row.peselHmac !== incomingHmac) {
-		throw createError({
-			statusCode: 400,
-			message: 'PESEL niezgodny z danymi pacjenta',
-		});
+		const incomingHmac = peselHmac(payload.pesel);
+
+		if (row.peselHmac !== incomingHmac) {
+			throw createError({
+				statusCode: 400,
+				message: 'PESEL niezgodny z danymi pacjenta',
+			});
+		}
 	}
 
 	if (row.status === 'checked_in') {

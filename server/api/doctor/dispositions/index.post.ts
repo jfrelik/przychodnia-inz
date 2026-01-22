@@ -13,11 +13,6 @@ import type { SendEmailJob, SendEmailResult } from '~~/server/types/bullmq';
 
 const queue = useQueue<SendEmailJob, SendEmailResult>('send-email');
 
-const formatAppointmentDateTime = (date: Date) =>
-	date.toLocaleString('pl-PL', {
-		dateStyle: 'long',
-		timeStyle: 'short',
-	});
 const formatAppointmentType = (type: 'consultation' | 'procedure') =>
 	type === 'procedure' ? 'Zabieg' : 'Konsultacja';
 const formatVisitMode = (isOnline: boolean) =>
@@ -75,25 +70,19 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	const today = new Date();
-	today.setHours(0, 0, 0, 0);
-	const earliestAllowed = new Date();
-	earliestAllowed.setHours(0, 0, 0, 0);
-	earliestAllowed.setDate(earliestAllowed.getDate() + 1);
-	const earliestAllowedKey = `${earliestAllowed.getFullYear()}-${String(
-		earliestAllowed.getMonth() + 1
-	).padStart(2, '0')}-${String(earliestAllowed.getDate()).padStart(2, '0')}`;
+	const todayStr = todayDateString();
+	const earliestAllowedKey = tomorrowDateString();
 
 	for (const day of payload.data.days) {
-		const parsedDay = new Date(`${day.date}T00:00:00`);
-		if (Number.isNaN(parsedDay.getTime())) {
+		const parsedDay = parseDateString(day.date);
+		if (!parsedDay.isValid) {
 			throw createError({
 				statusCode: 400,
 				message: 'Data jest nieprawidłowa',
 			});
 		}
 
-		if (parsedDay.getTime() < today.getTime()) {
+		if (day.date < todayStr) {
 			throw createError({
 				statusCode: 400,
 				message: 'Data nie może być w przeszłości',
@@ -153,8 +142,9 @@ export default defineEventHandler(async (event) => {
 
 			if (removedDays.length) {
 				for (const day of removedDays) {
-					const startOfDay = new Date(`${day}T00:00:00`);
-					const endOfDay = new Date(`${day}T23:59:59.999`);
+					const dayStart = parseDateString(day);
+					const startOfDay = dayStart.toJSDate();
+					const endOfDay = dayStart.endOf('day').toJSDate();
 
 					const rows = await tx
 						.select({
@@ -236,9 +226,7 @@ export default defineEventHandler(async (event) => {
 				{
 					patientName: appointment.patientName,
 					doctorName: session.user.name ?? 'Lekarz',
-					appointmentDateTime: formatAppointmentDateTime(
-						new Date(appointment.datetime)
-					),
+					appointmentDateTime: formatDateTime(appointment.datetime),
 					visitMode: formatVisitMode(appointment.isOnline),
 					appointmentType: formatAppointmentType(
 						appointment.type as 'consultation' | 'procedure'

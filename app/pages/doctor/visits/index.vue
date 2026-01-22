@@ -1,9 +1,6 @@
 <script lang="ts" setup>
-	import {
-		CalendarDate,
-		getLocalTimeZone,
-		today,
-	} from '@internationalized/date';
+	import { CalendarDate } from '@internationalized/date';
+	import { DateTime } from 'luxon';
 
 	import type { VisitDetails } from '~/components/visit/CardModal.vue';
 
@@ -14,6 +11,9 @@
 	useHead({
 		title: 'Wizyty',
 	});
+
+	const TIMEZONE = useAppTimezone();
+	const LOCALE = useAppLocale();
 
 	type VisitStatus = 'scheduled' | 'completed' | 'checked_in';
 	type Visit = {
@@ -39,7 +39,13 @@
 	const route = useRoute();
 	const router = useRouter();
 
-	const todayDate = today(getLocalTimeZone());
+	const nowWarsaw = () => DateTime.now().setZone(TIMEZONE);
+	const todayLuxon = nowWarsaw().startOf('day');
+	const todayDate = new CalendarDate(
+		todayLuxon.year,
+		todayLuxon.month,
+		todayLuxon.day
+	);
 
 	const getInitialDate = (): CalendarDate => {
 		const dateParam = route.query.date as string | undefined;
@@ -95,26 +101,23 @@
 			completed: { label: 'Zakończona', color: 'success' },
 		};
 
-	const normalizeDate = (value: Visit['datetime']) => {
-		const date = value instanceof Date ? value : new Date(value);
-		return Number.isNaN(date.getTime()) ? null : date;
-	};
-
 	const formatTime = (value: Visit['datetime']) => {
-		const date = normalizeDate(value);
-		return date
-			? date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
-			: 'Brak danych';
+		const iso = value instanceof Date ? value.toISOString() : String(value);
+		return DateTime.fromISO(iso).setZone(TIMEZONE).toFormat('HH:mm');
 	};
 
 	const formatDisplayDate = (date: CalendarDate) => {
-		const jsDate = new Date(date.year, date.month - 1, date.day);
-		return jsDate.toLocaleDateString('pl-PL', {
-			weekday: 'long',
-			day: 'numeric',
-			month: 'long',
-			year: 'numeric',
-		});
+		return DateTime.fromObject(
+			{ year: date.year, month: date.month, day: date.day },
+			{ zone: TIMEZONE }
+		)
+			.setLocale(LOCALE)
+			.toLocaleString({
+				weekday: 'long',
+				day: 'numeric',
+				month: 'long',
+				year: 'numeric',
+			});
 	};
 
 	const getStatusLabel = (status: VisitStatus) =>

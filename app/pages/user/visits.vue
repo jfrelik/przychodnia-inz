@@ -53,31 +53,8 @@
 			canceled: { label: 'Odwołana', color: 'error' },
 		};
 
-	const normalizeDate = (value: Visit['datetime']) => {
-		const date = value instanceof Date ? value : new Date(value);
-		return Number.isNaN(date.getTime()) ? null : date;
-	};
-
-	const formatDate = (value: Visit['datetime']) => {
-		const date = normalizeDate(value);
-		return date
-			? date.toLocaleDateString('pl-PL', {
-					day: '2-digit',
-					month: '2-digit',
-					year: 'numeric',
-				})
-			: 'Brak danych';
-	};
-
-	const formatTime = (value: Visit['datetime']) => {
-		const date = normalizeDate(value);
-		return date
-			? date.toLocaleTimeString('pl-PL', {
-					hour: '2-digit',
-					minute: '2-digit',
-				})
-			: 'Brak danych';
-	};
+	const formatDate = (value: Visit['datetime']) => useDateShort(value);
+	const formatTime = (value: Visit['datetime']) => useTime(value);
 
 	const getStatusLabel = (status: VisitStatus) =>
 		statusMeta[status]?.label ?? 'Nieznany status';

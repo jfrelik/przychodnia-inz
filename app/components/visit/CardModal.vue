@@ -40,23 +40,7 @@
 		emit('update:open', false);
 	};
 
-	const normalizeDate = (value: string | Date) => {
-		const date = value instanceof Date ? value : new Date(value);
-		return Number.isNaN(date.getTime()) ? null : date;
-	};
-
-	const formatDateTime = (value: string | Date) => {
-		const date = normalizeDate(value);
-		return date
-			? date.toLocaleString('pl-PL', {
-					day: 'numeric',
-					month: 'long',
-					year: 'numeric',
-					hour: '2-digit',
-					minute: '2-digit',
-				})
-			: 'Brak danych';
-	};
+	const formatDateTime = (value: string | Date) => useDateTimeFull(value);
 </script>
 
 <template>

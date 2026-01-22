@@ -42,11 +42,7 @@
 
 	const formatNextAvailableDate = (dateStr: string | null) => {
 		if (!dateStr) return 'Brak wolnych terminów';
-		const [y, m, d] = dateStr.split('-').map(Number);
-		const date = new Date(y!, m! - 1, d);
-		return `Najbliższy termin: ${date.toLocaleDateString('pl-PL', {
-			dateStyle: 'long',
-		})}`;
+		return `Najbliższy termin: ${useDateLong(dateStr)}`;
 	};
 
 	const nextVisitInfo = computed(() =>

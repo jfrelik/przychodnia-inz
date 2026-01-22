@@ -2,12 +2,6 @@ import { and, asc, eq, gte, sql } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
 import { appointments, doctors } from '~~/server/db/clinic';
 
-const twoMonthsAgo = () => {
-	const date = new Date();
-	date.setMonth(date.getMonth() - 2);
-	return date;
-};
-
 export default defineEventHandler(async (event) => {
 	const session = await requireSessionWithPermissions(event, {
 		appointments: ['list'],
@@ -45,7 +39,7 @@ export default defineEventHandler(async (event) => {
 				and(
 					eq(appointments.doctorId, doctorRow.userId),
 					eq(appointments.status, 'completed'),
-					gte(appointments.datetime, twoMonthsAgo())
+					gte(appointments.datetime, nowTZ().minus({ months: 2 }).toJSDate())
 				)
 			)
 			.groupBy(weekTrunc)

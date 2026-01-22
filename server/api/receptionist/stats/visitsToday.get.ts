@@ -2,22 +2,12 @@ import { and, gte, inArray, lte } from 'drizzle-orm';
 import { createError, defineEventHandler } from 'h3';
 import { appointments } from '~~/server/db/clinic';
 
-const buildTodayRange = () => {
-	const start = new Date();
-	start.setHours(0, 0, 0, 0);
-
-	const end = new Date(start);
-	end.setHours(23, 59, 59, 999);
-
-	return { start, end };
-};
-
 export default defineEventHandler(async (event) => {
 	await requireSessionWithPermissions(event, {
 		appointments: ['list'],
 	});
 
-	const { start, end } = buildTodayRange();
+	const { start, end } = todayRange();
 
 	try {
 		const rows = await useDb()
@@ -41,8 +31,7 @@ export default defineEventHandler(async (event) => {
 
 		const bucketMap = new Map<number, { onsite: number; remote: number }>();
 		for (const row of rows) {
-			const ts = new Date(row.datetime);
-			const hour = ts.getHours();
+			const hour = parseToTZ(row.datetime.toISOString()).hour;
 			const bucket = bucketMap.get(hour) ?? { onsite: 0, remote: 0 };
 			if (row.isOnline) bucket.remote += 1;
 			else bucket.onsite += 1;
@@ -68,7 +57,7 @@ export default defineEventHandler(async (event) => {
 		);
 
 		return {
-			day: start.toISOString().slice(0, 10),
+			day: todayDateString(),
 			buckets,
 			totals,
 		};

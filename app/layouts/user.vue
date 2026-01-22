@@ -9,19 +9,14 @@
 
 	const handleSignout = async () => {
 		try {
-			await authClient.signOut({
-				fetchOptions: {
-					onSuccess: () => {
-						toast.add({
-							title: 'Wylogowano',
-							description: 'Proces wylogowywania powiódł się',
-							color: 'success',
-							icon: 'lucide:check',
-						});
-						navigateTo('/');
-					},
-				},
+			await authClient.signOut();
+			toast.add({
+				title: 'Wylogowano',
+				description: 'Proces wylogowywania powiódł się',
+				color: 'success',
+				icon: 'lucide:check',
 			});
+			navigateTo('/login?logout=true', { replace: true });
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			toast.add({
@@ -172,7 +167,10 @@
 
 				<template #footer="{ collapsed }">
 					<div class="flex flex-col gap-2">
-						<FontSizeSelector :collapsed="collapsed" popover-side="top" />
+						<FontSizeSelector
+							:collapsed="collapsed ?? false"
+							popover-side="top"
+						/>
 
 						<UButton
 							:label="collapsed ? undefined : 'Wyloguj się'"

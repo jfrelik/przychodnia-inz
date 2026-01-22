@@ -12,11 +12,6 @@ export default defineTask({
 	async run() {
 		const queue = useQueue<SendEmailJob, SendEmailResult>('send-email');
 
-		const formatAppointmentDateTime = (date: Date) =>
-			date.toLocaleString('pl-PL', {
-				dateStyle: 'long',
-				timeStyle: 'short',
-			});
 		const formatAppointmentType = (type: 'consultation' | 'procedure') =>
 			type === 'procedure' ? 'Zabieg' : 'Konsultacja';
 		const formatVisitMode = (isOnline: boolean) =>
@@ -35,11 +30,7 @@ export default defineTask({
 			return 'Pacjent';
 		};
 
-		const now = new Date();
-		const startOfDay = new Date(now);
-		startOfDay.setHours(0, 0, 0, 0);
-		const endOfDay = new Date(now);
-		endOfDay.setHours(23, 59, 59, 999);
+		const { start: startOfDay, end: endOfDay } = todayRange();
 
 		const patientUser = alias(authUser, 'patient_user');
 		const doctorUser = alias(authUser, 'doctor_user');
@@ -99,9 +90,7 @@ export default defineTask({
 						row.patientName
 					),
 					doctorName: row.doctorName ?? 'Lekarz',
-					appointmentDateTime: formatAppointmentDateTime(
-						new Date(row.datetime)
-					),
+					appointmentDateTime: formatDateTime(row.datetime),
 					visitMode: formatVisitMode(row.isOnline),
 					appointmentType: formatAppointmentType(
 						row.type as 'consultation' | 'procedure'

@@ -215,7 +215,7 @@
 						</template>
 
 						<template #createdAt-cell="{ row }">
-							{{ new Date(row.original.createdAt).toLocaleDateString('pl-PL') }}
+							{{ useDateShort(row.original.createdAt) }}
 						</template>
 
 						<template #actions-cell="{ row }">

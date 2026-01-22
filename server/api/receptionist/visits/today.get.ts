@@ -4,22 +4,12 @@ import { createError, defineEventHandler } from 'h3';
 import { user as authUser } from '~~/server/db/auth';
 import { appointments, doctors, patients, room } from '~~/server/db/clinic';
 
-const buildTodayRange = () => {
-	const start = new Date();
-	start.setHours(0, 0, 0, 0);
-
-	const end = new Date(start);
-	end.setHours(23, 59, 59, 999);
-
-	return { start, end };
-};
-
 export default defineEventHandler(async (event) => {
 	await requireSessionWithPermissions(event, {
 		appointments: ['list'],
 	});
 
-	const { start, end } = buildTodayRange();
+	const { start, end } = todayRange();
 
 	const patientUser = alias(authUser, 'patient_user');
 	const doctorUser = alias(authUser, 'doctor_user');
