@@ -393,7 +393,7 @@
 									:key="name"
 									variant="soft"
 									color="primary"
-									size="xs"
+									size="sm"
 									:label="name"
 								/>
 								<span

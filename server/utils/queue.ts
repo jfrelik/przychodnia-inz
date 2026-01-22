@@ -3,6 +3,14 @@ import { Redis } from 'ioredis';
 
 const queueMap = new Map<string, Queue>();
 
+const DEFAULT_JOB_OPTIONS = {
+	attempts: 3,
+	backoff: {
+		type: 'exponential' as const,
+		delay: 30000,
+	},
+};
+
 export const useQueue = <
 	DataType = unknown,
 	ResultType = unknown,
@@ -25,7 +33,14 @@ export const useQueue = <
 
 	queueMap.set(
 		name,
-		new Queue<DataType, ResultType, NameType>(name, { ...opts, connection })
+		new Queue<DataType, ResultType, NameType>(name, {
+			...opts,
+			connection,
+			defaultJobOptions: {
+				...DEFAULT_JOB_OPTIONS,
+				...opts?.defaultJobOptions,
+			},
+		})
 	);
 
 	return queueMap.get(name) as Queue<DataType, ResultType, NameType>;
