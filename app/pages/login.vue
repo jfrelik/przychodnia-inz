@@ -8,11 +8,19 @@
 	});
 
 	const toast = useToast();
+	const router = useRouter();
 	const _session = authClient.useSession();
 	const show = ref(false);
 	const isSubmitting = ref(false);
 	const turnstile = ref();
 	const route = useRoute();
+
+	// Remove logout query param from URL
+	onMounted(() => {
+		if (route.query.logout === 'true') {
+			router.replace({ path: '/login', query: {} });
+		}
+	});
 
 	const turnstileOptions = {
 		language: 'pl',
