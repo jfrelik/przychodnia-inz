@@ -167,7 +167,10 @@
 
 				<template #footer="{ collapsed }">
 					<div class="flex flex-col gap-2">
-						<FontSizeSelector :collapsed="collapsed" popover-side="top" />
+						<FontSizeSelector
+							:collapsed="collapsed ?? false"
+							popover-side="top"
+						/>
 
 						<UButton
 							:label="collapsed ? undefined : 'Wyloguj się'"
